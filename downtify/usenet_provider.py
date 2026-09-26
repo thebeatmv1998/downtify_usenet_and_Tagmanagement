@@ -123,14 +123,32 @@ class NewznabClient:
     def configured(self) -> bool:
         return bool(self.base_url and self.api_key)
 
+    def endpoints(self) -> list[str]:
+        """Candidate Newznab endpoints, first match wins.
+
+        Classic indexers serve the spec at ``<base>/api``; Prowlarr (and some
+        Hydra setups) expose it at ``<base>/api/v1/search`` instead. A base
+        that already ends in ``/api`` or ``/search`` is used verbatim.
+        """
+        if self.base_url.endswith(('/api', '/search')):
+            return [self.base_url]
+        return [f'{self.base_url}/api', f'{self.base_url}/api/v1/search']
+
     def _get(self, params: dict[str, Any], **kwargs: Any) -> httpx.Response:
-        resp = httpx.get(
-            f'{self.base_url}/api',
-            params=params,
-            timeout=self.timeout,
-            follow_redirects=True,
-            **kwargs,
-        )
+        endpoints = self.endpoints()
+        resp = None
+        for i, url in enumerate(endpoints):
+            resp = httpx.get(
+                url,
+                params=params,
+                timeout=self.timeout,
+                follow_redirects=True,
+                **kwargs,
+            )
+            if resp.status_code == 404 and i < len(endpoints) - 1:
+                # Prowlarr-style base without the classic /api path.
+                continue
+            break
         resp.raise_for_status()
         return resp
 

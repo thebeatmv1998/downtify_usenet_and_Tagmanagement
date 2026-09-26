@@ -26,6 +26,7 @@ from loguru import logger
 
 from .navidrome import SUBSONIC_AUTH_FAILED, NavidromeClient, SubsonicError
 from .slskd_provider import SlskdClient
+from .usenet_provider import NewznabClient
 
 #: Seconds each request may take. A test that hangs is worse than one
 #: that says "no answer".
@@ -268,24 +269,36 @@ def check_usenet(cfg: dict[str, Any]) -> dict[str, Any]:
         checks.append(_check('indexer', STATUS_FAIL, 'missing'))
     for row in enabled:
         name = str(row.get('name') or row.get('base_url') or '')[:80]
-        base_url = str(row.get('base_url') or '').rstrip('/')
-        api_key = str(row.get('api_key') or '')
-        if not base_url or not api_key:
+        client = NewznabClient(row)
+        if not client.configured():
             checks.append(
                 _check('indexer', STATUS_FAIL, 'missing', name)
             )
             continue
-        try:
-            idx_resp = _get(
-                f'{base_url}/api',
-                params={'t': 'caps', 'apikey': api_key, 'output': 'json'},
-                timeout=PROBE_TIMEOUT,
-            )
-        except Exception as exc:
-            _log_failure('Newznab indexer', exc)
-            checks.append(
-                _check('indexer', STATUS_FAIL, _transport_code(exc), name)
-            )
+        endpoints = client.endpoints()
+        idx_resp = None
+        for i, url in enumerate(endpoints):
+            try:
+                idx_resp = _get(
+                    url,
+                    params={
+                        't': 'caps',
+                        'apikey': client.api_key,
+                        'output': 'json',
+                    },
+                    timeout=PROBE_TIMEOUT,
+                )
+            except Exception as exc:
+                _log_failure('Newznab indexer', exc)
+                checks.append(
+                    _check('indexer', STATUS_FAIL, _transport_code(exc), name)
+                )
+                break
+            if idx_resp.status_code == 404 and i < len(endpoints) - 1:
+                # Prowlarr-style base without the classic /api path.
+                continue
+            break
+        if idx_resp is None:
             continue
         if idx_resp.status_code in {401, 403}:
             checks.append(_check('indexer', STATUS_FAIL, 'bad_key', name))

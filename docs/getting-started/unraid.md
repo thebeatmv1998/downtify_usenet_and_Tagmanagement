@@ -43,7 +43,9 @@ DrunkenSlug, …) and hand the resulting NZB to SABnzbd:
    e.g. `/mnt/user/downloads/complete` → `/usenet`. Use the same path SABnzbd
    itself reports, or set `complete_dir` in Downtify's settings to the mount path.
 2. In **Settings → Usenet**, add your indexer(s) (name, base URL, API key) and the
-   SABnzbd connection (URL, API key, category `music`).
+   SABnzbd connection (URL, API key, category `music`). Prowlarr works as the
+   Newznab source too: base URL `http://<host>:9696` (its Newznab endpoint
+   `/api/v1/search` is used automatically) plus the Prowlarr API key.
 3. Use the built-in connection test to verify SABnzbd and every indexer.
 4. Put `usenet` at the top of the source order if you want Usenet tried first.
 

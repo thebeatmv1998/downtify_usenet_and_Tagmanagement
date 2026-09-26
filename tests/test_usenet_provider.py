@@ -371,3 +371,55 @@ def test_wait_for_sabnzbd_stops_when_deadline_passed(tmp_path, monkeypatch):
     assert usenet._wait_for_sabnzbd(
         client, 'nzo1', _settings(tmp_path), deadline=0.0
     ) is None
+
+
+def test_newznab_client_falls_back_to_prowlarr_endpoint(monkeypatch):
+    calls: list[str] = []
+
+    class FakeResp:
+        def __init__(self, status):
+            self.status_code = status
+            self.content = b''
+
+        def raise_for_status(self):
+            if self.status_code >= 400:
+                raise RuntimeError(f'HTTP {self.status_code}')
+
+    def fake_get(url, **kwargs):
+        calls.append(url)
+        # Classic /api missing (Prowlarr), /api/v1/search answers.
+        return FakeResp(404 if url.endswith('/api') else 200)
+
+    monkeypatch.setattr(usenet.httpx, 'get', fake_get)
+    client = usenet.NewznabClient(
+        {'name': 'prowlarr', 'base_url': 'http://prowlarr:9696', 'api_key': 'k'}
+    )
+    resp = client._get({'t': 'search'})
+    assert resp.status_code == 200
+    assert calls == [
+        'http://prowlarr:9696/api',
+        'http://prowlarr:9696/api/v1/search',
+    ]
+
+
+def test_newznab_client_explicit_endpoint_used_verbatim(monkeypatch):
+    calls: list[str] = []
+
+    class FakeResp:
+        status_code = 200
+        content = b''
+
+        def raise_for_status(self):
+            return None
+
+    monkeypatch.setattr(
+        usenet.httpx, 'get', lambda url, **kw: calls.append(url) or FakeResp()
+    )
+    client = usenet.NewznabClient({
+        'name': 'prowlarr',
+        'base_url': 'http://prowlarr:9696/api/v1/search',
+        'api_key': 'k',
+    })
+    assert client.endpoints() == ['http://prowlarr:9696/api/v1/search']
+    client._get({'t': 'search'})
+    assert calls == ['http://prowlarr:9696/api/v1/search']
