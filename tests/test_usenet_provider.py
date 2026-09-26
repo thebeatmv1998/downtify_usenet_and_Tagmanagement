@@ -345,3 +345,29 @@ def test_cleanup_schedules_history_delete(tmp_path, monkeypatch):
     found = download_from_usenet(dict(_SONG), settings)
     assert found == audio
     assert len(timers) == 1
+
+
+def test_download_timeout_deadline_aborts_before_search(tmp_path, monkeypatch):
+    settings = _settings(tmp_path, download_timeout_seconds=60)
+    searched: list[int] = []
+    monkeypatch.setattr(
+        usenet,
+        '_search_indexers',
+        lambda indexers, query: searched.append(1) or [],
+    )
+    # A deadline in the past must abort before any indexer is contacted.
+    monkeypatch.setattr(usenet, '_usenet_deadline', lambda s: 0.0)
+    assert download_from_usenet(dict(_SONG), settings) is None
+    assert not searched
+
+
+def test_wait_for_sabnzbd_stops_when_deadline_passed(tmp_path, monkeypatch):
+    _mock_sabnzbd(
+        monkeypatch,
+        {'nzo_id': 'nzo1', 'status': 'Downloading', 'percentage': 10},
+        queued=[],
+    )
+    client = SabnzbdClient(_settings(tmp_path))
+    assert usenet._wait_for_sabnzbd(
+        client, 'nzo1', _settings(tmp_path), deadline=0.0
+    ) is None

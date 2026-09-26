@@ -89,6 +89,23 @@ _MIN_IMPLIED_KBPS = 96
 _MAX_IMPLIED_KBPS = 2500
 _STRICT_DURATION_SECONDS = 3
 _CLEANUP_DELAY_SECONDS = 60.0
+_DEFAULT_DOWNLOAD_TIMEOUT_SECONDS = 600
+
+
+def _usenet_deadline(settings: dict[str, Any]) -> float:
+    """Wall-clock budget for one track (search + queue + fetch), as slskd."""
+    seconds = _int_setting(
+        settings,
+        'download_timeout_seconds',
+        _DEFAULT_DOWNLOAD_TIMEOUT_SECONDS,
+        minimum=30,
+        maximum=3600,
+    )
+    return time.monotonic() + seconds
+
+
+def _past_deadline(deadline: float) -> bool:
+    return time.monotonic() >= deadline
 
 
 # ── Newznab ──────────────────────────────────────────────────────────
@@ -637,15 +654,19 @@ def _wait_for_sabnzbd(
     settings: dict[str, Any],
     *,
     progress_cb: Optional[ProgressCallback] = None,
+    deadline: float = 0.0,
 ) -> Optional[dict[str, Any]]:
     """Poll queue/history until the job completes; returns the history slot."""
     interval = _int_setting(
         settings, 'poll_interval_seconds', 5, minimum=1, maximum=30
     )
     attempts = _int_setting(
-        settings, 'poll_max_attempts', 180, minimum=1, maximum=10000
+        settings, 'poll_max_attempts', 180, minimum=1, maximum=1000
     )
     for attempt in range(max(1, attempts)):
+        if _past_deadline(deadline):
+            logger.info('usenet: download timed out nzo={}', nzo_id)
+            return None
         try:
             slot = client.history_slot(nzo_id)
         except Exception as exc:
@@ -766,9 +787,15 @@ def download_from_usenet(  # noqa: PLR0914  # search, rank, queue, poll, verify
     complete_dir = Path(str(sab.get('complete_dir') or '/usenet'))
 
     with _usenet_semaphore(settings):
+        deadline = _usenet_deadline(settings)
         report(5.0, 'searching')
         ranked: list[dict[str, Any]] = []
         for query in queries:
+            if _past_deadline(deadline):
+                logger.info(
+                    'usenet: search timed out title={!r}', song.get('name')
+                )
+                break
             releases = _search_indexers(indexers, query)
             if not releases:
                 continue
@@ -799,6 +826,14 @@ def download_from_usenet(  # noqa: PLR0914  # search, rank, queue, poll, verify
         report(36.0, f'queued ({len(ranked)} candidates)')
 
         for attempt_idx, release in enumerate(ranked, start=1):
+            if _past_deadline(deadline):
+                logger.info(
+                    'usenet: download timed out title={!r} tried={}/{}',
+                    song.get('name'),
+                    attempt_idx - 1,
+                    len(ranked),
+                )
+                break
             release_name = str(release.get('title') or '')[:120]
             nzb_url = str(release.get('nzb_url') or '')
             nzo_id: Optional[str] = None
@@ -833,7 +868,8 @@ def download_from_usenet(  # noqa: PLR0914  # search, rank, queue, poll, verify
                 continue
 
             slot = _wait_for_sabnzbd(
-                client, nzo_id, settings, progress_cb=progress_cb
+                client, nzo_id, settings,
+                progress_cb=progress_cb, deadline=deadline,
             )
             if slot is None:
                 continue

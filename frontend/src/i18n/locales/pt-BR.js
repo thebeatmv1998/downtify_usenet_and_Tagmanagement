@@ -843,7 +843,7 @@ export default {
       connection_not_navidrome:
         'Algo respondeu em {url}, mas não parece ser o Navidrome. Confira o endereço e a porta.',
       connection_http_error: 'O servidor respondeu com um erro ({detail}).',
-      auth_bad_key: 'O slskd recusou a chave de API.',
+      auth_bad_key: 'O servidor recusou a chave de API.',
       auth_bad_credentials: 'O Navidrome recusou o usuário ou a senha.',
       auth_api_error: 'O Navidrome respondeu: {detail}',
       soulseek_ok: 'O slskd está conectado ao Soulseek.',
@@ -851,7 +851,7 @@ export default {
         'O slskd não está conectado ao Soulseek. Ele não encontrará nada até se conectar.',
       folder_ok: 'O Downtify consegue ler {detail}.',
       folder_missing:
-        'O Downtify não consegue ler {detail}. Essa deve ser a pasta onde o slskd baixa, montada neste contêiner.',
+        'O Downtify não consegue ler {detail}. Essa deve ser a pasta de download do slskd ou do SABnzbd, montada neste contêiner.',
       scan_ok: 'Esta conta pode iniciar varreduras da biblioteca.',
       scan_not_admin:
         'Esta conta não pode iniciar varreduras da biblioteca — o Navidrome só permite a administradores. Preencha o usuário e a senha de administrador para as músicas novas aparecerem mais cedo.',

@@ -840,7 +840,7 @@ export default {
       connection_not_navidrome:
         '{url} adresinde bir şey yanıt verdi ama Navidrome’a benzemiyor. Adresi ve bağlantı noktasını denetleyin.',
       connection_http_error: 'Sunucu bir hatayla yanıt verdi ({detail}).',
-      auth_bad_key: 'slskd API anahtarını reddetti.',
+      auth_bad_key: 'Sunucu API anahtarını reddetti.',
       auth_bad_credentials: 'Navidrome kullanıcı adını veya parolayı reddetti.',
       auth_api_error: 'Navidrome şunu yanıtladı: {detail}',
       soulseek_ok: 'slskd Soulseek’e bağlı.',
@@ -848,7 +848,7 @@ export default {
         'slskd Soulseek’e bağlı değil. Bağlanana kadar hiçbir şey bulamaz.',
       folder_ok: 'Downtify {detail} yolunu okuyabiliyor.',
       folder_missing:
-        'Downtify {detail} yolunu okuyamıyor. Burası slskd’nin indirdiği klasör olmalı ve bu kapsayıcıya bağlanmış olmalı.',
+        'Downtify {detail} yolunu okuyamıyor. Burası slskd’nin veya SABnzbd’nin indirdiği klasör olmalı ve bu kapsayıcıya bağlanmış olmalı.',
       scan_ok: 'Bu hesap kitaplık taraması başlatabilir.',
       scan_not_admin:
         'Bu hesap kitaplık taraması başlatamaz — Navidrome bunu yalnızca yöneticilere verir. Yeni şarkılar daha erken görünsün diye yönetici kullanıcı adını ve parolasını doldurun.',

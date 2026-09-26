@@ -849,7 +849,7 @@ export default {
       connection_not_navidrome:
         'Κάτι απάντησε στο {url}, αλλά δεν μοιάζει με Navidrome. Ελέγξτε τη διεύθυνση και τη θύρα.',
       connection_http_error: 'Ο διακομιστής απάντησε με σφάλμα ({detail}).',
-      auth_bad_key: 'Το slskd απέρριψε το κλειδί API.',
+      auth_bad_key: 'Ο διακομιστής απέρριψε το κλειδί API.',
       auth_bad_credentials:
         'Το Navidrome απέρριψε το όνομα χρήστη ή τον κωδικό.',
       auth_api_error: 'Το Navidrome απάντησε: {detail}',
@@ -858,7 +858,7 @@ export default {
         'Το slskd δεν είναι συνδεδεμένο στο Soulseek. Δεν θα βρίσκει τίποτα μέχρι να συνδεθεί.',
       folder_ok: 'Το Downtify μπορεί να διαβάσει το {detail}.',
       folder_missing:
-        'Το Downtify δεν μπορεί να διαβάσει το {detail}. Πρέπει να είναι ο φάκελος όπου κατεβάζει το slskd, προσαρτημένος σε αυτό το container.',
+        'Το Downtify δεν μπορεί να διαβάσει το {detail}. Πρέπει να είναι ο φάκελος λήψης του slskd ή του SABnzbd, προσαρτημένος σε αυτό το container.',
       scan_ok:
         'Αυτός ο λογαριασμός μπορεί να ξεκινήσει σαρώσεις της βιβλιοθήκης.',
       scan_not_admin:

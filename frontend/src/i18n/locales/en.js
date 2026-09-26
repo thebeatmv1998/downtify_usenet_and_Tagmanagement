@@ -823,7 +823,7 @@ export default {
       connection_not_navidrome:
         "Something answered at {url}, but it doesn't look like Navidrome. Check the address and port.",
       connection_http_error: 'The server answered with an error ({detail}).',
-      auth_bad_key: 'slskd rejected the API key.',
+      auth_bad_key: 'The server rejected the API key.',
       auth_bad_credentials: 'Navidrome rejected the username or password.',
       auth_api_error: 'Navidrome answered: {detail}',
       soulseek_ok: 'slskd is logged in to Soulseek.',
@@ -831,7 +831,7 @@ export default {
         "slskd isn't logged in to Soulseek. It will find nothing until it is.",
       folder_ok: 'Downtify can read {detail}.',
       folder_missing:
-        "Downtify can't read {detail}. That must be the folder slskd downloads into, mounted in this container.",
+        "Downtify can't read {detail}. That must be the download folder of slskd or SABnzbd, mounted in this container.",
       scan_ok: 'This account can start library scans.',
       scan_not_admin:
         "This account can't start library scans — Navidrome only lets admins. Fill in the admin username and password so new songs show up sooner.",

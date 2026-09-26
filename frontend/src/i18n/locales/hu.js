@@ -843,7 +843,7 @@ export default {
       connection_not_navidrome:
         'A(z) {url} címen válaszolt valami, de nem úgy néz ki, mint a Navidrome. Ellenőrizd a címet és a portot.',
       connection_http_error: 'A szerver hibával válaszolt ({detail}).',
-      auth_bad_key: 'A slskd elutasította az API-kulcsot.',
+      auth_bad_key: 'A szerver elutasította az API-kulcsot.',
       auth_bad_credentials:
         'A Navidrome elutasította a felhasználónevet vagy a jelszót.',
       auth_api_error: 'A Navidrome ezt válaszolta: {detail}',
@@ -852,7 +852,7 @@ export default {
         'A slskd nincs bejelentkezve a Soulseekbe. Addig nem talál semmit.',
       folder_ok: 'A Downtify olvasni tudja ezt: {detail}.',
       folder_missing:
-        'A Downtify nem tudja olvasni ezt: {detail}. Ennek kell lennie annak a mappának, ahová a slskd letölt, és be kell csatolni ebbe a konténerbe.',
+        'A Downtify nem tudja olvasni ezt: {detail}. Ennek kell lennie a slskd vagy a SABnzbd letöltési mappájának, és be kell csatolni ebbe a konténerbe.',
       scan_ok: 'Ez a fiók indíthat könyvtárvizsgálatot.',
       scan_not_admin:
         'Ez a fiók nem indíthat könyvtárvizsgálatot — a Navidrome ezt csak adminisztrátoroknak engedi. Add meg az admin felhasználónevet és jelszót, hogy az új számok előbb megjelenjenek.',

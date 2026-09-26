@@ -3,6 +3,19 @@
 Downtify runs on Unraid as a Docker container. A ready-made template ships in the
 repository at [`unraid/downtify.xml`](https://github.com/henriquesebastiao/downtify/blob/main/unraid/downtify.xml).
 
+> **This fork:** the Usenet audio source is only in this repository, not in the
+> official `downtify/downtify` image. Build the image yourself and point the
+> template's **Repository** at it, e.g. on your Unraid box:
+>
+> ```sh
+> git clone https://github.com/betterix/downtify /mnt/user/appdata/downtify-src
+> cd /mnt/user/appdata/downtify-src
+> docker build -t downtify-usenet:latest .
+> ```
+>
+> Then set **Repository** to `downtify-usenet:latest` in **Docker → Add
+> Container** (see below).
+
 ## Installation
 
 1. In the Unraid web UI, open **Docker → Add Container**.

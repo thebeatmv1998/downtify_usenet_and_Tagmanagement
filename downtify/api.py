@@ -1316,13 +1316,13 @@ def search_endpoint(query: str = Query('')) -> list[dict[str, Any]]:
     results = providers.search_songs(query, limit=20)
     if results:
         return results
-    q = query.strip()
-    if not q or 'slskd' not in _effective_audio_providers(state.settings):
+    audio_providers = _effective_audio_providers(state.settings)
+    if not query.strip() or not {'slskd', 'usenet'} & set(audio_providers):
         return []
-    # With slskd enabled, a search YouTube Music has nothing for can still
-    # be downloaded from Soulseek: offer the query itself as a track
-    # ("Artist - Title" is split into artist and title).
-    stub = providers.song_stub_from_text_query(q)
+    # With slskd or usenet enabled, a search YouTube Music has nothing for
+    # can still be downloaded from Soulseek or Usenet: offer the query
+    # itself as a track ("Artist - Title" is split into artist and title).
+    stub = providers.song_stub_from_text_query(q := query.strip())
     if stub is None:
         return []
     logger.info(
