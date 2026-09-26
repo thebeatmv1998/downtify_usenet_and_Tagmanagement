@@ -134,6 +134,7 @@
               <SourceOrder
                 v-model="s.audio_providers"
                 @enable-slskd="s.slskd.enabled = true"
+                @enable-usenet="s.usenet.enabled = true"
               />
             </SettingGroup>
 
@@ -205,6 +206,160 @@
                   <UiSwitch
                     v-model="s.slskd.leave_in_place"
                     :aria-label="t('settings.slskdInPlace')"
+                  />
+                </SettingRow>
+              </template>
+            </SettingGroup>
+
+            <SettingGroup
+              :title="t('settings.usenetTitle')"
+              :description="t('settings.usenetHint')"
+            >
+              <SettingRow
+                :label="t('settings.usenetEnabled')"
+                :description="t('settings.usenetEnabledHint')"
+              >
+                <UiSwitch
+                  v-model="s.usenet.enabled"
+                  :aria-label="t('settings.usenetEnabled')"
+                />
+              </SettingRow>
+              <template v-if="s.usenet.enabled">
+                <div class="grid gap-4 px-5 py-4 sm:grid-cols-2">
+                  <UiInput
+                    v-model.trim="s.usenet.sabnzbd.base_url"
+                    :label="t('settings.usenetSabUrl')"
+                    placeholder="http://sabnzbd:8080"
+                    type="url"
+                    :error="needsValue(s.usenet.sabnzbd.base_url)"
+                  />
+                  <UiInput
+                    v-model.trim="s.usenet.sabnzbd.api_key"
+                    :label="t('settings.usenetSabKey')"
+                    type="password"
+                    :error="needsValue(s.usenet.sabnzbd.api_key)"
+                  />
+                  <UiInput
+                    v-model.trim="s.usenet.sabnzbd.category"
+                    :label="t('settings.usenetCategory')"
+                    placeholder="music"
+                  />
+                  <UiInput
+                    v-model.trim="s.usenet.sabnzbd.complete_dir"
+                    :label="t('settings.usenetCompleteDir')"
+                    :hint="t('settings.usenetCompleteDirHint')"
+                    placeholder="/usenet"
+                    mono
+                  />
+                  <div class="grid grid-cols-2 gap-3">
+                    <UiInput
+                      v-model="s.usenet.download_timeout_seconds"
+                      :label="t('settings.usenetTimeout')"
+                      type="number"
+                      min="30"
+                      max="7200"
+                      suffix="s"
+                    />
+                    <UiInput
+                      v-model="s.usenet.min_score"
+                      :label="t('settings.usenetMinScore')"
+                      type="number"
+                      min="0"
+                      max="100"
+                    />
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <UiInput
+                      v-model="s.usenet.duration_tolerance_seconds"
+                      :label="t('settings.usenetDurationSeconds')"
+                      type="number"
+                      min="1"
+                      max="120"
+                      suffix="s"
+                    />
+                    <UiInput
+                      v-model="s.usenet.duration_tolerance_percent"
+                      :label="t('settings.usenetDurationPercent')"
+                      type="number"
+                      min="1"
+                      max="100"
+                      suffix="%"
+                    />
+                  </div>
+                </div>
+                <div class="flex flex-col gap-3 px-5 py-4">
+                  <div>
+                    <p class="text-sm font-semibold">
+                      {{ t('settings.usenetIndexers') }}
+                    </p>
+                    <p class="text-xs text-pretty text-muted">
+                      {{ t('settings.usenetIndexersHint') }}
+                    </p>
+                  </div>
+                  <div
+                    v-for="(indexer, i) in s.usenet.indexers"
+                    :key="i"
+                    class="flex flex-col gap-3 rounded-[12px] border border-line-2 p-3"
+                  >
+                    <div class="grid gap-3 sm:grid-cols-2">
+                      <UiInput
+                        v-model.trim="indexer.name"
+                        :label="t('settings.usenetIndexerName')"
+                        placeholder="NZBGeek"
+                      />
+                      <UiInput
+                        v-model.trim="indexer.base_url"
+                        :label="t('settings.usenetIndexerUrl')"
+                        placeholder="https://api.nzbgeek.info"
+                        type="url"
+                      />
+                    </div>
+                    <div class="flex items-end gap-3">
+                      <div class="min-w-0 flex-1">
+                        <UiInput
+                          v-model.trim="indexer.api_key"
+                          :label="t('settings.usenetIndexerKey')"
+                          type="password"
+                        />
+                      </div>
+                      <UiSwitch
+                        v-model="indexer.enabled"
+                        :aria-label="
+                          indexer.name || t('settings.usenetIndexerName')
+                        "
+                      />
+                      <UiIconButton
+                        icon="trash"
+                        :label="t('settings.usenetRemoveIndexer')"
+                        size="sm"
+                        @click="removeUsenetIndexer(i)"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <UiButton
+                      variant="secondary"
+                      icon="plus"
+                      @click="addUsenetIndexer"
+                    >
+                      {{ t('settings.usenetAddIndexer') }}
+                    </UiButton>
+                  </div>
+                </div>
+                <div class="px-5 py-4">
+                  <ConnectionTest
+                    kind="usenet"
+                    :config="s.usenet"
+                    :url="s.usenet.sabnzbd.base_url"
+                  />
+                </div>
+                <SettingRow
+                  :label="t('settings.usenetCleanup')"
+                  :description="t('settings.usenetCleanupHint')"
+                >
+                  <UiSwitch
+                    v-model="s.usenet.cleanup"
+                    :aria-label="t('settings.usenetCleanup')"
                   />
                 </SettingRow>
               </template>
@@ -719,6 +874,20 @@ const section = computed(() => {
 
 function needsValue(value) {
   return String(value ?? '').trim() ? '' : t('settings.required')
+}
+
+function addUsenetIndexer() {
+  if (!Array.isArray(s.value.usenet.indexers)) s.value.usenet.indexers = []
+  s.value.usenet.indexers.push({
+    name: '',
+    base_url: '',
+    api_key: '',
+    enabled: true,
+  })
+}
+
+function removeUsenetIndexer(index) {
+  s.value.usenet.indexers.splice(index, 1)
 }
 
 const templateTokens = [

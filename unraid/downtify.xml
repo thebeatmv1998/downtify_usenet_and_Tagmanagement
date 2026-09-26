@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>downtify</Name>
+  <Repository>downtify/downtify</Repository>
+  <Registry>https://hub.docker.com/r/downtify/downtify</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/henriquesebastiao/downtify/issues</Support>
+  <Project>https://github.com/henriquesebastiao/downtify</Project>
+  <Overview>Download music from Spotify and YouTube Music playlists, with optional Soulseek (slskd) and Usenet (Newznab indexer + SABnzbd) audio sources.</Overview>
+  <Category>MediaApp:Music Tools:</Category>
+  <WebUI>http://[IP]:[PORT:8000]/</WebUI>
+  <TemplateURL/>
+  <Icon>https://raw.githubusercontent.com/henriquesebastiao/downtify/main/assets/logo.png</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires/>
+  <Config Name="WebUI Port" Target="8000" Default="30321" Mode="tcp" Description="Container Port: 8000 (DOWNTIFY_PORT). Map any free host port." Type="Port" Display="always" Required="true" Mask="false">8000</Config>
+  <Config Name="Downloads" Target="/downloads" Default="/mnt/user/downloads/music/downtify" Mode="rw" Description="Downloaded music library." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/downloads/music/downtify</Config>
+  <Config Name="App Data" Target="/data" Default="/mnt/user/appdata/downtify" Mode="rw" Description="Settings, databases, cookies.txt — survives image updates." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/downtify</Config>
+  <Config Name="slskd downloads" Target="/slskd" Default="" Mode="rw" Description="Optional: slskd download folder, when using the Soulseek audio source." Type="Path" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="SABnzbd complete" Target="/usenet" Default="" Mode="rw" Description="Optional: SABnzbd 'Completed Downloads' folder, when using the Usenet audio source. Mount it with the SAME container path SABnzbd uses, or set 'complete_dir' in Downtify's settings to /usenet." Type="Path" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="PUID" Target="UID" Default="99" Mode="" Description="Container Variable: UID" Type="Variable" Display="always" Required="false" Mask="false">99</Config>
+  <Config Name="PGID" Target="GID" Default="100" Mode="" Description="Container Variable: GID" Type="Variable" Display="always" Required="false" Mask="false">100</Config>
+  <Config Name="UMASK" Target="UMASK" Default="022" Mode="" Description="Container Variable: UMASK" Type="Variable" Display="advanced" Required="false" Mask="false">022</Config>
+  <Config Name="TZ" Target="TZ" Default="Europe/Berlin" Mode="" Description="Container Variable: TZ" Type="Variable" Display="always" Required="false" Mask="false">Europe/Berlin</Config>
+  <Config Name="Downtify Port" Target="DOWNTIFY_PORT" Default="8000" Mode="" Description="Internal port Downtify listens on. Keep in sync with the WebUI Port target." Type="Variable" Display="advanced" Required="false" Mask="false">8000</Config>
+  <Config Name="Cookies file" Target="DOWNTIFY_COOKIES_FILE" Default="" Mode="" Description="Optional: container path of a YouTube cookies.txt (e.g. /data/cookies.txt) to bypass YouTube's bot check. Can also be uploaded in Settings." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="YT player clients" Target="DOWNTIFY_YT_PLAYER_CLIENTS" Default="" Mode="" Description="Optional: comma-separated yt-dlp player_client override (e.g. android,web_embedded)." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="YT PO Token" Target="DOWNTIFY_YT_PO_TOKEN" Default="" Mode="" Description="Optional: comma-separated PO Tokens in the form client.context+token (e.g. web.gvs+ABC123) to bypass YouTube's bot check." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+</Container>

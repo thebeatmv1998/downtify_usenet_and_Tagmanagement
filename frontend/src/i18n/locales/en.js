@@ -587,6 +587,8 @@ export default {
     sourceYtmHint: 'Best metadata matches',
     sourceYt: 'YouTube',
     sourceYtHint: 'Fallback for songs missing from YouTube Music',
+    sourceUsenet: 'Usenet (SABnzbd)',
+    sourceUsenetHint: 'Newznab indexers + SABnzbd — often lossless',
     slskdTitle: 'slskd',
     slskdHint:
       'Download from Soulseek through your slskd server. Tracks it can’t find fall through to the next source.',
@@ -598,6 +600,33 @@ export default {
     slskdFolderHint: 'The path inside the Downtify container, not on the host.',
     slskdTimeout: 'Total timeout',
     slskdQueuedTimeout: 'Queued timeout',
+    usenetTitle: 'Usenet',
+    usenetHint:
+      'Download from Usenet: search Newznab indexers, download with SABnzbd. Releases it can’t find fall through to the next source.',
+    usenetEnabled: 'Use Usenet',
+    usenetEnabledHint:
+      'Needs SABnzbd and at least one Newznab indexer with an API key.',
+    usenetSabUrl: 'SABnzbd URL',
+    usenetSabKey: 'SABnzbd API key',
+    usenetCategory: 'SABnzbd category',
+    usenetCompleteDir: 'Completed downloads folder',
+    usenetCompleteDirHint:
+      'The path inside the Downtify container, not on the host.',
+    usenetCleanup: 'Clean up SABnzbd afterwards',
+    usenetCleanupHint:
+      'Remove the history entry and SABnzbd’s copy once the file is in your downloads.',
+    usenetIndexers: 'Newznab indexers',
+    usenetIndexersHint:
+      'All enabled indexers are searched in parallel; the best release wins.',
+    usenetIndexerName: 'Name',
+    usenetIndexerUrl: 'Indexer URL',
+    usenetIndexerKey: 'API key',
+    usenetAddIndexer: 'Add indexer',
+    usenetRemoveIndexer: 'Remove',
+    usenetTimeout: 'Total timeout',
+    usenetMinScore: 'Minimum match score',
+    usenetDurationSeconds: 'Duration tolerance',
+    usenetDurationPercent: 'Duration tolerance %',
     slskdInPlace: 'Leave files in the slskd folder',
     slskdInPlaceHint:
       'Tag them where slskd saved them instead of copying into your downloads folder.',
@@ -686,6 +715,18 @@ export default {
         'That address is not valid. Start it with http:// or https://.',
       connection_tls:
         "The HTTPS certificate isn't trusted. Use http://, or a certificate from a trusted authority.",
+      connection_not_sabnzbd:
+        "Something answered at {url}, but it doesn't look like SABnzbd. Check the address and port.",
+      indexer_ok: 'Indexer {detail} answered.',
+      indexer_missing: 'Fill in the indexer URL and API key ({detail}).',
+      indexer_bad_key: 'Indexer {detail} rejected the API key.',
+      indexer_http_error: 'Indexer {detail} answered with an error.',
+      indexer_unreachable:
+        "Can't reach indexer {detail}. Check the address and that it's running.",
+      indexer_timeout: "Indexer {detail} didn't answer in time.",
+      indexer_bad_url: 'The indexer address is not valid ({detail}).',
+      indexer_tls:
+        "The indexer's HTTPS certificate isn't trusted ({detail}).",
       connection_not_slskd:
         "Something answered at {url}, but it doesn't look like slskd. Check the address and port.",
       connection_not_navidrome:

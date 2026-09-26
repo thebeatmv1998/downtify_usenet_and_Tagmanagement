@@ -34,6 +34,12 @@ _NETSCAPE_FIELD_COUNT = 7
 
 _USEFUL_DOMAINS = ('youtube.com', 'google.com')
 
+#: First line browsers' export extensions write on a Netscape cookie jar.
+_NETSCAPE_HEADERS = (
+    '# Netscape HTTP Cookie File',
+    '# HTTP Cookie File',
+)
+
 
 class InvalidCookiesFile(ValueError):
     """Raised when an upload isn't a usable Netscape cookies.txt."""
@@ -96,6 +102,14 @@ def validate_cookies(content: bytes) -> list[str]:
 
     warnings: list[str] = []
     domains = {fields[0].lstrip('.').lower() for fields in records}
+    useful_records = [
+        fields
+        for fields in records
+        if any(
+            fields[0].lstrip('.').lower().endswith(useful)
+            for useful in _USEFUL_DOMAINS
+        )
+    ]
     if not any(
         domain.endswith(useful)
         for domain in domains
@@ -106,7 +120,87 @@ def validate_cookies(content: bytes) -> list[str]:
             'Export it from a tab logged into YouTube, otherwise it '
             "won't help with age-restricted tracks."
         )
+    expiry_warning = _expiry_warning(useful_records)
+    if expiry_warning is not None:
+        warnings.append(expiry_warning)
     return warnings
+
+
+def _expiry_warning(records: list[list[str]]) -> Optional[str]:
+    """Warning when every relevant cookie in *records* has expired.
+
+    Expiry ``0`` marks a session cookie — browsers don't persist those
+    to the exported file, so they're treated as still valid. Expired
+    session cookies can't be told apart from live ones by the file
+    alone, but fixed-expiry cookies (which carry YouTube's actual login
+    state) can be, and if all of those are in the past the jar won't
+    authenticate anything.
+    """
+
+    if not records:
+        return None
+    now = datetime.now(tz=timezone.utc).timestamp()
+    expiries: list[float] = []
+    for fields in records:
+        try:
+            expiry = float(fields[4])
+        except ValueError:
+            # An unparsable expiry is a broken record, not an expired one.
+            continue
+        if expiry > 0:
+            expiries.append(expiry)
+    if not expiries:
+        # Only session cookies — nothing checkable, assume the best.
+        return None
+    if any(expiry > now for expiry in expiries):
+        return None
+    return (
+        'All youtube.com/google.com cookies in this file have expired. '
+        'Export a fresh cookies.txt while still logged into YouTube, '
+        "otherwise downloads will keep failing with YouTube's "
+        '"Sign in to confirm you\'re not a bot" check.'
+    )
+
+
+def check_cookies_file(path: Path | str) -> tuple[bool, Optional[str]]:
+    """Check the cookie jar at *path*, returning ``(ok, warning)``.
+
+    ``ok`` is ``False`` when the file can't work at all (missing,
+    unreadable, or not a Netscape cookies.txt) — *warning* then holds
+    the reason. A usable-but-suspicious file returns ``True`` with a
+    warning describing the suspicion (no YouTube cookies, everything
+    expired). The file content is never logged; it holds session tokens.
+    """
+
+    file_path = Path(path)
+    try:
+        content = file_path.read_bytes()
+    except OSError as exc:
+        return False, f'Cookies file {file_path} is not readable: {exc}'
+    try:
+        warnings = validate_cookies(content)
+    except InvalidCookiesFile as exc:
+        return False, f'Cookies file {file_path} is invalid: {exc}'
+    return True, warnings[0] if warnings else None
+
+
+def default_cookiefile() -> str:
+    """Cookie file for ad-hoc yt-dlp runs, or ``''`` when none exists.
+
+    Mirrors :meth:`CookiesStore.active_path` for callers that have no
+    store instance (the provider search helpers): the environment
+    variable wins, otherwise the uploaded file at its default location
+    under ``DATABASE_DIR``. Only existing files are returned so the
+    result can be passed straight to yt-dlp's ``cookiefile``.
+    """
+
+    env_path = os.getenv(ENV_VAR, '').strip()
+    if env_path and Path(env_path).is_file():
+        return env_path
+    store_path = Path(os.getenv('DATABASE_DIR', '/data')) / 'cookies.txt'
+    if store_path.is_file():
+        return str(store_path)
+    return ''
 
 
 class CookiesStore:

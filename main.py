@@ -416,6 +416,7 @@ def build_app() -> FastAPI:
         ),
         audio_providers=api._effective_audio_providers(api.state.settings),
         slskd_settings=api._effective_slskd_settings(api.state.settings),
+        usenet_settings=api._effective_usenet_settings(api.state.settings),
     )
     api.providers.set_cover_resolution(
         api._clamp_cover_resolution(

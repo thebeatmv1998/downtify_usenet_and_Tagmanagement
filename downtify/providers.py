@@ -32,6 +32,7 @@ from ytmusicapi.navigation import (
 )
 from ytmusicapi.parsers.library import parse_albums as _parse_ytm_albums
 
+from .cookies import default_cookiefile
 from .telemetry import json_log_blob, redact_sensitive_mapping
 
 
@@ -1192,14 +1193,29 @@ def _youtube_core_title(title: Any) -> str:
 
 
 def _youtube_search(query: str, limit: int) -> list[dict[str, Any]]:
-    """Flat standard-YouTube search results (``ytsearch``) via yt-dlp."""
+    """Flat standard-YouTube search results (``ytsearch``) via yt-dlp.
+
+    Uses the same cookies, player clients, PO Tokens and EJS challenge
+    solver as the download path: the search is exactly what YouTube
+    answers with "Sign in to confirm you're not a bot" on flagged IPs,
+    so running it bare would break the fallback match for every song.
+    """
+
+    # Imported lazily: downloader imports this module at module level,
+    # so a top-level import here would be circular.
+    from .downloader import youtube_extractor_args  # noqa: PLC0415
 
     opts: dict[str, Any] = {
         'quiet': True,
         'no_warnings': True,
         'skip_download': True,
         'extract_flat': 'in_playlist',
+        'extractor_args': youtube_extractor_args(),
+        'remote_components': ['ejs:github'],
     }
+    cookiefile = default_cookiefile()
+    if cookiefile:
+        opts['cookiefile'] = cookiefile
     if os.getenv('DOWNTIFY_FORCE_IPV4', '').strip() in {'1', 'true', 'yes'}:
         opts['source_address'] = '0.0.0.0'
     with yt_dlp.YoutubeDL(opts) as ydl:

@@ -170,6 +170,7 @@ from .track_index import (
     resolve_existing_download,
 )
 from .update_check import UpdateChecker
+from .usenet_provider import reset_usenet_parallelism
 
 MIN_PARALLEL_DOWNLOADS = 1
 
@@ -219,6 +220,27 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         'extensions': ['mp3', 'flac'],
         'min_bitrate': 256,
     },
+    # Usenet via Newznab indexers + SABnzbd, used when 'usenet' is in
+    # audio_providers.
+    'usenet': {
+        'enabled': False,
+        'indexers': [],
+        'sabnzbd': {
+            'base_url': '',
+            'api_key': '',
+            'category': 'music',
+            'complete_dir': '/usenet',
+        },
+        'timeout_seconds': 20,
+        'download_timeout_seconds': 900,
+        'poll_interval_seconds': 5,
+        'poll_max_attempts': 180,
+        'duration_tolerance_seconds': 10,
+        'duration_tolerance_percent': 15,
+        'extensions': ['flac', 'mp3'],
+        'min_score': 5,
+        'cleanup': True,
+    },
     # Navidrome (Subsonic API) playlist sync after playlist downloads.
     'sync_navidrome': True,
     'navidrome': {
@@ -252,7 +274,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
 # Settings stored as nested objects: saved values are merged over the
 # defaults key by key, so a settings.json from an older version still gets
 # every newer option.
-_NESTED_SETTINGS = ('slskd', 'navidrome', 'library_upgrade')
+_NESTED_SETTINGS = ('slskd', 'usenet', 'navidrome', 'library_upgrade')
 
 
 def _clamp_parallel_downloads(value: Any) -> int:
@@ -390,33 +412,111 @@ def _effective_slskd_settings(settings: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _usenet_extensions(raw: dict[str, Any]) -> list[str]:
+    value = raw.get('extensions')
+    if isinstance(value, str):
+        value = value.split(',')
+    if not isinstance(value, list):
+        value = []
+    extensions = [
+        str(e).strip().lower().lstrip('.') for e in value if str(e).strip()
+    ]
+    return extensions or ['flac', 'mp3']
+
+
+def _effective_usenet_settings(settings: dict[str, Any]) -> dict[str, Any]:
+    """Normalized usenet settings (URLs trimmed, numbers clamped).
+
+    Indexers are normalized one by one; the SABnzbd connection lives in the
+    ``sabnzbd`` sub-dict. The parallel-download limit is taken from the
+    global setting, capped at 8 for usenet.
+    """
+
+    raw = settings.get('usenet')
+    if not isinstance(raw, dict):
+        raw = {}
+
+    def bounded(key: str, default: int, low: int, high: int) -> int:
+        return _setting_int(raw, key, default, minimum=low, maximum=high)
+
+    indexers: list[dict[str, Any]] = []
+    raw_indexers = raw.get('indexers')
+    for row in raw_indexers if isinstance(raw_indexers, list) else []:
+        if not isinstance(row, dict):
+            continue
+        indexers.append({
+            'name': str(row.get('name') or '').strip(),
+            'base_url': str(row.get('base_url') or '').strip().rstrip('/'),
+            'api_key': str(row.get('api_key') or '').strip(),
+            'enabled': bool(row.get('enabled', True)),
+        })
+
+    sab = raw.get('sabnzbd')
+    sab = sab if isinstance(sab, dict) else {}
+    sabnzbd = {
+        'base_url': str(sab.get('base_url') or '').strip().rstrip('/'),
+        'api_key': str(sab.get('api_key') or '').strip(),
+        'category': str(sab.get('category') or 'music').strip() or 'music',
+        'complete_dir': str(sab.get('complete_dir') or '/usenet').strip(),
+    }
+
+    return {
+        'enabled': bool(raw.get('enabled', False)),
+        'indexers': indexers,
+        'sabnzbd': sabnzbd,
+        'timeout_seconds': bounded('timeout_seconds', 20, 5, 120),
+        'download_timeout_seconds': bounded(
+            'download_timeout_seconds', 900, 30, 7200
+        ),
+        'poll_interval_seconds': bounded('poll_interval_seconds', 5, 1, 30),
+        'poll_max_attempts': bounded('poll_max_attempts', 180, 1, 1000),
+        'duration_tolerance_seconds': bounded(
+            'duration_tolerance_seconds', 10, 1, 120
+        ),
+        'duration_tolerance_percent': bounded(
+            'duration_tolerance_percent', 15, 1, 100
+        ),
+        'extensions': _usenet_extensions(raw),
+        'min_score': bounded('min_score', 5, 0, 100),
+        'cleanup': bool(raw.get('cleanup', True)),
+        'max_parallel_downloads': _setting_int(
+            settings, 'max_parallel_downloads', 3, minimum=1, maximum=8
+        ),
+    }
+
+
 def _effective_audio_providers(settings: dict[str, Any]) -> list[str]:
     """Enabled audio providers in the configured order.
 
-    slskd is dropped while it's disabled. When slskd is the only provider
-    left, YouTube Music and YouTube are appended as fallbacks so a track
-    slskd can't find still downloads.
+    slskd and usenet are dropped while disabled. When the only provider
+    left is slskd or usenet, YouTube Music and YouTube are appended as
+    fallbacks so a track the audio provider can't find still downloads.
     """
 
     slskd_enabled = bool(_effective_slskd_settings(settings).get('enabled'))
+    usenet_enabled = bool(_effective_usenet_settings(settings).get('enabled'))
     out: list[str] = []
     for raw in settings.get('audio_providers') or []:
         name = str(raw or '').strip()
         if name == 'slskd' and not slskd_enabled:
             continue
+        if name == 'usenet' and not usenet_enabled:
+            continue
         if name in AUDIO_PROVIDERS and name not in out:
             out.append(name)
     if not out:
         return ['youtube-music']
-    if out == ['slskd']:
+    if out in (['slskd'], ['usenet']):
         out += ['youtube-music', 'youtube']
     return out
 
 
 def _validate_integration_settings(
-    slskd: dict[str, Any], navidrome: dict[str, Any]
+    slskd: dict[str, Any],
+    navidrome: dict[str, Any],
+    usenet: Optional[dict[str, Any]] = None,
 ) -> None:
-    """Reject enabling slskd/Navidrome without the fields they need."""
+    """Reject enabling slskd/Navidrome/usenet without the fields they need."""
 
     if slskd.get('enabled'):
         if not slskd.get('base_url'):
@@ -440,6 +540,35 @@ def _validate_integration_settings(
                     status_code=400,
                     detail=f'Navidrome {label} is required when enabled',
                 )
+    usenet = usenet if isinstance(usenet, dict) else {}
+    if usenet.get('enabled'):
+        sab = usenet.get('sabnzbd')
+        sab = sab if isinstance(sab, dict) else {}
+        if not sab.get('base_url'):
+            raise HTTPException(
+                status_code=400,
+                detail='SABnzbd base URL is required when usenet is enabled',
+            )
+        if not sab.get('api_key'):
+            raise HTTPException(
+                status_code=400,
+                detail='SABnzbd API key is required when usenet is enabled',
+            )
+        indexers = usenet.get('indexers')
+        usable = [
+            row
+            for row in (indexers if isinstance(indexers, list) else [])
+            if isinstance(row, dict)
+            and row.get('enabled')
+            and row.get('base_url')
+            and row.get('api_key')
+        ]
+        if not usable:
+            raise HTTPException(
+                status_code=400,
+                detail='At least one enabled indexer with base URL and API '
+                'key is required when usenet is enabled',
+            )
 
 
 def _organize_enabled() -> bool:
@@ -831,6 +960,22 @@ async def _schedule_playlist_refresh_after_download(
     asyncio.create_task(_run())
 
 
+def _merge_nested_setting(key: str, saved: dict[str, Any]) -> dict[str, Any]:
+    """Merge a nested setting over its defaults.
+
+    For ``usenet`` the SABnzbd sub-dict is deep-merged (older saves may
+    lack newer keys) while the ``indexers`` list is replaced wholesale by
+    the saved value.
+    """
+    merged = {**DEFAULT_SETTINGS[key], **saved}
+    if key == 'usenet' and isinstance(saved.get('sabnzbd'), dict):
+        merged['sabnzbd'] = {
+            **DEFAULT_SETTINGS['usenet']['sabnzbd'],
+            **saved['sabnzbd'],
+        }
+    return merged
+
+
 def _load_settings(path: Path) -> dict[str, Any]:
     """Load saved settings from *path*, merging with DEFAULT_SETTINGS as base."""
     try:
@@ -841,7 +986,7 @@ def _load_settings(path: Path) -> dict[str, Any]:
                 if k not in DEFAULT_SETTINGS:
                     continue
                 if k in _NESTED_SETTINGS and isinstance(v, dict):
-                    merged[k] = {**DEFAULT_SETTINGS[k], **v}
+                    merged[k] = _merge_nested_setting(k, v)
                 else:
                     merged[k] = v
             merged['max_parallel_downloads'] = _clamp_parallel_downloads(
@@ -3187,9 +3332,11 @@ async def update_settings_endpoint(
         pending = {**state.settings, **payload}
         slskd_cfg = _effective_slskd_settings(pending)
         navidrome_cfg = _effective_navidrome_settings(pending)
+        usenet_cfg = _effective_usenet_settings(pending)
         _validate_integration_settings(
             slskd_cfg if 'slskd' in payload else {},
             navidrome_cfg if 'navidrome' in payload else {},
+            usenet_cfg if 'usenet' in payload else {},
         )
         for key, raw_value in payload.items():
             if key not in DEFAULT_SETTINGS:
@@ -3210,16 +3357,27 @@ async def update_settings_endpoint(
                 }
             elif key == 'navidrome':
                 state.settings[key] = navidrome_cfg
+            elif key == 'usenet':
+                # Same as slskd: the parallel limit is derived from
+                # max_parallel_downloads, not stored with usenet's options.
+                state.settings[key] = {
+                    k: v
+                    for k, v in usenet_cfg.items()
+                    if k != 'max_parallel_downloads'
+                }
             else:
                 state.settings[key] = raw_value
-        if {'audio_providers', 'slskd'} & set(payload):
+        if {'audio_providers', 'slskd', 'usenet'} & set(payload):
             state.settings['audio_providers'] = _effective_audio_providers(
                 state.settings
             )
         if state.downloader is not None:
-            if {'audio_providers', 'slskd', 'max_parallel_downloads'} & set(
-                payload
-            ):
+            if {
+                'audio_providers',
+                'slskd',
+                'usenet',
+                'max_parallel_downloads',
+            } & set(payload):
                 state.downloader.slskd_settings = (
                     state.downloader._normalize_slskd_settings(
                         _effective_slskd_settings(state.settings)
@@ -3227,6 +3385,11 @@ async def update_settings_endpoint(
                 )
                 state.downloader.slskd_settings['output_dir'] = str(
                     state.downloader.download_dir
+                )
+                state.downloader.usenet_settings = (
+                    state.downloader._normalize_usenet_settings(
+                        _effective_usenet_settings(state.settings)
+                    )
                 )
                 state.downloader.audio_providers = _effective_audio_providers(
                     state.settings
@@ -3267,6 +3430,9 @@ async def update_settings_endpoint(
                 state.settings['max_parallel_downloads']
             )
             reset_slskd_parallelism(_effective_slskd_settings(state.settings))
+            reset_usenet_parallelism(
+                _effective_usenet_settings(state.settings)
+            )
         if 'cover_resolution' in payload:
             providers.set_cover_resolution(state.settings['cover_resolution'])
     if state.settings_path is not None:
@@ -3298,6 +3464,23 @@ async def test_slskd_endpoint(request: Request) -> dict[str, Any]:
         'slskd': payload or (saved if isinstance(saved, dict) else {}),
     })
     return await asyncio.to_thread(integration_check.check_slskd, cfg)
+
+
+@router.post('/api/usenet/test')
+async def test_usenet_endpoint(request: Request) -> dict[str, Any]:
+    """Try a usenet configuration without saving it.
+
+    Same shape as ``POST /api/slskd/test``, with the ``usenet`` settings
+    object (indexers plus SABnzbd connection) as the body.
+    """
+
+    payload = await _json_object(request)
+    saved = state.settings.get('usenet')
+    cfg = _effective_usenet_settings({
+        **state.settings,
+        'usenet': payload or (saved if isinstance(saved, dict) else {}),
+    })
+    return await asyncio.to_thread(integration_check.check_usenet, cfg)
 
 
 @router.post('/api/navidrome/test')

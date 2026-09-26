@@ -593,6 +593,8 @@ export default {
     sourceYtmHint: 'Най-добри съвпадения на метаданни',
     sourceYt: 'YouTube',
     sourceYtHint: 'Резерва за песни, които липсват в YouTube Music',
+    sourceUsenet: 'Usenet (SABnzbd)',
+    sourceUsenetHint: 'Newznab индекси + SABnzbd — често без загуби',
     slskdTitle: 'slskd',
     slskdHint:
       'Изтегляй от Soulseek чрез своя slskd сървър. Ненамерените песни минават към следващия източник.',
@@ -604,6 +606,33 @@ export default {
     slskdFolderHint: 'Пътят в контейнера на Downtify, не на хоста.',
     slskdTimeout: 'Общо време за изчакване',
     slskdQueuedTimeout: 'Време за изчакване в опашка',
+    usenetTitle: 'Usenet',
+    usenetHint:
+      'Изтегляне от Usenet: търсене в Newznab индекси, изтегляне чрез SABnzbd. Каквото не намери, преминава към следващия източник.',
+    usenetEnabled: 'Използвай Usenet',
+    usenetEnabledHint:
+      'Изисква SABnzbd и поне един Newznab индекс с API ключ.',
+    usenetSabUrl: 'Адрес на SABnzbd',
+    usenetSabKey: 'API ключ на SABnzbd',
+    usenetCategory: 'Категория в SABnzbd',
+    usenetCompleteDir: 'Папка за завършени изтегляния',
+    usenetCompleteDirHint:
+      'Пътят в контейнера на Downtify, не на хоста.',
+    usenetCleanup: 'Почистване на SABnzbd след това',
+    usenetCleanupHint:
+      'Премахва записа от историята и копието на SABnzbd, след като файлът е във вашите изтегляния.',
+    usenetIndexers: 'Newznab индекси',
+    usenetIndexersHint:
+      'Всички активни индекси се търсят паралелно; печели най-доброто издание.',
+    usenetIndexerName: 'Име',
+    usenetIndexerUrl: 'Адрес на индекса',
+    usenetIndexerKey: 'API ключ',
+    usenetAddIndexer: 'Добави индекс',
+    usenetRemoveIndexer: 'Премахни',
+    usenetTimeout: 'Общ лимит',
+    usenetMinScore: 'Минимален резултат за съвпадение',
+    usenetDurationSeconds: 'Толеранс на продължителността',
+    usenetDurationPercent: 'Толеранс на продължителността %',
     slskdInPlace: 'Остави файловете в папката на slskd',
     slskdInPlaceHint:
       'Тагва ги там, където slskd ги е запазил, вместо да ги копира в папката за изтегляния.',
@@ -695,6 +724,19 @@ export default {
         'Този адрес не е валиден. Започнете с http:// или https://.',
       connection_tls:
         'HTTPS сертификатът не е доверен. Използвайте http:// или сертификат от доверен орган.',
+      connection_not_sabnzbd:
+        'Нещо отговори на {url}, но не прилича на SABnzbd. Проверете адреса и порта.',
+      indexer_ok: 'Индексът {detail} отговори.',
+      indexer_missing:
+        'Попълнете адреса и API ключа на индекса ({detail}).',
+      indexer_bad_key: 'Индексът {detail} отхвърли API ключа.',
+      indexer_http_error: 'Индексът {detail} отговори с грешка.',
+      indexer_unreachable:
+        'Индексът {detail} е недостъпен. Проверете адреса и че работи.',
+      indexer_timeout: 'Индексът {detail} не отговори навреме.',
+      indexer_bad_url: 'Адресът на индекса е невалиден ({detail}).',
+      indexer_tls:
+        'HTTPS сертификатът на индекса не е доверен ({detail}).',
       connection_not_slskd:
         'Нещо отговори на {url}, но не прилича на slskd. Проверете адреса и порта.',
       connection_not_navidrome:

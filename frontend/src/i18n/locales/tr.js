@@ -601,6 +601,8 @@ export default {
     sourceYtmHint: 'En iyi meta veri eşleşmeleri',
     sourceYt: 'YouTube',
     sourceYtHint: 'YouTube Music’te olmayan şarkılar için yedek',
+    sourceUsenet: 'Usenet (SABnzbd)',
+    sourceUsenetHint: 'Newznab indeksleri + SABnzbd — çoğu zaman kayıpsız',
     slskdTitle: 'slskd',
     slskdHint:
       'Soulseek’ten slskd sunucun üzerinden indir. Bulunamayan parçalar sonraki kaynağa geçer.',
@@ -612,6 +614,33 @@ export default {
     slskdFolderHint: 'Ana makinedeki değil, Downtify kapsayıcısındaki yol.',
     slskdTimeout: 'Toplam zaman aşımı',
     slskdQueuedTimeout: 'Kuyruk zaman aşımı',
+    usenetTitle: 'Usenet',
+    usenetHint:
+      'Usenet’ten indir: Newznab indekslerinde ara, SABnzbd ile indir. Bulamadıkları bir sonraki kaynağa geçer.',
+    usenetEnabled: 'Usenet kullan',
+    usenetEnabledHint:
+      'SABnzbd ve API anahtarlı en az bir Newznab indeksi gerekir.',
+    usenetSabUrl: 'SABnzbd adresi',
+    usenetSabKey: 'SABnzbd API anahtarı',
+    usenetCategory: 'SABnzbd kategorisi',
+    usenetCompleteDir: 'Tamamlanan indirmeler klasörü',
+    usenetCompleteDirHint:
+      'Ana makinedeki değil, Downtify konteynerindeki yol.',
+    usenetCleanup: 'Sonrasında SABnzbd’yi temizle',
+    usenetCleanupHint:
+      'Dosya indirmelerinize kopyalandıktan sonra geçmiş girdisini ve SABnzbd’nin kopyasını siler.',
+    usenetIndexers: 'Newznab indeksleri',
+    usenetIndexersHint:
+      'Etkin tüm indeksler paralel aranır; en iyi sürüm kazanır.',
+    usenetIndexerName: 'Ad',
+    usenetIndexerUrl: 'İndeks adresi',
+    usenetIndexerKey: 'API anahtarı',
+    usenetAddIndexer: 'İndeks ekle',
+    usenetRemoveIndexer: 'Kaldır',
+    usenetTimeout: 'Toplam zaman aşımı',
+    usenetMinScore: 'En düşük eşleşme puanı',
+    usenetDurationSeconds: 'Süre toleransı',
+    usenetDurationPercent: 'Süre toleransı %',
     slskdInPlace: 'Dosyaları slskd klasöründe bırak',
     slskdInPlaceHint:
       'İndirme klasörüne kopyalamak yerine slskd’nin kaydettiği yerde etiketle.',
@@ -701,6 +730,17 @@ export default {
         'Bu adres geçerli değil. http:// veya https:// ile başlayın.',
       connection_tls:
         'HTTPS sertifikası güvenilir değil. http:// kullanın ya da güvenilir bir yetkiliden sertifika alın.',
+      connection_not_sabnzbd:
+        '{url} adresinde bir şey yanıt verdi ama SABnzbd’ye benzemiyor. Adresi ve portu kontrol edin.',
+      indexer_ok: '{detail} indeksi yanıt verdi.',
+      indexer_missing: 'İndeks adresini ve API anahtarını doldurun ({detail}).',
+      indexer_bad_key: '{detail} indeksi API anahtarını reddetti.',
+      indexer_http_error: '{detail} indeksi bir hatayla yanıt verdi.',
+      indexer_unreachable:
+        '{detail} indeksine ulaşılamıyor. Adresi ve çalıştığını kontrol edin.',
+      indexer_timeout: '{detail} indeksi zamanında yanıt vermedi.',
+      indexer_bad_url: 'İndeks adresi geçerli değil ({detail}).',
+      indexer_tls: 'İndeksin HTTPS sertifikasına güvenilmiyor ({detail}).',
       connection_not_slskd:
         '{url} adresinde bir şey yanıt verdi ama slskd’ye benzemiyor. Adresi ve bağlantı noktasını denetleyin.',
       connection_not_navidrome:

@@ -601,6 +601,8 @@ export default {
     sourceYtmHint: 'Legjobb metaadat-egyezések',
     sourceYt: 'YouTube',
     sourceYtHint: 'Tartalék a YouTube Musicból hiányzó dalokhoz',
+    sourceUsenet: 'Usenet (SABnzbd)',
+    sourceUsenetHint: 'Newznab indexerek + SABnzbd — gyakran veszteségmentes',
     slskdTitle: 'slskd',
     slskdHint:
       'Letöltés a Soulseekről a slskd szervereden át. A nem talált számok a következő forráshoz kerülnek.',
@@ -613,6 +615,33 @@ export default {
       'Az útvonal a Downtify konténeren belül, nem a gazdagépen.',
     slskdTimeout: 'Teljes időkorlát',
     slskdQueuedTimeout: 'Sorban állási időkorlát',
+    usenetTitle: 'Usenet',
+    usenetHint:
+      'Letöltés Usenetről: keresés Newznab indexerekben, letöltés SABnzbd-vel. Ami nem található, a következő forrásra kerül.',
+    usenetEnabled: 'Usenet használata',
+    usenetEnabledHint:
+      'SABnzbd és legalább egy API-kulcsos Newznab indexer szükséges.',
+    usenetSabUrl: 'SABnzbd címe',
+    usenetSabKey: 'SABnzbd API-kulcs',
+    usenetCategory: 'SABnzbd kategória',
+    usenetCompleteDir: 'Kész letöltések mappája',
+    usenetCompleteDirHint:
+      'Az útvonal a Downtify konténeren belül, nem a gazdagépen.',
+    usenetCleanup: 'SABnzbd takarítása utána',
+    usenetCleanupHint:
+      'Törli az előzménybejegyzést és a SABnzbd másolatát, amint a fájl a letöltéseidben van.',
+    usenetIndexers: 'Newznab indexerek',
+    usenetIndexersHint:
+      'Minden engedélyezett indexer párhuzamosan keres; a legjobb kiadás nyer.',
+    usenetIndexerName: 'Név',
+    usenetIndexerUrl: 'Indexer címe',
+    usenetIndexerKey: 'API-kulcs',
+    usenetAddIndexer: 'Indexer hozzáadása',
+    usenetRemoveIndexer: 'Eltávolítás',
+    usenetTimeout: 'Teljes időkorlát',
+    usenetMinScore: 'Minimális találati pontszám',
+    usenetDurationSeconds: 'Hossztűrés',
+    usenetDurationPercent: 'Hossztűrés %',
     slskdInPlace: 'Fájlok hagyása az slskd mappában',
     slskdInPlaceHint:
       'Ott címkézi őket, ahová az slskd mentette, ahelyett hogy a letöltési mappába másolná.',
@@ -704,6 +733,18 @@ export default {
         'Ez a cím érvénytelen. http://-vel vagy https://-sel kezdődjön.',
       connection_tls:
         'A HTTPS-tanúsítvány nem megbízható. Használj http://-t, vagy megbízható hatóság tanúsítványát.',
+      connection_not_sabnzbd:
+        'Valami válaszolt a(z) {url} címen, de nem SABnzbd-nek tűnik. Ellenőrizd a címet és a portot.',
+      indexer_ok: 'A(z) {detail} indexer válaszolt.',
+      indexer_missing: 'Töltsd ki az indexer címét és API-kulcsát ({detail}).',
+      indexer_bad_key: 'A(z) {detail} indexer elutasította az API-kulcsot.',
+      indexer_http_error: 'A(z) {detail} indexer hibával válaszolt.',
+      indexer_unreachable:
+        'A(z) {detail} indexer nem érhető el. Ellenőrizd a címet és hogy fut-e.',
+      indexer_timeout: 'A(z) {detail} indexer nem válaszolt időben.',
+      indexer_bad_url: 'Az indexer címe érvénytelen ({detail}).',
+      indexer_tls:
+        'Az indexer HTTPS-tanúsítványa nem megbízható ({detail}).',
       connection_not_slskd:
         'A(z) {url} címen válaszolt valami, de nem úgy néz ki, mint a slskd. Ellenőrizd a címet és a portot.',
       connection_not_navidrome:

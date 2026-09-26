@@ -25,6 +25,7 @@ from downtify.api import (
     _effective_audio_providers,
     _effective_lyrics_providers,
     _effective_slskd_settings,
+    _effective_usenet_settings,
     _load_settings,
     artist_info_endpoint,
     artist_similar_endpoint,
@@ -761,3 +762,180 @@ def test_update_settings_applies_providers_and_slskd_to_downloader(
     assert downloader.audio_providers == ['slskd', 'youtube-music']
     assert downloader.slskd_settings['enabled'] is True
     assert downloader.slskd_settings['output_dir'] == str(tmp_path)
+
+
+# ── usenet settings ──────────────────────────────────────────────────
+
+
+def test_default_settings_has_usenet():
+    usenet = DEFAULT_SETTINGS['usenet']
+    assert usenet['enabled'] is False
+    assert usenet['indexers'] == []
+    assert usenet['sabnzbd']['category'] == 'music'
+    assert usenet['extensions'] == ['flac', 'mp3']
+    assert usenet['cleanup'] is True
+
+
+def test_effective_usenet_settings_defaults_when_missing():
+    out = _effective_usenet_settings({})
+    assert out['enabled'] is False
+    assert out['indexers'] == []
+    assert out['sabnzbd']['complete_dir'] == '/usenet'
+    assert out['timeout_seconds'] == 20
+    assert out['min_score'] == 5
+
+
+def test_effective_usenet_settings_normalizes_values():
+    out = _effective_usenet_settings({
+        'usenet': {
+            'enabled': True,
+            'indexers': [
+                {
+                    'name': ' NZBGeek ',
+                    'base_url': 'https://api.nzbgeek.info/',
+                    'api_key': '  key ',
+                },
+                'not-a-dict',
+            ],
+            'sabnzbd': {
+                'base_url': 'http://sab:8080/',
+                'api_key': ' sabkey ',
+                'category': '',
+                'complete_dir': '/data/usenet',
+            },
+            'timeout_seconds': '90',
+            'poll_max_attempts': 99999,
+            'extensions': 'FLAC, .ogg',
+        }
+    })
+    assert out['enabled'] is True
+    assert out['indexers'] == [
+        {
+            'name': 'NZBGeek',
+            'base_url': 'https://api.nzbgeek.info',
+            'api_key': 'key',
+            'enabled': True,
+        }
+    ]
+    assert out['sabnzbd']['base_url'] == 'http://sab:8080'
+    assert out['sabnzbd']['api_key'] == 'sabkey'
+    assert out['sabnzbd']['category'] == 'music'
+    assert out['sabnzbd']['complete_dir'] == '/data/usenet'
+    assert out['timeout_seconds'] == 90
+    assert out['poll_max_attempts'] == 1000
+    assert out['extensions'] == ['flac', 'ogg']
+
+
+def test_effective_usenet_settings_caps_parallelism_at_eight():
+    out = _effective_usenet_settings({'max_parallel_downloads': 30})
+    assert out['max_parallel_downloads'] == 8
+
+
+def test_load_settings_deep_merges_usenet_dict(tmp_path):
+    path = tmp_path / 'settings.json'
+    path.write_text(
+        json.dumps({
+            'usenet': {
+                'indexers': [
+                    {
+                        'name': 'i',
+                        'base_url': 'http://idx',
+                        'api_key': 'k',
+                        'enabled': True,
+                    }
+                ],
+                'sabnzbd': {'base_url': 'http://sab:8080'},
+            },
+        }),
+        encoding='utf-8',
+    )
+    out = _load_settings(path)
+    # The saved indexers list wins wholesale; the sabnzbd dict deep-merges.
+    assert len(out['usenet']['indexers']) == 1
+    assert out['usenet']['sabnzbd']['base_url'] == 'http://sab:8080'
+    assert out['usenet']['sabnzbd']['category'] == 'music'
+    assert out['usenet']['sabnzbd']['complete_dir'] == '/usenet'
+
+
+def _enabled_usenet(**overrides):
+    usenet = {
+        'enabled': True,
+        'indexers': [
+            {'base_url': 'http://idx', 'api_key': 'k', 'enabled': True}
+        ],
+        'sabnzbd': {'base_url': 'http://sab:8080', 'api_key': 'k'},
+    }
+    usenet.update(overrides)
+    return usenet
+
+
+def test_update_settings_rejects_enabled_usenet_without_sabnzbd(
+    monkeypatch,
+):
+    with pytest.raises(HTTPException) as exc_info:
+        _update(
+            monkeypatch,
+            {'usenet': _enabled_usenet(sabnzbd={'base_url': '', 'api_key': ''})},
+        )
+    assert exc_info.value.status_code == 400
+    assert 'SABnzbd' in exc_info.value.detail
+    assert api.state.settings['usenet']['enabled'] is False
+
+
+def test_update_settings_rejects_enabled_usenet_without_indexer(
+    monkeypatch,
+):
+    with pytest.raises(HTTPException) as exc_info:
+        _update(monkeypatch, {'usenet': _enabled_usenet(indexers=[])})
+    assert exc_info.value.status_code == 400
+    assert 'indexer' in exc_info.value.detail
+
+
+def test_update_settings_rejects_enabled_usenet_with_only_disabled_indexers(
+    monkeypatch,
+):
+    usenet = _enabled_usenet(
+        indexers=[{'base_url': 'http://idx', 'api_key': 'k'}]
+    )
+    usenet['indexers'][0]['enabled'] = False
+    with pytest.raises(HTTPException) as exc_info:
+        _update(monkeypatch, {'usenet': usenet})
+    assert exc_info.value.status_code == 400
+
+
+def test_update_settings_applies_usenet_to_downloader(monkeypatch, tmp_path):
+    downloader = Downloader(tmp_path)
+    out = _update(
+        monkeypatch,
+        {
+            'audio_providers': ['usenet', 'youtube-music'],
+            'usenet': _enabled_usenet(),
+        },
+        downloader=downloader,
+    )
+    assert out['audio_providers'] == ['usenet', 'youtube-music']
+    assert out['usenet']['enabled'] is True
+    assert 'max_parallel_downloads' not in out['usenet']
+    assert downloader.audio_providers == ['usenet', 'youtube-music']
+    assert downloader.usenet_settings['enabled'] is True
+    assert downloader.usenet_settings['sabnzbd']['base_url'] == (
+        'http://sab:8080'
+    )
+
+
+def test_usenet_test_endpoint(monkeypatch):
+    captured = []
+
+    def _check(cfg):
+        captured.append(cfg)
+        return {'ok': True, 'server': 'SABnzbd 4.0.0', 'checks': []}
+
+    monkeypatch.setattr(api.integration_check, 'check_usenet', _check)
+    monkeypatch.setattr(api.state, 'settings', dict(DEFAULT_SETTINGS))
+    payload = {
+        'sabnzbd': {'base_url': 'http://sab:8080/', 'api_key': 'k'},
+        'indexers': [],
+    }
+    out = asyncio.run(api.test_usenet_endpoint(_JsonRequest(payload)))
+    assert out['ok'] is True
+    assert captured[0]['sabnzbd']['base_url'] == 'http://sab:8080'

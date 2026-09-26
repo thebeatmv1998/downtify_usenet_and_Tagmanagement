@@ -226,3 +226,94 @@ def test_audio_providers_are_normalized():
         'slskd',
         'youtube',
     ]) == ['slskd', 'youtube']
+    assert Downloader._normalize_audio_providers([
+        'usenet',
+        'bogus',
+        'usenet',
+    ]) == ['usenet']
+
+
+def test_usenet_dispatch_enabled(tmp_path, monkeypatch, no_youtube):
+    calls = []
+
+    def _usenet(song, settings, progress_cb=None):
+        calls.append(song)
+
+    monkeypatch.setattr(downloader_mod, 'download_from_usenet', _usenet)
+    monkeypatch.setattr(
+        downloader_mod, 'find_match', lambda song: ('vid12345678', {})
+    )
+    d = Downloader(
+        tmp_path,
+        audio_providers=['usenet', 'youtube-music'],
+        usenet_settings={'enabled': True},
+    )
+
+    assert d.download(dict(_SONG)) == 'Artist - Track.mp3'
+    # usenet was tried first; YouTube Music took over when it found nothing.
+    assert len(calls) == 1
+    assert no_youtube == ['https://music.youtube.com/watch?v=vid12345678']
+
+
+def test_usenet_disabled_is_skipped(tmp_path, monkeypatch, no_youtube):
+    def _boom(*args, **kwargs):
+        raise AssertionError('usenet must not be searched when disabled')
+
+    monkeypatch.setattr(downloader_mod, 'download_from_usenet', _boom)
+    monkeypatch.setattr(
+        downloader_mod, 'find_match', lambda song: ('vid12345678', {})
+    )
+    d = Downloader(
+        tmp_path,
+        audio_providers=['usenet', 'youtube-music'],
+        usenet_settings={'enabled': False},
+    )
+
+    assert d.download(dict(_SONG)) == 'Artist - Track.mp3'
+    assert no_youtube == ['https://music.youtube.com/watch?v=vid12345678']
+
+
+def test_usenet_local_source_is_copied_to_destination(
+    tmp_path, monkeypatch, no_youtube
+):
+    usenet_dir = tmp_path / 'usenet'
+    source = usenet_dir / 'Artist - Track.mp3'
+    usenet_dir.mkdir()
+    _minimal_mp3(source)
+
+    monkeypatch.setattr(
+        downloader_mod, 'download_from_usenet', lambda *a, **k: source
+    )
+    monkeypatch.setattr(
+        downloader_mod, '_download_cover', lambda url: b'IMG-BYTES'
+    )
+    d = Downloader(
+        tmp_path / 'downloads',
+        audio_providers=['usenet'],
+        usenet_settings={'enabled': True},
+    )
+
+    stored = d.download(dict(_SONG))
+
+    assert stored == 'Artist - Track.mp3'
+    assert (tmp_path / 'downloads' / 'Artist - Track.mp3').is_file()
+    assert no_youtube == []
+
+
+def test_no_audio_match_mentions_audio_when_usenet_enabled(
+    tmp_path, monkeypatch, no_youtube
+):
+    monkeypatch.setattr(
+        downloader_mod, 'download_from_usenet', lambda *a, **k: None
+    )
+    monkeypatch.setattr(
+        downloader_mod, 'find_match', lambda song: (None, None)
+    )
+    d = Downloader(
+        tmp_path,
+        audio_providers=['usenet', 'youtube-music'],
+        usenet_settings={'enabled': True},
+    )
+
+    with pytest.raises(RuntimeError, match='an audio match'):
+        d.download(dict(_SONG))

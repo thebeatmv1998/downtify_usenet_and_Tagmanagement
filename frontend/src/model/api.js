@@ -301,6 +301,10 @@ function testNavidrome(config) {
   return API.post('/api/navidrome/test', config)
 }
 
+function testUsenet(config) {
+  return API.post('/api/usenet/test', config)
+}
+
 function setSettings(settings) {
   return API.post('/api/settings/update', settings, {
     params: { client_id: sessionID },
@@ -354,6 +358,7 @@ export default {
   setSettings,
   testSlskd,
   testNavidrome,
+  testUsenet,
   getCookiesStatus,
   uploadCookies,
   deleteCookies,

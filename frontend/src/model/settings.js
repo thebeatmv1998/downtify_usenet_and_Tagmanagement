@@ -24,6 +24,25 @@ const settings = ref({
     extensions: ['mp3', 'flac'],
     min_bitrate: 256,
   },
+  usenet: {
+    enabled: false,
+    indexers: [],
+    sabnzbd: {
+      base_url: '',
+      api_key: '',
+      category: 'music',
+      complete_dir: '/usenet',
+    },
+    timeout_seconds: 20,
+    download_timeout_seconds: 900,
+    poll_interval_seconds: 5,
+    poll_max_attempts: 180,
+    duration_tolerance_seconds: 10,
+    duration_tolerance_percent: 15,
+    extensions: ['flac', 'mp3'],
+    min_score: 5,
+    cleanup: true,
+  },
   lyrics_providers: [''],
   download_lyrics: true,
   format: '',
@@ -68,7 +87,7 @@ const MIN_COVER_RESOLUTION = 300
 const MAX_COVER_RESOLUTION = 1200
 
 const settingsOptions = {
-  audio_providers: ['youtube', 'youtube-music', 'slskd'],
+  audio_providers: ['youtube', 'youtube-music', 'slskd', 'usenet'],
   lyrics_providers: ['lrclib', 'genius', 'musixmatch', 'azlyrics'],
   format: ['mp3', 'flac', 'ogg', 'opus', 'm4a'],
   bitrate: ['128', '192', '256', '320'],
@@ -114,6 +133,17 @@ export function clampCoverResolution(value) {
   return Math.min(MAX_COVER_RESOLUTION, Math.max(MIN_COVER_RESOLUTION, parsed))
 }
 
+// Merge the nested usenet block: `sabnzbd` key by key (older saves may
+// lack newer keys), the `indexers` list wholesale from the server.
+function mergeUsenet(base, saved) {
+  const incoming = saved || {}
+  return {
+    ...base,
+    ...incoming,
+    sabnzbd: { ...base.sabnzbd, ...(incoming.sabnzbd || {}) },
+  }
+}
+
 // Last state the server confirmed — the settings page compares against
 // it to show a "Save changes" bar only when something actually changed.
 const saved = ref('')
@@ -131,6 +161,7 @@ API.getSettings()
       ...settings.value,
       ...res.data,
       slskd: { ...settings.value.slskd, ...(res.data.slskd || {}) },
+      usenet: mergeUsenet(settings.value.usenet, res.data.usenet),
       navidrome: { ...settings.value.navidrome, ...(res.data.navidrome || {}) },
     }
     saved.value = snapshot()
@@ -160,6 +191,7 @@ async function saveSettings() {
       ...settings.value,
       ...res.data,
       slskd: { ...settings.value.slskd, ...(res.data.slskd || {}) },
+      usenet: mergeUsenet(settings.value.usenet, res.data.usenet),
       navidrome: { ...settings.value.navidrome, ...(res.data.navidrome || {}) },
     }
     saved.value = snapshot()

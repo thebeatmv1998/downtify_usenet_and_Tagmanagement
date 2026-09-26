@@ -13,6 +13,7 @@ export const KNOWN_CODES = new Set([
   'connection_bad_url',
   'connection_tls',
   'connection_not_slskd',
+  'connection_not_sabnzbd',
   'connection_not_navidrome',
   'connection_http_error',
   'auth_bad_key',
@@ -22,6 +23,14 @@ export const KNOWN_CODES = new Set([
   'soulseek_offline',
   'folder_ok',
   'folder_missing',
+  'indexer_ok',
+  'indexer_missing',
+  'indexer_bad_key',
+  'indexer_http_error',
+  'indexer_unreachable',
+  'indexer_timeout',
+  'indexer_bad_url',
+  'indexer_tls',
   'scan_ok',
   'scan_not_admin',
   'scan_not_admin_separate',
@@ -61,10 +70,17 @@ export function describeTest(result, { url = '' } = {}) {
 
 /** True when a test can be started: every required field has a value. */
 export function canTest(config, fields) {
-  return fields.every((field) => String(config?.[field] ?? '').trim() !== '')
+  return fields.every((field) => {
+    // Dotted paths reach into nested blocks (usenet's sabnzbd sub-object).
+    const value = field
+      .split('.')
+      .reduce((cur, part) => cur?.[part], config ?? undefined)
+    return String(value ?? '').trim() !== ''
+  })
 }
 
 export const REQUIRED_FIELDS = {
   slskd: ['base_url', 'api_key'],
   navidrome: ['url', 'username', 'password'],
+  usenet: ['sabnzbd.base_url', 'sabnzbd.api_key'],
 }

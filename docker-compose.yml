@@ -11,6 +11,10 @@ services:
       - ./docker/data:/data
       # slskd's download folder, when using the slskd audio source:
       # - ./docker/slskd:/slskd
+      # SABnzbd's "Completed Downloads" folder, when using the usenet audio
+      # source (mount with the same path SABnzbd reports, or set
+      # complete_dir=/usenet in Settings → Usenet):
+      # - ./docker/usenet:/usenet
       # - ./docker/cookies.txt:/cookies.txt
     environment:
       - DOWNTIFY_PORT=30321

@@ -9,6 +9,7 @@ export const NAV = [
       { title: 'Overview', page: 'getting-started/index.md' },
       { title: 'Installation', page: 'getting-started/installation.md' },
       { title: 'Docker Compose', page: 'getting-started/docker-compose.md' },
+      { title: 'Unraid', page: 'getting-started/unraid.md' },
       { title: 'One-Click Install', page: 'getting-started/one-click.md' },
       {
         title: 'Environment Variables',

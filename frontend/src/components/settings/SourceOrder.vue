@@ -2,9 +2,9 @@
   <ProviderOrder
     :model-value="modelValue"
     :providers="providers"
-    :first-when-enabled="['slskd']"
+    :first-when-enabled="['slskd', 'usenet']"
     @update:model-value="(value) => $emit('update:modelValue', value)"
-    @enabled="(id) => id === 'slskd' && $emit('enable-slskd')"
+    @enabled="onEnabled"
   >
     <template #badge="{ row }">
       <SourceBadge :source="row.id" />
@@ -19,15 +19,25 @@ import SourceBadge from '../ui/SourceBadge.vue'
 import { useI18n } from '/src/i18n'
 
 defineProps({ modelValue: { type: Array, required: true } })
-defineEmits(['update:modelValue', 'enable-slskd'])
+const emit = defineEmits(['update:modelValue', 'enable-slskd', 'enable-usenet'])
 const { t } = useI18n()
 
-// slskd first: it's the only lossless source, so when it's on it leads.
+function onEnabled(id) {
+  if (id === 'slskd') emit('enable-slskd')
+  if (id === 'usenet') emit('enable-usenet')
+}
+
+// slskd and usenet first: the lossless sources lead when they're on.
 const providers = computed(() => [
   {
     id: 'slskd',
     title: t('settings.sourceSlskd'),
     description: t('settings.sourceSlskdHint'),
+  },
+  {
+    id: 'usenet',
+    title: t('settings.sourceUsenet'),
+    description: t('settings.sourceUsenetHint'),
   },
   {
     id: 'youtube-music',

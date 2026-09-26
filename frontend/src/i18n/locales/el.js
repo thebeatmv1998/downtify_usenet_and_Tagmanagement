@@ -602,6 +602,8 @@ export default {
     sourceYtmHint: 'Καλύτερες αντιστοιχίες μεταδεδομένων',
     sourceYt: 'YouTube',
     sourceYtHint: 'Εναλλακτική για τραγούδια που λείπουν από το YouTube Music',
+    sourceUsenet: 'Usenet (SABnzbd)',
+    sourceUsenetHint: 'Ευρετήρια Newznab + SABnzbd — συχνά lossless',
     slskdTitle: 'slskd',
     slskdHint:
       'Λήψη από Soulseek μέσω του διακομιστή slskd. Όσα δεν βρεθούν περνούν στην επόμενη πηγή.',
@@ -614,6 +616,33 @@ export default {
       'Η διαδρομή μέσα στο container του Downtify, όχι στον host.',
     slskdTimeout: 'Συνολικό χρονικό όριο',
     slskdQueuedTimeout: 'Χρονικό όριο αναμονής',
+    usenetTitle: 'Usenet',
+    usenetHint:
+      'Λήψη από Usenet: αναζήτηση σε ευρετήρια Newznab, λήψη με SABnzbd. Ό,τι δεν βρίσκει περνά στην επόμενη πηγή.',
+    usenetEnabled: 'Χρήση Usenet',
+    usenetEnabledHint:
+      'Απαιτεί SABnzbd και τουλάχιστον ένα ευρετήριο Newznab με κλειδί API.',
+    usenetSabUrl: 'Διεύθυνση SABnzbd',
+    usenetSabKey: 'Κλειδί API SABnzbd',
+    usenetCategory: 'Κατηγορία SABnzbd',
+    usenetCompleteDir: 'Φάκελος ολοκληρωμένων λήψεων',
+    usenetCompleteDirHint:
+      'Η διαδρομή μέσα στο container του Downtify, όχι στον κεντρικό υπολογιστή.',
+    usenetCleanup: 'Καθαρισμός SABnzbd μετά',
+    usenetCleanupHint:
+      'Αφαιρεί την καταχώρηση ιστορικού και το αντίγραφο του SABnzbd μόλις το αρχείο είναι στις λήψεις σας.',
+    usenetIndexers: 'Ευρετήρια Newznab',
+    usenetIndexersHint:
+      'Όλα τα ενεργά ευρετήρια αναζητούν παράλληλα· κερδίζει η καλύτερη κυκλοφορία.',
+    usenetIndexerName: 'Όνομα',
+    usenetIndexerUrl: 'Διεύθυνση ευρετηρίου',
+    usenetIndexerKey: 'Κλειδί API',
+    usenetAddIndexer: 'Προσθήκη ευρετηρίου',
+    usenetRemoveIndexer: 'Αφαίρεση',
+    usenetTimeout: 'Συνολικό χρονικό όριο',
+    usenetMinScore: 'Ελάχιστη βαθμολογία αντιστοίχισης',
+    usenetDurationSeconds: 'Ανοχή διάρκειας',
+    usenetDurationPercent: 'Ανοχή διάρκειας %',
     slskdInPlace: 'Διατήρηση αρχείων στον φάκελο slskd',
     slskdInPlaceHint:
       'Επισήμανση εκεί όπου τα αποθήκευσε το slskd αντί για αντιγραφή στον φάκελο λήψεων.',
@@ -707,6 +736,20 @@ export default {
         'Η διεύθυνση δεν είναι έγκυρη. Ξεκινήστε με http:// ή https://.',
       connection_tls:
         'Το πιστοποιητικό HTTPS δεν είναι αξιόπιστο. Χρησιμοποιήστε http://, ή πιστοποιητικό από αξιόπιστη αρχή.',
+      connection_not_sabnzbd:
+        'Κάτι απάντησε στο {url}, αλλά δεν μοιάζει με SABnzbd. Ελέγξτε τη διεύθυνση και τη θύρα.',
+      indexer_ok: 'Το ευρετήριο {detail} απάντησε.',
+      indexer_missing:
+        'Συμπληρώστε τη διεύθυνση και το κλειδί API του ευρετηρίου ({detail}).',
+      indexer_bad_key: 'Το ευρετήριο {detail} απέρριψε το κλειδί API.',
+      indexer_http_error: 'Το ευρετήριο {detail} απάντησε με σφάλμα.',
+      indexer_unreachable:
+        'Δεν είναι δυνατή η σύνδεση με το ευρετήριο {detail}. Ελέγξτε τη διεύθυνση και ότι λειτουργεί.',
+      indexer_timeout: 'Το ευρετήριο {detail} δεν απάντησε εγκαίρως.',
+      indexer_bad_url:
+        'Η διεύθυνση του ευρετηρίου δεν είναι έγκυρη ({detail}).',
+      indexer_tls:
+        'Το πιστοποιητικό HTTPS του ευρετηρίου δεν είναι αξιόπιστο ({detail}).',
       connection_not_slskd:
         'Κάτι απάντησε στο {url}, αλλά δεν μοιάζει με slskd. Ελέγξτε τη διεύθυνση και τη θύρα.',
       connection_not_navidrome:

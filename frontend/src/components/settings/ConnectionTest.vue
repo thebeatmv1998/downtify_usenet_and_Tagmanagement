@@ -59,7 +59,7 @@ import API from '/src/model/api'
 import { useI18n } from '/src/i18n'
 
 const props = defineProps({
-  // 'slskd' | 'navidrome': which integration, and so which endpoint.
+  // 'slskd' | 'navidrome' | 'usenet': which integration, and so which endpoint.
   kind: { type: String, required: true },
   // The settings object as it is in the form (saved or not).
   config: { type: Object, required: true },
@@ -96,13 +96,19 @@ watch(
   { deep: true }
 )
 
+const TEST_CALLS = {
+  slskd: API.testSlskd,
+  navidrome: API.testNavidrome,
+  usenet: API.testUsenet,
+}
+
 async function run() {
   const mine = (serial += 1)
   testing.value = true
   failed.value = false
   result.value = null
   try {
-    const call = props.kind === 'slskd' ? API.testSlskd : API.testNavidrome
+    const call = TEST_CALLS[props.kind]
     const res = await call(props.config)
     if (mine === serial) result.value = res.data
   } catch {

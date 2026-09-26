@@ -38,7 +38,7 @@ from yt_dlp.postprocessor.ffmpeg import FFmpegExtractAudioPP
 
 from . import lyrics as lyrics_mod
 from . import spotify as spotify_mod
-from .cookies import CookiesStore
+from .cookies import CookiesStore, check_cookies_file
 from .itunes import fetch_genre as _fetch_itunes_genre
 from .library_paths import library_stored_path, slskd_dir_from_downloader
 from .m3u import sanitize_playlist_name
@@ -49,6 +49,7 @@ from .providers import (
     find_match_youtube_only,
 )
 from .slskd_provider import download_from_slskd
+from .usenet_provider import download_from_usenet
 
 _INVALID_FS_CHARS = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
 
@@ -62,7 +63,7 @@ _AUDIO_EXTENSIONS = frozenset({'mp3', 'flac', 'ogg', 'opus', 'm4a'})
 # shown next to each queue row.
 ProgressCallback = Callable[[float, str, Optional[str]], None]
 
-AUDIO_PROVIDERS = ('youtube-music', 'youtube', 'slskd')
+AUDIO_PROVIDERS = ('youtube-music', 'youtube', 'slskd', 'usenet')
 
 
 class NoAudioMatchError(RuntimeError):
@@ -255,6 +256,52 @@ def _yt_po_tokens() -> list[str]:
     return [t.strip() for t in raw.split(',') if t.strip()]
 
 
+def youtube_extractor_args() -> dict[str, Any]:
+    """``extractor_args`` for yt-dlp's YouTube extractor.
+
+    Shared by the download path and the plain-YouTube search in
+    ``providers.py`` so both behave the same on IPs YouTube flags with
+    the "Sign in to confirm you're not a bot" check: the ordered player
+    client list, plus any PO Tokens from ``DOWNTIFY_YT_PO_TOKEN`` (each
+    in yt-dlp's ``<client>.<context>+<token>`` form).
+    """
+
+    youtube_args: dict[str, Any] = {'player_client': _yt_player_clients()}
+    po_tokens = _yt_po_tokens()
+    if po_tokens:
+        youtube_args['po_token'] = po_tokens
+    return {'youtube': youtube_args}
+
+
+_cookies_file_warned = False
+
+
+def _warn_on_suspicious_cookies_file(path: str) -> None:
+    """Log a warning when the cookies.txt can't authenticate anything.
+
+    Fires at most once per process and per message: an invalid jar is a
+    configuration problem, and every download re-warning would drown the
+    log. Uploading a fixed file changes the outcome, which naturally
+    produces a new (or no) warning.
+    """
+
+    global _cookies_file_warned
+    if _cookies_file_warned:
+        return
+    ok, warning = check_cookies_file(path)
+    if ok and warning is None:
+        return
+    _cookies_file_warned = True
+    if not ok:
+        logger.warning(
+            '{}. Downloads will run without it; YouTube may answer with '
+            '"Sign in to confirm you\'re not a bot".',
+            warning,
+        )
+    else:
+        logger.warning('{}', warning)
+
+
 # Substrings YouTube/yt-dlp use when a video is behind the age wall.
 _AGE_GATE_ERROR_FRAGMENTS = (
     'confirm your age',
@@ -271,10 +318,24 @@ def is_age_restricted_error(message: str) -> bool:
     )
 
 
+# Substrings YouTube/yt-dlp use for the "Sign in to confirm you're not a
+# bot" challenge that datacenter IPs and stale cookies trigger.
+_BOT_CHECK_ERROR_FRAGMENTS = (
+    'not a bot',
+    'sign in to confirm',
+)
+
+
+def is_bot_check_error(message: str) -> bool:
+    return any(
+        fragment in message.lower() for fragment in _BOT_CHECK_ERROR_FRAGMENTS
+    )
+
+
 def _translate_download_error(
     exc: Exception, song: dict[str, Any], has_cookies: bool
 ) -> Exception:
-    """Replace yt-dlp's age-gate error with something actionable.
+    """Replace yt-dlp's age-gate/bot-check errors with something actionable.
 
     The raw error is a wall of yt-dlp CLI advice (``--cookies-from-browser``,
     wiki links) that means nothing to someone using the web UI, and it's
@@ -282,7 +343,26 @@ def _translate_download_error(
     failure is passed through untouched.
     """
 
-    if not is_age_restricted_error(str(exc)):
+    message = str(exc)
+    if is_bot_check_error(message) and not is_age_restricted_error(message):
+        name = song.get('name') or 'This track'
+        if has_cookies:
+            return RuntimeError(
+                f'YouTube blocked "{name}" with its "Sign in to confirm '
+                'you\'re not a bot" check — the configured cookies file '
+                'was not accepted. Export a fresh cookies.txt while '
+                'logged into YouTube in your browser and upload it again '
+                'in Settings > YouTube cookies. If that alone is not '
+                'enough, set a PO Token via the DOWNTIFY_YT_PO_TOKEN '
+                'environment variable.'
+            )
+        return RuntimeError(
+            f'YouTube blocked "{name}" with its "Sign in to confirm '
+            'you\'re not a bot" check. Upload a YouTube cookies.txt in '
+            'Settings > YouTube cookies (or set the '
+            'DOWNTIFY_COOKIES_FILE environment variable) to download it.'
+        )
+    if not is_age_restricted_error(message):
         return exc
     name = song.get('name') or 'This track'
     if has_cookies:
@@ -318,6 +398,7 @@ class Downloader:
         cookies_store: Optional[CookiesStore] = None,
         audio_providers: Optional[list[str]] = None,
         slskd_settings: Optional[dict[str, Any]] = None,
+        usenet_settings: Optional[dict[str, Any]] = None,
     ):
         self.download_dir = Path(download_dir)
         self.download_dir.mkdir(parents=True, exist_ok=True)
@@ -325,6 +406,7 @@ class Downloader:
         self.slskd_settings = self._normalize_slskd_settings(slskd_settings)
         # slskd copies a finished transfer here when it isn't left in place.
         self.slskd_settings['output_dir'] = str(self.download_dir)
+        self.usenet_settings = self._normalize_usenet_settings(usenet_settings)
         # Resolves DOWNTIFY_COOKIES_FILE and the cookies.txt uploaded
         # through the settings UI, in that order of precedence. ``None``
         # keeps the env-var-only behavior for direct/standalone use.
@@ -415,6 +497,81 @@ class Downloader:
             ),
         }
 
+    @staticmethod
+    def _normalize_usenet_settings(
+        settings: Optional[dict[str, Any]],
+    ) -> dict[str, Any]:
+        raw = settings if isinstance(settings, dict) else {}
+
+        def _int(value: Any, default: int, low: int, high: int) -> int:
+            try:
+                number = int(value if value is not None else default)
+            except (TypeError, ValueError):
+                number = default
+            return min(high, max(low, number))
+
+        indexers: list[dict[str, Any]] = []
+        raw_indexers = raw.get('indexers')
+        for row in raw_indexers if isinstance(raw_indexers, list) else []:
+            if not isinstance(row, dict):
+                continue
+            indexers.append({
+                'name': str(row.get('name') or '').strip(),
+                'base_url': str(row.get('base_url') or '')
+                .strip()
+                .rstrip('/'),
+                'api_key': str(row.get('api_key') or '').strip(),
+                'enabled': bool(row.get('enabled', True)),
+            })
+
+        sab = raw.get('sabnzbd')
+        sab = sab if isinstance(sab, dict) else {}
+        sabnzbd = {
+            'base_url': str(sab.get('base_url') or '').strip().rstrip('/'),
+            'api_key': str(sab.get('api_key') or '').strip(),
+            'category': str(sab.get('category') or 'music').strip() or 'music',
+            'complete_dir': str(sab.get('complete_dir') or '/usenet').strip(),
+        }
+
+        extensions = raw.get('extensions')
+        if isinstance(extensions, str):
+            extensions = extensions.split(',')
+        if not isinstance(extensions, list):
+            extensions = []
+        extensions = [
+            str(e).strip().lower().lstrip('.')
+            for e in extensions
+            if str(e).strip()
+        ] or ['flac', 'mp3']
+
+        return {
+            'enabled': bool(raw.get('enabled', False)),
+            'indexers': indexers,
+            'sabnzbd': sabnzbd,
+            'timeout_seconds': _int(raw.get('timeout_seconds'), 20, 5, 120),
+            'download_timeout_seconds': _int(
+                raw.get('download_timeout_seconds'), 900, 30, 7200
+            ),
+            'poll_interval_seconds': _int(
+                raw.get('poll_interval_seconds'), 5, 1, 30
+            ),
+            'poll_max_attempts': _int(
+                raw.get('poll_max_attempts'), 180, 1, 1000
+            ),
+            'duration_tolerance_seconds': _int(
+                raw.get('duration_tolerance_seconds'), 10, 1, 120
+            ),
+            'duration_tolerance_percent': _int(
+                raw.get('duration_tolerance_percent'), 15, 1, 100
+            ),
+            'extensions': extensions,
+            'min_score': _int(raw.get('min_score'), 5, 0, 100),
+            'cleanup': bool(raw.get('cleanup', True)),
+            'max_parallel_downloads': _int(
+                raw.get('max_parallel_downloads'), 3, 1, 8
+            ),
+        }
+
     def _resolve_source(
         self,
         song: dict[str, Any],
@@ -444,6 +601,19 @@ class Downloader:
                     'Audio provider slskd: no match for {!r}', song.get('name')
                 )
                 _report(progress_cb, 0.0, 'Trying next source', 'slskd')
+            elif provider == 'usenet':
+                if not self.usenet_settings.get('enabled'):
+                    continue
+                local = download_from_usenet(
+                    song, self.usenet_settings, progress_cb=progress_cb
+                )
+                if local is not None:
+                    return None, None, 'usenet', local
+                logger.info(
+                    'Audio provider usenet: no match for {!r}',
+                    song.get('name'),
+                )
+                _report(progress_cb, 0.0, 'Trying next source', 'usenet')
             elif provider == 'youtube-music':
                 # find_match falls back to standard YouTube on its own when
                 # YouTube Music has nothing (or only a far-off length).
@@ -469,11 +639,20 @@ class Downloader:
         With a store configured this is DOWNTIFY_COOKIES_FILE, else the
         file uploaded through the settings UI. Resolved per download so
         uploading or deleting one takes effect without a restart.
+
+        A suspicious file (not Netscape format, no YouTube cookies,
+        everything expired) gets one log warning per process — it's the
+        usual cause of "Sign in to confirm you're not a bot" failures,
+        but re-checking per download would spam the log.
         """
         if self.cookies_store is not None:
             active = self.cookies_store.active_path()
-            return str(active) if active else ''
-        return os.getenv('DOWNTIFY_COOKIES_FILE', '').strip()
+            path = str(active) if active else ''
+        else:
+            path = os.getenv('DOWNTIFY_COOKIES_FILE', '').strip()
+        if path:
+            _warn_on_suspicious_cookies_file(path)
+        return path
 
     @staticmethod
     def _artist_subdir(song: dict[str, Any]) -> str:
@@ -773,12 +952,14 @@ class Downloader:
                 match = None
 
         if not video_id and local_source is None:
-            source = (
-                'an audio match'
-                if 'slskd' in self.audio_providers
+            audio_enabled = (
+                'slskd' in self.audio_providers
                 and self.slskd_settings.get('enabled')
-                else 'a YouTube match'
+            ) or (
+                'usenet' in self.audio_providers
+                and self.usenet_settings.get('enabled')
             )
+            source = 'an audio match' if audio_enabled else 'a YouTube match'
             raise NoAudioMatchError(
                 f'Could not find {source} for {song.get("name")!r}'
             )
@@ -984,9 +1165,9 @@ class Downloader:
             # gated by YouTube's "Sign in to confirm you're not a bot"
             # check on datacenter IPs. `tv` and `mweb` almost always
             # bypass it. Order matters — yt-dlp tries them in sequence.
-            'extractor_args': {
-                'youtube': {'player_client': _yt_player_clients()}
-            },
+            # PO Tokens from DOWNTIFY_YT_PO_TOKEN are merged in by the
+            # helper (they unlock the GVS-gated ios/android/mweb formats).
+            'extractor_args': youtube_extractor_args(),
             # `web`/`web_embedded` need a JS runtime to solve YouTube's
             # signature/n-challenges (see the comment on
             # _DEFAULT_YT_PLAYER_CLIENTS above) — that's the only real

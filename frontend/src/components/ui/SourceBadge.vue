@@ -38,6 +38,11 @@ const SOURCES = {
     icon: 'share',
     classes: 'border-src-slskd/25 bg-src-slskd/15 text-src-slskd',
   },
+  usenet: {
+    label: 'Usenet',
+    icon: 'server',
+    classes: 'border-src-usenet/25 bg-src-usenet/15 text-src-usenet',
+  },
 }
 
 const meta = computed(() => SOURCES[props.source] || null)

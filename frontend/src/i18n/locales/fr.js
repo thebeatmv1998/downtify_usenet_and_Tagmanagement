@@ -611,6 +611,8 @@ export default {
     sourceYtmHint: 'Meilleures correspondances de métadonnées',
     sourceYt: 'YouTube',
     sourceYtHint: 'Solution de repli pour les titres absents de YouTube Music',
+    sourceUsenet: 'Usenet (SABnzbd)',
+    sourceUsenetHint: 'Indexeurs Newznab + SABnzbd — souvent sans perte',
     slskdTitle: 'slskd',
     slskdHint:
       'Téléchargez depuis Soulseek via votre serveur slskd. Les titres introuvables passent à la source suivante.',
@@ -622,6 +624,33 @@ export default {
     slskdFolderHint: 'Le chemin dans le conteneur Downtify, pas sur l’hôte.',
     slskdTimeout: 'Délai total',
     slskdQueuedTimeout: 'Délai en file',
+    usenetTitle: 'Usenet',
+    usenetHint:
+      'Télécharger depuis Usenet : recherche sur des indexeurs Newznab, téléchargement via SABnzbd. Ce qu’il ne trouve pas passe à la source suivante.',
+    usenetEnabled: 'Utiliser Usenet',
+    usenetEnabledHint:
+      'Nécessite SABnzbd et au moins un indexeur Newznab avec une clé d’API.',
+    usenetSabUrl: 'URL de SABnzbd',
+    usenetSabKey: 'Clé d’API SABnzbd',
+    usenetCategory: 'Catégorie SABnzbd',
+    usenetCompleteDir: 'Dossier des téléchargements terminés',
+    usenetCompleteDirHint:
+      'Le chemin dans le conteneur Downtify, pas sur l’hôte.',
+    usenetCleanup: 'Nettoyer SABnzbd ensuite',
+    usenetCleanupHint:
+      'Supprime l’entrée d’historique et la copie de SABnzbd une fois le fichier dans vos téléchargements.',
+    usenetIndexers: 'Indexeurs Newznab',
+    usenetIndexersHint:
+      'Tous les indexeurs activés sont interrogés en parallèle ; la meilleure release gagne.',
+    usenetIndexerName: 'Nom',
+    usenetIndexerUrl: 'URL de l’indexeur',
+    usenetIndexerKey: 'Clé d’API',
+    usenetAddIndexer: 'Ajouter un indexeur',
+    usenetRemoveIndexer: 'Retirer',
+    usenetTimeout: 'Délai total',
+    usenetMinScore: 'Score de correspondance minimal',
+    usenetDurationSeconds: 'Tolérance de durée',
+    usenetDurationPercent: 'Tolérance de durée %',
     slskdInPlace: 'Laisser les fichiers dans le dossier slskd',
     slskdInPlaceHint:
       'Les taguer là où slskd les a enregistrés au lieu de les copier dans votre dossier de téléchargements.',
@@ -717,6 +746,19 @@ export default {
         'Cette adresse n’est pas valide. Commencez par http:// ou https://.',
       connection_tls:
         'Le certificat HTTPS n’est pas de confiance. Utilisez http://, ou un certificat d’une autorité de confiance.',
+      connection_not_sabnzbd:
+        'Quelque chose a répondu à {url}, mais ça ne ressemble pas à SABnzbd. Vérifiez l’adresse et le port.',
+      indexer_ok: 'L’indexeur {detail} a répondu.',
+      indexer_missing:
+        'Renseignez l’URL et la clé d’API de l’indexeur ({detail}).',
+      indexer_bad_key: 'L’indexeur {detail} a refusé la clé d’API.',
+      indexer_http_error: 'L’indexeur {detail} a répondu avec une erreur.',
+      indexer_unreachable:
+        'Impossible de joindre l’indexeur {detail}. Vérifiez l’adresse et qu’il est en marche.',
+      indexer_timeout: 'L’indexeur {detail} n’a pas répondu à temps.',
+      indexer_bad_url: 'L’adresse de l’indexeur n’est pas valide ({detail}).',
+      indexer_tls:
+        'Le certificat HTTPS de l’indexeur n’est pas de confiance ({detail}).',
       connection_not_slskd:
         'Quelque chose répond sur {url}, mais cela ne ressemble pas à slskd. Vérifiez l’adresse et le port.',
       connection_not_navidrome:

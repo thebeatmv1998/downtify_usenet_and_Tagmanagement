@@ -600,6 +600,8 @@ export default {
     sourceYtmHint: 'Melhores correspondências de metadados',
     sourceYt: 'YouTube',
     sourceYtHint: 'Alternativa para músicas ausentes do YouTube Music',
+    sourceUsenet: 'Usenet (SABnzbd)',
+    sourceUsenetHint: 'Indexadores Newznab + SABnzbd — muitas vezes lossless',
     slskdTitle: 'slskd',
     slskdHint:
       'Baixe do Soulseek pelo seu servidor slskd. Faixas não encontradas passam para a próxima fonte.',
@@ -611,6 +613,33 @@ export default {
     slskdFolderHint: 'O caminho dentro do contêiner do Downtify, não no host.',
     slskdTimeout: 'Tempo limite total',
     slskdQueuedTimeout: 'Tempo limite na fila',
+    usenetTitle: 'Usenet',
+    usenetHint:
+      'Baixe da Usenet: busca em indexadores Newznab, download via SABnzbd. O que não for encontrado passa para a próxima fonte.',
+    usenetEnabled: 'Usar Usenet',
+    usenetEnabledHint:
+      'Precisa do SABnzbd e de pelo menos um indexador Newznab com chave de API.',
+    usenetSabUrl: 'URL do SABnzbd',
+    usenetSabKey: 'Chave de API do SABnzbd',
+    usenetCategory: 'Categoria do SABnzbd',
+    usenetCompleteDir: 'Pasta de downloads concluídos',
+    usenetCompleteDirHint:
+      'O caminho dentro do contêiner do Downtify, não no host.',
+    usenetCleanup: 'Limpar o SABnzbd depois',
+    usenetCleanupHint:
+      'Remove a entrada do histórico e a cópia do SABnzbd quando o arquivo já está nos seus downloads.',
+    usenetIndexers: 'Indexadores Newznab',
+    usenetIndexersHint:
+      'Todos os indexadores ativos são pesquisados em paralelo; o melhor release vence.',
+    usenetIndexerName: 'Nome',
+    usenetIndexerUrl: 'URL do indexador',
+    usenetIndexerKey: 'Chave de API',
+    usenetAddIndexer: 'Adicionar indexador',
+    usenetRemoveIndexer: 'Remover',
+    usenetTimeout: 'Tempo limite total',
+    usenetMinScore: 'Pontuação mínima de correspondência',
+    usenetDurationSeconds: 'Tolerância de duração',
+    usenetDurationPercent: 'Tolerância de duração %',
     slskdInPlace: 'Manter arquivos na pasta do slskd',
     slskdInPlaceHint:
       'Marcar os arquivos onde o slskd os salvou em vez de copiar para sua pasta de downloads.',
@@ -703,6 +732,19 @@ export default {
         'Esse endereço não é válido. Comece com http:// ou https://.',
       connection_tls:
         'O certificado HTTPS não é confiável. Use http://, ou um certificado de uma autoridade confiável.',
+      connection_not_sabnzbd:
+        'Algo respondeu em {url}, mas não parece ser o SABnzbd. Verifique o endereço e a porta.',
+      indexer_ok: 'O indexador {detail} respondeu.',
+      indexer_missing:
+        'Preencha a URL e a chave de API do indexador ({detail}).',
+      indexer_bad_key: 'O indexador {detail} recusou a chave de API.',
+      indexer_http_error: 'O indexador {detail} respondeu com um erro.',
+      indexer_unreachable:
+        'Não foi possível alcançar o indexador {detail}. Verifique o endereço e se ele está no ar.',
+      indexer_timeout: 'O indexador {detail} não respondeu a tempo.',
+      indexer_bad_url: 'O endereço do indexador não é válido ({detail}).',
+      indexer_tls:
+        'O certificado HTTPS do indexador não é confiável ({detail}).',
       connection_not_slskd:
         'Algo respondeu em {url}, mas não parece ser o slskd. Confira o endereço e a porta.',
       connection_not_navidrome:

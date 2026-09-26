@@ -185,6 +185,125 @@ def check_slskd(cfg: dict[str, Any]) -> dict[str, Any]:
     return _result(checks, f'slskd {version}')
 
 
+# ── usenet (Newznab + SABnzbd) ───────────────────────────────────────
+def _sabnzbd_url(cfg: dict[str, Any], mode: str) -> str:
+    base = str(cfg.get('base_url') or '').rstrip('/')
+    return f'{base}/sabnzbd/api?mode={mode}&output=json'
+
+
+def _sabnzbd_params(cfg: dict[str, Any]) -> dict[str, str]:
+    return {'apikey': str(cfg.get('api_key') or '')}
+
+
+def _sabnzbd_version(data: Any) -> Optional[str]:
+    if isinstance(data, dict):
+        text = str(data.get('version') or '').strip()
+        if text:
+            return text
+    return None
+
+
+def check_usenet(cfg: dict[str, Any]) -> dict[str, Any]:
+    """Test a normalized usenet configuration (``_effective_usenet_settings``).
+
+    Probes SABnzbd with ``mode=version`` and each enabled Newznab indexer
+    with ``t=caps``. A result is the same ``{ok, server, checks}`` shape as
+    :func:`check_slskd`.
+    """
+
+    sab = cfg.get('sabnzbd')
+    sab = sab if isinstance(sab, dict) else {}
+    if not sab.get('base_url') or not sab.get('api_key'):
+        return _result([_check('config', STATUS_FAIL, 'missing')])
+
+    try:
+        resp = _get(
+            _sabnzbd_url(sab, 'version'),
+            params=_sabnzbd_params(sab),
+            timeout=PROBE_TIMEOUT,
+        )
+    except Exception as exc:
+        _log_failure('SABnzbd connection', exc)
+        return _result([
+            _check('connection', STATUS_FAIL, _transport_code(exc))
+        ])
+
+    if resp.status_code in {401, 403}:
+        return _result([
+            _check('connection', STATUS_OK),
+            _check('auth', STATUS_FAIL, 'bad_key'),
+        ])
+    if resp.status_code >= 400:
+        return _result([
+            _check(
+                'connection',
+                STATUS_FAIL,
+                'http_error',
+                str(resp.status_code),
+            )
+        ])
+    try:
+        version = _sabnzbd_version(resp.json())
+    except ValueError:
+        version = None
+    if version is None:
+        return _result([_check('connection', STATUS_FAIL, 'not_sabnzbd')])
+
+    checks = [_check('connection', STATUS_OK), _check('auth', STATUS_OK)]
+
+    complete_dir = str(sab.get('complete_dir') or '')
+    folder = Path(complete_dir) if complete_dir else None
+    if folder is not None and folder.is_dir() and os.access(folder, os.R_OK):
+        checks.append(_check('folder', STATUS_OK, 'ok', complete_dir))
+    else:
+        checks.append(_check('folder', STATUS_WARN, 'missing', complete_dir))
+
+    raw_indexers = cfg.get('indexers')
+    enabled = [
+        row
+        for row in (raw_indexers if isinstance(raw_indexers, list) else [])
+        if isinstance(row, dict) and row.get('enabled')
+    ]
+    if not enabled:
+        checks.append(_check('indexer', STATUS_FAIL, 'missing'))
+    for row in enabled:
+        name = str(row.get('name') or row.get('base_url') or '')[:80]
+        base_url = str(row.get('base_url') or '').rstrip('/')
+        api_key = str(row.get('api_key') or '')
+        if not base_url or not api_key:
+            checks.append(
+                _check('indexer', STATUS_FAIL, 'missing', name)
+            )
+            continue
+        try:
+            idx_resp = _get(
+                f'{base_url}/api',
+                params={'t': 'caps', 'apikey': api_key, 'output': 'json'},
+                timeout=PROBE_TIMEOUT,
+            )
+        except Exception as exc:
+            _log_failure('Newznab indexer', exc)
+            checks.append(
+                _check('indexer', STATUS_FAIL, _transport_code(exc), name)
+            )
+            continue
+        if idx_resp.status_code in {401, 403}:
+            checks.append(_check('indexer', STATUS_FAIL, 'bad_key', name))
+        elif idx_resp.status_code >= 400:
+            checks.append(
+                _check(
+                    'indexer',
+                    STATUS_FAIL,
+                    'http_error',
+                    f'{name} {idx_resp.status_code}',
+                )
+            )
+        else:
+            checks.append(_check('indexer', STATUS_OK, 'ok', name))
+
+    return _result(checks, f'SABnzbd {version}')
+
+
 # ── Navidrome ────────────────────────────────────────────────────────
 def _navidrome_failure(exc: BaseException) -> dict[str, str]:
     """The connection/auth check that an exception from a request means."""
