@@ -33,6 +33,7 @@ from ytmusicapi.navigation import (
 from ytmusicapi.parsers.library import parse_albums as _parse_ytm_albums
 
 from .cookies import default_cookiefile
+from .file_naming import file_name_key
 from .telemetry import json_log_blob, redact_sensitive_mapping
 
 
@@ -408,6 +409,31 @@ def search_artists(query: str, limit: int = 10) -> list[dict[str, Any]]:
         if artist:
             artists.append(artist)
     return artists
+
+
+def resolve_artist_id(name: str) -> Optional[str]:
+    """YouTube Music channel id for an exact name match, or ``None`` if no
+    search result's name matches exactly. Case and the characters a file
+    name can't hold are ignored (``ACDC`` matches ``AC/DC``, see
+    :func:`downtify.file_naming.file_name_key`).
+
+    Deliberately strict, same reasoning as
+    :func:`downtify.deezer.resolve_artist_id`/
+    :func:`downtify.apple_music.resolve_artist_id`: an unrelated top
+    result would silently attach the wrong artist's id to this one's
+    profile. Used by :func:`downtify.artist_profile.resolve_platform_ids`
+    to fill in ``platforms_id.youtubemusic`` - YouTube Music has no bio
+    of its own in the profile picker anymore, just this id.
+    """
+
+    text = name.strip()
+    wanted = file_name_key(text)
+    if not wanted:
+        return None
+    for artist in search_artists(text, limit=25):
+        if file_name_key(str(artist.get('name') or '')) == wanted:
+            return artist.get('artist_id') or None
+    return None
 
 
 def _artist_discography_browse_id(channel_id: str) -> str:
@@ -803,6 +829,129 @@ def artist_top_songs_from_channel_id(channel_id: str) -> list[dict[str, Any]]:
         song = _result_to_song(result)
         if song:
             songs.append(song)
+    return songs
+
+
+_PLAYS_RE = re.compile(r'^\s*(\d[\d.,]*)\s*([KMB])?\s+plays?\s*$', re.I)
+_PLAYS_MULTIPLIER = {'': 1, 'K': 10**3, 'M': 10**6, 'B': 10**9}
+
+
+def _parse_play_count(text: Any) -> int:
+    """``'1.2B plays'`` -> ``1200000000``; ``0`` if it isn't a play count.
+
+    YouTube Music only reports a rounded figure (``4.4M plays``), so the
+    result is an approximation, not the real total. The text is English
+    because the client is created without a language.
+    """
+
+    match = _PLAYS_RE.match(text) if isinstance(text, str) else None
+    if match is None:
+        return 0
+    digits, suffix = match.group(1), (match.group(2) or '').upper()
+    try:
+        value = float(digits.replace(',', ''))
+    except ValueError:
+        return 0
+    return int(round(value * _PLAYS_MULTIPLIER[suffix]))
+
+
+def _music_list_rows(node: Any) -> list[dict[str, Any]]:
+    """Every ``musicResponsiveListItemRenderer`` under *node*."""
+
+    rows: list[dict[str, Any]] = []
+    if isinstance(node, dict):
+        row = node.get('musicResponsiveListItemRenderer')
+        if isinstance(row, dict):
+            rows.append(row)
+        for value in node.values():
+            rows.extend(_music_list_rows(value))
+    elif isinstance(node, list):
+        for value in node:
+            rows.extend(_music_list_rows(value))
+    return rows
+
+
+def _playlist_play_counts(playlist_id: str) -> dict[str, int]:
+    """``{videoId: approximate play count}`` for a playlist's first page.
+
+    ``ytmusicapi`` reads the "plays" column only for albums, so
+    ``get_playlist`` reports ``views: None`` for a playlist like an
+    artist's Top songs even though every row carries it. This reads the
+    same ``browse`` response directly instead. Best effort: any failure
+    returns ``{}`` and the songs simply have no count.
+    """
+
+    browse_id = (
+        playlist_id if playlist_id.startswith('VL') else f'VL{playlist_id}'
+    )
+    try:
+        response = _ytm()._send_request('browse', {'browseId': browse_id})
+    except Exception:
+        logger.opt(exception=True).warning(
+            'YouTube Music play counts unavailable for {}', playlist_id
+        )
+        return {}
+
+    counts: dict[str, int] = {}
+    for row in _music_list_rows(response):
+        video_id = (row.get('playlistItemData') or {}).get('videoId')
+        if not video_id:
+            continue
+        for column in row.get('flexColumns') or []:
+            runs = (
+                column.get('musicResponsiveListItemFlexColumnRenderer') or {}
+            ).get('text', {}).get('runs') or []
+            plays = _parse_play_count(runs[0].get('text') if runs else None)
+            if plays:
+                counts[video_id] = plays
+                break
+    return counts
+
+
+def artist_full_top_songs_from_channel_id(
+    channel_id: str,
+) -> list[dict[str, Any]]:
+    """Full 'Top songs' playlist for an artist, beyond the ~5-10 item
+    preview :func:`artist_top_songs_from_channel_id` returns.
+
+    The artist's ``songs`` shelf carries its own ``browseId`` for an
+    auto-generated playlist covering the shelf in full — resolved the same
+    way any YouTube Music playlist is, via :func:`playlist_tracks_from_id`.
+    Each song gets an approximate ``play_count`` (with
+    ``play_count_approx``) when the response has one.
+    Returns ``[]`` if the artist, its songs shelf, or the shelf's browseId
+    can't be resolved at all.
+    """
+
+    try:
+        artist_data = _ytm().get_artist(channel_id)
+    except Exception:
+        logger.exception('YouTube Music get_artist failed for {}', channel_id)
+        return []
+
+    section = artist_data.get('songs')
+    if not isinstance(section, dict):
+        return []
+    browse_id = section.get('browseId')
+    if not browse_id:
+        return []
+
+    try:
+        songs = playlist_tracks_from_id(browse_id)
+    except Exception:
+        logger.exception(
+            'Failed to resolve full top-songs playlist {} for artist {}',
+            browse_id,
+            channel_id,
+        )
+        return []
+
+    plays = _playlist_play_counts(browse_id) if songs else {}
+    for song in songs:
+        count = plays.get(song.get('song_id') or '')
+        if count:
+            song['play_count'] = count
+            song['play_count_approx'] = True
     return songs
 
 

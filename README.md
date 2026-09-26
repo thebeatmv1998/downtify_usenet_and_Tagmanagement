@@ -50,12 +50,14 @@ All of it runs inside a single Docker container. See **[How it works](https://he
 
 | | |
 |---|---|
-| **Download** | Spotify tracks, albums and playlists; YouTube Music songs, albums, playlists and artists; free-text search; CSV imports from Soundiiz, TuneMyMusic and Exportify. MP3, FLAC, M4A, OGG or OPUS at the bitrate you pick. See [Download settings](https://henriquesebastiao.github.io/downtify/features/download-settings/) and [Library import](https://henriquesebastiao.github.io/downtify/features/library-import/). |
+| **Download** | Spotify tracks, albums, playlists and artists (their releases and top songs); YouTube Music songs, albums, playlists and artists; free-text search; CSV imports from Soundiiz, TuneMyMusic and Exportify. MP3, FLAC, M4A, OGG or OPUS at the bitrate you pick. See [Download settings](https://henriquesebastiao.github.io/downtify/features/download-settings/) and [Library import](https://henriquesebastiao.github.io/downtify/features/library-import/). |
 | **Tags and lyrics** | Title, artist, album, year and cover art embedded in every file. Plain and time-synced lyrics from LRCLIB and NetEase, tried in the order you choose. See [Lyrics](https://henriquesebastiao.github.io/downtify/features/lyrics/). |
-| **Playlist Monitor** | Watch Spotify or YouTube Music playlists and artists; new tracks and new releases download on a schedule you set. See [Playlist Monitor](https://henriquesebastiao.github.io/downtify/features/playlist-monitor/). |
+| **Playlist Monitor** | Watch Spotify or YouTube Music playlists and artists; new tracks and new releases download on a schedule you set. Artist watches can be limited to albums, singles or EPs, and to releases from now on. See [Playlist Monitor](https://henriquesebastiao.github.io/downtify/features/playlist-monitor/). |
 | **Built-in player** | Full-screen Now playing with synced lyrics, an editable queue, a sleep timer, keyboard shortcuts, media keys and a ten-band equalizer (experimental). See [Built-in player](https://henriquesebastiao.github.io/downtify/features/player/). |
 | **Liked songs** | Tap the heart on a song and a *Liked songs* playlist of everything you have liked appears, in Downtify and in your media server. See [Liked songs](https://henriquesebastiao.github.io/downtify/features/liked-songs/). |
-| **Library** | Albums, artists, playlists and tracks in a grid or a list, with filtering, multi-select and download as a ZIP. **Upgrade library** repairs small covers, missing lyrics and incomplete tags on music you already have, without re-downloading. See [Library catalog](https://henriquesebastiao.github.io/downtify/features/library-catalog/) and [Upgrade library](https://henriquesebastiao.github.io/downtify/features/library-upgrade/). |
+| **Podcasts** | Subscribe by RSS feed, Spotify link or name; new episodes download, tag and keep their resume position on their own. See [Podcasts](https://henriquesebastiao.github.io/downtify/features/podcasts/). |
+| **Discover** | Artists, albums and playlists you don't have yet, suggested from your library, liked songs and what you play — no account or API key. Preview any album's or playlist's songs before downloading, and hide any artist you never want suggested. See [Discover](https://henriquesebastiao.github.io/downtify/features/discover/). |
+| **Library** | Albums, artists, playlists and tracks in a grid or a list, with filtering, multi-select and download as a ZIP. **Upgrade library** repairs small covers, missing lyrics and incomplete tags on music you already have, without re-downloading. Pick a real photo and banner for an artist from YouTube Music, Deezer, Spotify or your own upload. See [Library catalog](https://henriquesebastiao.github.io/downtify/features/library-catalog/), [Upgrade library](https://henriquesebastiao.github.io/downtify/features/library-upgrade/) and [Artist photo & banner](https://henriquesebastiao.github.io/downtify/features/artist-images/). |
 | **Playlist files** | Standard M3U files that Jellyfin, Navidrome and Plex pick up, plus each playlist's own cover art, saved before its tracks. A flat folder layout or one folder per artist. See [M3U export](https://henriquesebastiao.github.io/downtify/features/m3u-export/), [Playlist cover art](https://henriquesebastiao.github.io/downtify/features/playlist-cover-art/) and [File organization](https://henriquesebastiao.github.io/downtify/features/file-organization/). |
 | **Integrations** | Optionally download from Soulseek through your own slskd server and mirror playlists into Navidrome, each with a **Test connection** button in Settings. See [slskd & Navidrome](https://henriquesebastiao.github.io/downtify/features/slskd-navidrome/). |
 | **Interface** | Light and dark themes, one layout from phone to widescreen, an installable app ([PWA](https://henriquesebastiao.github.io/downtify/features/pwa/)), live download progress, update notices and eight languages. |
@@ -116,14 +118,14 @@ The remaining deployment options (timezone, monitor sync time, cookies file, IPv
 
 | Input | Example |
 |-------|---------|
-| Spotify track, album or playlist | `open.spotify.com/track/…` |
+| Spotify track, album, playlist or artist | `open.spotify.com/track/…` |
 | YouTube Music playlist | `music.youtube.com/playlist?list=…` |
 | YouTube Music artist | `music.youtube.com/channel/UC…` or `music.youtube.com/@artist` |
 | YouTube or YouTube Music video | `youtube.com/watch?v=…` |
 | Free-text search | `The Night Owls Do I Still Recall` |
 | Library export (CSV) | Soundiiz, TuneMyMusic, Exportify |
 
-Spotify artist pages can't be downloaded; search for the artist instead. Artists can also be watched for new releases with the **Playlist Monitor**.
+An artist link opens the artist's page, with their releases and a **Top Songs** button to pick from their most popular songs and download them, optionally as a playlist ([details](https://henriquesebastiao.github.io/downtify/features/top-songs/)). Artists in your Library also get a **Top songs** tab with their first five Spotify top songs, kept in a per-artist file for a week, and a 30-second preview of each song you haven't downloaded yet; an artist's bio, genre and links are also filled in, in your language, in the background as their first track finishes downloading ([details](https://henriquesebastiao.github.io/downtify/features/top-songs/#on-an-artists-library-page)). Artists can also be watched for new releases with the **Playlist Monitor** — just albums, singles or EPs if you like, and optionally only what comes out from now on, skipping the back catalogue.
 
 ## Troubleshooting
 
@@ -168,6 +170,12 @@ Contributions, issues and feature requests are welcome. Check the [issues page](
 Before sending a pull request, read [**CONTRIBUTING.md**](./CONTRIBUTING.md). It covers local setup, the coding and formatting standards (Ruff for Python, Prettier for the frontend), testing requirements, commit conventions and the pull request checklist.
 
 If Downtify has been useful to you, a star on GitHub helps other people find it.
+
+## Contributors
+
+Thanks for your contribution to the project!
+
+[![Contributors Avatars](https://contributors-img.web.app/image?repo=henriquesebastiao/downtify)](https://github.com/henriquesebastiao/downtify/graphs/contributors)
 
 ## Support
 

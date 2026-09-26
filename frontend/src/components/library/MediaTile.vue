@@ -3,6 +3,7 @@
     <RouterLink :to="to" class="relative block" :aria-label="title">
       <CoverArt
         :src="cover"
+        :fallback="fallback"
         :covers="covers"
         :name="name || title"
         :round="round"
@@ -31,6 +32,11 @@
     >
       <AppIcon name="play" :size="16" />
     </button>
+    <!-- Controls over the cover (e.g. a menu): outside the link, so a
+    click on one doesn't also open the tile. -->
+    <div v-if="$slots.overlay" class="absolute top-2 right-2">
+      <slot name="overlay" />
+    </div>
     <RouterLink
       :to="to"
       class="flex min-w-0 flex-col gap-0.5"
@@ -56,6 +62,8 @@ defineProps({
   subtitle: { type: String, default: '' },
   name: { type: String, default: '' },
   cover: { type: String, default: '' },
+  // Shown when `cover` fails to load (see CoverArt).
+  fallback: { type: String, default: '' },
   covers: { type: Array, default: () => [] },
   icon: { type: String, default: 'disc' },
   symbol: { type: Boolean, default: false },

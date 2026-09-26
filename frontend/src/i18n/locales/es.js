@@ -28,6 +28,8 @@ export default {
     library: 'Biblioteca',
     queue: 'Cola',
     monitor: 'Monitor',
+    discover: 'Descubrir',
+    podcasts: 'Podcasts',
     settings: 'Ajustes',
     more: 'Más',
     playlists: 'Playlists',
@@ -41,6 +43,10 @@ export default {
     play: 'Reproducir',
     playAll: 'Reproducir todo',
     playItem: 'Reproducir {name}',
+    playPreview: 'Escuchar un adelanto de {name}',
+    pausePreview: 'Pausar el adelanto de {name}',
+    previewLabel: 'Adelanto',
+    noPreview: 'No se encontró una vista previa de {name}',
     shuffle: 'Aleatorio',
     playNext: 'Reproducir a continuación',
     addToQueue: 'Añadir a la cola',
@@ -60,7 +66,7 @@ export default {
     inputPlaceholder:
       'Enlace de Spotify o YouTube Music, o un artista, álbum, canción…',
     getIt: 'Descargar',
-    hintSpotify: 'Canciones, álbumes y playlists',
+    hintSpotify: 'Canciones, álbumes, playlists y artistas',
     hintYoutube: 'Canciones, álbumes, playlists y artistas de YouTube Music',
     hintCsv: 'Importa un CSV (Soundiiz, Exportify…)',
     downloading: 'Descargando ahora',
@@ -115,8 +121,6 @@ export default {
     typeEp: 'EP',
     unsupportedLink:
       'Downtify no puede descargar ese enlace. Pega una canción, álbum o playlist de Spotify, o un enlace de YouTube Music.',
-    spotifyArtistUnsupported:
-      'Las páginas de artista de Spotify no se pueden descargar — busca al artista aquí.',
     tipSearchTitle: 'Busca por nombre',
     tipSearchBody:
       'Escribe un artista, álbum o canción — los resultados vienen de YouTube Music.',
@@ -155,6 +159,15 @@ export default {
     filterNew: 'Nuevas',
     filterLibrary: 'En la biblioteca',
     filterQueue: 'En cola',
+    topSongs: 'Top Songs',
+    topSongsOf: 'Top Songs of {artist}',
+    topSongsEmpty: 'No se encontraron canciones populares de este artista',
+    createPlaylist: 'Crear playlist',
+    createPlaylistHint:
+      'Guarda las canciones como una playlist en este orden, con la foto del artista como portada cuando la portada de playlist está activada.',
+    selectAll: 'Seleccionar todo',
+    playCountSpotify: 'Reproducciones en Spotify',
+    playCountYoutubeMusic: 'Reproducciones en YouTube Music (aproximado)',
   },
   queue: {
     title: 'Cola',
@@ -352,6 +365,65 @@ export default {
     kicker: 'Artista',
     notFound: 'Artista no encontrado',
     findMore: 'Buscar más',
+    relatedArtists: 'A los fans también les gusta',
+    topSongsLink: 'Ver más canciones populares',
+    linksTab: 'Enlaces',
+    linksPlatforms: 'Plataformas de streaming',
+    linksSocial: 'Redes sociales',
+  },
+  artistArt: {
+    editPhoto: 'Editar foto',
+    editArtist: 'Editar artista',
+    titlePhoto: 'Foto de {name}',
+    titleBanner: 'Banner de {name}',
+    tabBanner: 'Banner',
+    tabProfile: 'Perfil',
+    inUse: 'En uso',
+    tabBio: 'Biografía',
+    tabSocial: 'Redes sociales',
+    titleBio: 'Biografía de {name}',
+    titleSocial: 'Redes sociales de {name}',
+    bioDescription: 'Escribe o edita tú mismo la biografía de este artista',
+    socialDescription:
+      'Añade enlaces a los perfiles sociales y al sitio web de este artista.',
+    bioPlaceholder: 'Aún no hay biografía — escribe una aquí',
+    save: 'Guardar',
+    bioSaved: 'Biografía guardada',
+    bioSaveFailed: 'No se pudo guardar la biografía',
+    socialSaved: 'Redes sociales guardadas',
+    socialSaveFailed: 'No se pudieron guardar las redes sociales',
+    socialTwitter: 'Twitter / X',
+    socialFacebook: 'Facebook',
+    socialYoutube: 'YouTube',
+    socialInstagram: 'Instagram',
+    socialWebsite: 'Sitio web',
+    description:
+      'Usa las imágenes de las principales plataformas de streaming, pega un enlace de imagen de la web o sube una desde tu dispositivo.',
+    searchPlaceholder: 'Enlace de imagen de internet o nombre del artista',
+    upload: 'Subir desde tu dispositivo',
+    noResults:
+      'Aún no hay resultados — busca al artista o pega un enlace de imagen.',
+    saved: 'Imagen guardada',
+    saveFailed: 'No se pudo guardar esa imagen',
+    searchFailed: 'No se pudieron buscar imágenes',
+    sourceLink: 'Enlace',
+    removePhoto: 'Quitar foto',
+    removeBanner: 'Quitar banner',
+    removed: 'Imagen eliminada',
+    removeFailed: 'No se pudo eliminar esa imagen',
+  },
+  artistBio: {
+    title: 'Biografía',
+    fetchAppleMusic: 'Buscar en Apple Music',
+    fetchDeezer: 'Buscar en Deezer',
+    formed: 'Formado en {year}',
+    born: 'Nacimiento: {date}',
+    genre: 'Género:',
+    empty: 'Aún no hay biografía.',
+    showMore: 'Mostrar más',
+    showLess: 'Mostrar menos',
+    loaded: 'Biografía cargada — pulsa Guardar para conservarla',
+    fetchFailed: 'No se pudo obtener una biografía para este artista',
   },
   playlists: {
     kicker: 'Playlist',
@@ -416,6 +488,8 @@ export default {
       artist: 'Reproduciendo del artista',
       library: 'Reproduciendo de tu biblioteca',
       search: 'Reproduciendo de la búsqueda',
+
+      podcast: 'Reproduciendo del podcast',
     },
     goToAlbum: 'Álbum',
     goToArtist: 'Artista',
@@ -465,6 +539,17 @@ export default {
       'No se pudo iniciar el ecualizador. La reproducción continúa sin él.',
   },
   monitor: {
+    releaseTypes: 'Descargar',
+    releaseTypesAtLeastOne: 'Deja al menos un tipo de lanzamiento',
+    release: { album: 'Álbumes', single: 'Sencillos', ep: 'EP' },
+    newOnly: 'Solo lanzamientos nuevos',
+    newOnlyHint:
+      'Omite todo lo que el artista ya ha publicado; solo se descarga lo que salga después de empezar a seguirlo.',
+    newOnlyTurnOn:
+      'Al guardar, se omite todo lo ya publicado; solo se descargan los lanzamientos futuros.',
+    newOnlyTurnOff:
+      'Al guardar, los lanzamientos omitidos se descargan en la próxima comprobación.',
+    newOnlyBadge: 'Solo nuevos',
     title: 'Monitor de playlists',
     subtitle:
       'Las canciones nuevas de estas playlists y artistas se descargan automáticamente.',
@@ -514,6 +599,8 @@ export default {
       'Al añadir una playlist se descarga todo su contenido ahora; después se comprueba según el intervalo y se descarga lo que se añada.',
     explainerArtists:
       'Al añadir un artista se descarga toda su discografía ahora; después se comprueba según el intervalo y se descarga cada nuevo lanzamiento.',
+    explainerArtistsNewOnly:
+      'Añadir un artista no descarga nada ahora; se comprueba según el intervalo y se descarga cada nuevo lanzamiento de los tipos elegidos.',
     emptyPlaylistsTitle: 'Aún no vigilas ninguna playlist',
     emptyPlaylistsBody:
       'Pega arriba el enlace de una playlist para mantenerla sincronizada.',
@@ -697,6 +784,12 @@ export default {
     coverSize: 'Tamaño de portada',
     coverSizeHint:
       'Para portadas de YouTube Music. Las de Spotify siempre usan el mayor tamaño disponible.',
+    artistCover: 'Obtener fotos de artista automáticamente',
+    artistCoverHint:
+      'Descarga la foto del artista a .metadata/ArtistImage; también puede usarse en servicios como Navidrome.',
+    artistCoverBanner: 'Obtener banners de artista automáticamente',
+    artistCoverBannerHint:
+      'Descarga el banner hero del artista para un aspecto más cuidado, guardado en .metadata/ArtistBannerImage.',
     lyricsGroup: 'Letras',
     lyrics: 'Descargar letras',
     lyricsHint:
@@ -825,6 +918,103 @@ export default {
     close: 'Cerrar reproducción actual',
     help: 'Ver atajos',
   },
+  discover: {
+    title: 'Descubrir',
+    subtitle:
+      'Artistas que aún no tienes, elegidos a partir de tu biblioteca y de lo que escuchas.',
+    refresh: 'Actualizar',
+    hiddenButton: 'Artistas ocultos ({count})',
+    emptyLibraryTitle: 'Aún no hay nada en qué basarse',
+    emptyLibraryBody:
+      'Descubrir sugiere artistas según los que hay en tu biblioteca. Descarga algo de música primero.',
+    findMusic: 'Buscar música',
+    failed: 'No se pudieron cargar las sugerencias',
+    noneTitle: 'No hay sugerencias nuevas',
+    noneBody:
+      'Todos los artistas sugeridos para tu biblioteca ya están en ella o están ocultos. Descarga o escucha más para obtener nuevas.',
+    partial:
+      'Algunos de tus artistas no se pudieron consultar ahora, así que la lista es más corta de lo habitual. Inténtalo más tarde.',
+    because: 'Porque te gusta {names}',
+    moreFor: 'Más opciones para {name}',
+    findSongs: 'Buscar canciones',
+    openDeezer: 'Abrir en Deezer',
+    notInterested: 'No me interesa',
+    hidden: '{name} no se volverá a sugerir',
+    undo: 'Deshacer',
+    actionFailed: 'Algo salió mal. Inténtalo de nuevo.',
+    hiddenTitle: 'Artistas ocultos',
+    hiddenBody: 'Estos artistas nunca se sugieren en Descubrir.',
+    hideByName: 'Ocultar un artista',
+    hideByNamePlaceholder: 'Nombre del artista',
+    hide: 'Ocultar',
+    unhide: 'Volver a mostrar',
+    hiddenEmpty: 'No hay artistas ocultos.',
+    listensBody:
+      'Una canción cuenta para Descubrir cuando se ha reproducido la mitad (o cuatro minutos).',
+    clearListens: 'Borrar historial de escucha',
+    clearListensTitle: '¿Borrar el historial de escucha?',
+    clearListensBody:
+      'Descubrir olvida lo que has escuchado. Tu biblioteca y tus canciones favoritas no cambian.',
+    listensCleared: 'Historial de escucha borrado',
+    artistsTitle: 'Artistas para ti',
+    showAll: 'Mostrar todos ({count})',
+    showLess: 'Mostrar menos',
+    albumsTitle: 'Álbumes para ti',
+    albumsBody: 'El álbum más conocido de artistas que te pueden gustar.',
+    moreAlbumsTitle: 'Más de tus artistas',
+    moreAlbumsBody:
+      'Álbumes populares de artistas que ya tienes y que aún no están en tu biblioteca.',
+    playlistsTitle: 'Playlists para ti',
+    playlistsBody:
+      'Mixes de Spotify en torno a los artistas que más escuchas, y lo esencial de artistas nuevos.',
+    radioFor: 'Mix en torno a {name}',
+    essentialsOf: 'Lo esencial de {name}',
+    collectionsFailed:
+      'No se pudieron cargar los álbumes y playlists ahora. Inténtalo más tarde.',
+    poweredBy:
+      'Los artistas vienen de los artistas similares de Deezer; los álbumes y playlists, de Spotify.',
+  },
+  podcasts: {
+    title: 'Podcasts',
+    subtitle:
+      'Suscríbete a un programa y sus nuevos episodios se descargan solos.',
+    addTitle: 'Añadir un podcast',
+    addBody:
+      'Pega la URL de un feed RSS, un enlace de programa o episodio de Spotify, o escribe un nombre para buscar.',
+    findPlaceholder: 'Feed RSS, enlace de Spotify o nombre de un programa',
+    find: 'Buscar',
+    noResults: 'No se encontraron programas',
+    findFailed: 'Ese enlace o búsqueda no funcionó — inténtalo de nuevo',
+    alreadySubscribed: 'Ya estás suscrito a este programa',
+    keep: 'Conservar',
+    retentionAll: 'Cada episodio nuevo',
+    retentionCount: {
+      one: 'Último episodio',
+      other: 'Últimos {count} episodios',
+    },
+    subscribe: 'Suscribirse',
+    subscribed: 'Suscrito a {name}',
+    emptyTitle: 'Aún no hay podcasts',
+    emptyBody:
+      'Suscríbete a un programa arriba y sus episodios aparecerán aquí.',
+    kicker: 'Podcast',
+    notFound: 'Ya no estás suscrito a este programa',
+    noEpisodesTitle: 'Aún no hay episodios',
+    noEpisodesBody: 'Downtify revisa este feed según su propio horario.',
+    download: 'Descargar episodio',
+    downloadFailed: 'No se pudo descargar el episodio',
+    played: 'Reproducido',
+    markPlayed: 'Marcar como reproducido',
+    markUnplayed: 'Marcar como no reproducido',
+    removeDownload: 'Quitar descarga',
+    resumeAt: 'Continuar en {time}',
+    unsubscribe: 'Cancelar suscripción',
+    unsubscribeKeepFiles:
+      'Cancelar suscripción, conservar episodios descargados',
+    skipBack: 'Retroceder 15 segundos',
+    skipForward: 'Avanzar 30 segundos',
+    playbackSpeed: 'Velocidad de reproducción',
+  },
   confirm: {
     deleteTrackTitle: '¿Eliminar «{title}»?',
     deleteTracksTitle: '¿Eliminar {count} canciones?',
@@ -838,6 +1028,17 @@ export default {
       'Los elementos en espera y completados se quitan de la lista. Los archivos descargados se conservan.',
     stopWatchingTitle: '¿Dejar de vigilar «{name}»?',
     stopWatchingBody: 'Las canciones descargadas siguen en tu biblioteca.',
+    removeEpisodeTitle: '¿Quitar la descarga de «{name}»?',
+    removeEpisodeBody:
+      'No se descargará de nuevo automáticamente — puedes volver a descargarlo cuando quieras desde la página del programa.',
+    unsubscribeTitle: '¿Cancelar la suscripción a «{name}»?',
+    unsubscribeBody: 'Sus episodios descargados también se eliminan.',
+    unsubscribeKeepBody:
+      'Los episodios descargados se conservan; solo se elimina la suscripción.',
+    removeArtistPhotoTitle: '¿Quitar la foto de {name}?',
+    removeArtistBannerTitle: '¿Quitar el banner de {name}?',
+    removeArtistArtBody:
+      'Esto solo elimina el archivo de imagen guardado — nada más se ve afectado.',
   },
   toast: {
     playingNext: {

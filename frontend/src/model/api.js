@@ -99,12 +99,106 @@ function searchArtists(query) {
   return API.get('/api/artists/search', { params: { query } })
 }
 
+// ── Artist photo & banner ───────────────────────────────────────────
+function getArtistArt(name) {
+  return API.get('/api/artists/art', { params: { name } })
+}
+
+// Saved photo/banner URLs for many artists in one call - used by the
+// Library page's artist grid so it doesn't send one request per tile.
+function getArtistArtBulk(names) {
+  return API.post('/api/artists/art/bulk', { names })
+}
+
+function searchArtistArt(name) {
+  return API.get('/api/artists/art/search', { params: { name } })
+}
+
+// `file` (a library track from Spotify) is the reliable way to find the
+// artist; `name` is the fallback - an exact-name search - for artists
+// none of whose tracks came from Spotify.
+function getSpotifyArtistArtCandidate(file, kind, name = '') {
+  return API.get('/api/artists/art/spotify_candidate', {
+    params: { file, kind, name },
+  })
+}
+
+function setArtistArtFromUrl(name, kind, imageUrl, source = '') {
+  return API.post('/api/artists/art/from_url', {
+    name,
+    kind,
+    image_url: imageUrl,
+    source,
+  })
+}
+
+// The file is sent as the raw request body rather than multipart
+// form-data, so the backend doesn't need python-multipart just for this
+// (same idea as uploadCookies below).
+function uploadArtistArt(name, kind, file, source = '') {
+  return API.post('/api/artists/art/upload', file, {
+    params: { name, kind, source },
+    headers: { 'Content-Type': file.type || 'application/octet-stream' },
+  })
+}
+
+function deleteArtistArt(name, kind) {
+  return API.delete('/api/artists/art', { params: { name, kind } })
+}
+
+// ── Artist profile: bio, social links, related artists, platform ids ──
+function getArtistProfile(name) {
+  return API.get('/api/artists/profile', { params: { name } })
+}
+
+// Seeds a brand-new artist's profile the first time it's needed - a
+// no-op once a profile already exists, so it's safe to call on every
+// visit to an artist's page instead of the plain GET above.
+function ensureArtistProfile(name, lang, trackFiles) {
+  return API.post('/api/artists/profile/ensure', {
+    name,
+    lang,
+    track_files: trackFiles,
+  })
+}
+
+// `source` picks whose biography text is saved: 'applemusic' or 'deezer'
+// (no fallback to the other one), or 'auto' - Apple Music's, else Deezer's.
+function fetchArtistBio(name, lang, source = 'auto') {
+  return API.post('/api/artists/profile/bio', { name, lang, source })
+}
+
+// Just the bio text of one service ('applemusic' or 'deezer'), saving
+// nothing - for loading it into an editor. Response: `{ bio }`.
+function previewArtistBio(name, lang, source) {
+  return API.post('/api/artists/profile/bio/preview', { name, lang, source })
+}
+
+function saveArtistBio(name, bio) {
+  return API.put('/api/artists/profile/bio', { name, bio })
+}
+
+function saveArtistSocial(name, social) {
+  return API.put('/api/artists/profile/social', { name, social })
+}
+
 function open(songURL) {
   return API.get('/api/song/url', { params: { url: songURL } })
 }
 
 function resolveUrl(url) {
   return API.get('/api/url/resolve', { params: { url } })
+}
+
+function artistTopSongs(url) {
+  return API.get('/api/artists/top_songs/url', { params: { url } })
+}
+
+// The first five Spotify top songs of a library artist, from the file the
+// backend keeps per artist (made or refreshed when missing or a week old).
+// Same shape as artistTopSongs, plus `fetched_at` and `stale`.
+function artistTopSongsSaved(name) {
+  return API.get('/api/artists/top_songs/spotify', { params: { name } })
 }
 
 // ── Downloads ────────────────────────────────────────────────────────
@@ -220,6 +314,91 @@ function clearLikes() {
   return API.post('/api/likes/clear')
 }
 
+// ── Discover ───────────────────────────────────────────────────────
+// `library`: [{ name, tracks, liked }] per library artist.
+function getDiscover(library) {
+  return API.post('/api/discover', { library })
+}
+
+// A 30 s clip from Deezer for a song with no `preview_url` of its own.
+function findPreview({ artist, title, duration }) {
+  return API.get('/api/preview', { params: { artist, title, duration } })
+}
+
+function getDiscoverCollections(payload) {
+  return API.post('/api/discover/collections', payload)
+}
+
+function recordListen(artist) {
+  return API.post('/api/discover/listens', { artist })
+}
+
+function clearListens() {
+  return API.delete('/api/discover/listens')
+}
+
+function getBlockedArtists() {
+  return API.get('/api/discover/blocked')
+}
+
+function blockArtist(name) {
+  return API.post('/api/discover/blocked', { name })
+}
+
+function unblockArtist(name) {
+  return API.delete('/api/discover/blocked', { params: { name } })
+}
+
+// ── Podcasts ───────────────────────────────────────────────────────
+function resolvePodcast(url) {
+  return API.post('/api/podcasts/resolve', { url })
+}
+
+function searchPodcasts(q) {
+  return API.get('/api/podcasts/search', { params: { q } })
+}
+
+function subscribePodcast(payload) {
+  return API.post('/api/podcasts/subscribe', payload)
+}
+
+function listPodcastShows() {
+  return API.get('/api/podcasts/shows')
+}
+
+function getPodcastShow(showId) {
+  return API.get(`/api/podcasts/shows/${showId}`)
+}
+
+function listPodcastEpisodes(showId, includeDismissed = false) {
+  return API.get(`/api/podcasts/shows/${showId}/episodes`, {
+    params: { include_dismissed: includeDismissed },
+  })
+}
+
+function updatePodcastShow(showId, updates) {
+  return API.patch(`/api/podcasts/shows/${showId}`, updates)
+}
+
+function deletePodcastShow(showId, keepFiles = false) {
+  return API.delete(`/api/podcasts/shows/${showId}`, {
+    params: { keep_files: keepFiles },
+  })
+}
+
+function downloadPodcastEpisode(episodeId) {
+  return API.post(`/api/podcasts/episodes/${episodeId}/download`)
+}
+
+function deletePodcastEpisode(episodeId) {
+  return API.delete(`/api/podcasts/episodes/${episodeId}`)
+}
+
+// Throttled by the caller; idempotent, so a retried tick is harmless.
+function setPodcastPlayback(episodeId, payload) {
+  return API.put(`/api/podcasts/episodes/${episodeId}/playback`, payload)
+}
+
 // ── Library upgrade ──────────────────────────────────────────────────
 function getLibraryUpgrade() {
   return API.get('/api/library/upgrade')
@@ -315,8 +494,23 @@ export default {
   search,
   searchAlbums,
   searchArtists,
+  getArtistArt,
+  getArtistArtBulk,
+  searchArtistArt,
+  getSpotifyArtistArtCandidate,
+  setArtistArtFromUrl,
+  uploadArtistArt,
+  deleteArtistArt,
+  getArtistProfile,
+  ensureArtistProfile,
+  fetchArtistBio,
+  previewArtistBio,
+  saveArtistBio,
+  saveArtistSocial,
   open,
   resolveUrl,
+  artistTopSongs,
+  artistTopSongsSaved,
   download,
   downloadBatch,
   downloadAlbum,
@@ -342,6 +536,25 @@ export default {
   getLikes,
   setLike,
   clearLikes,
+  getDiscover,
+  getDiscoverCollections,
+  findPreview,
+  recordListen,
+  clearListens,
+  getBlockedArtists,
+  blockArtist,
+  unblockArtist,
+  resolvePodcast,
+  searchPodcasts,
+  subscribePodcast,
+  listPodcastShows,
+  getPodcastShow,
+  listPodcastEpisodes,
+  updatePodcastShow,
+  deletePodcastShow,
+  downloadPodcastEpisode,
+  deletePodcastEpisode,
+  setPodcastPlayback,
   getLibraryUpgrade,
   getLibraryUpgradeJobs,
   scanLibraryUpgrade,

@@ -51,6 +51,15 @@
         </UiButton>
       </div>
     </form>
+    <div
+      v-if="tab === 'artist'"
+      class="-mt-3 rounded-panel border border-line-2 bg-surface px-4 py-3"
+    >
+      <ReleaseFilters
+        v-model:types="newReleaseTypes"
+        v-model:new-only="newOnly"
+      />
+    </div>
     <p
       v-if="addError[tab]"
       class="-mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-danger"
@@ -160,6 +169,7 @@
               :class="item.enabled ? '' : 'opacity-50'"
             >
               <CoverArt
+                :src="tab === 'artist' ? artistCover(item) : ''"
                 :name="item.name"
                 :round="tab === 'artist'"
                 :icon="tab === 'artist' ? 'user' : 'playlist'"
@@ -183,6 +193,27 @@
                   class="block truncate font-mono text-[11.5px] text-muted hover:text-fg hover:underline"
                   >{{ displayUrl(item.url) }}</a
                 >
+                <span
+                  v-if="
+                    releaseFilterSummary(item).types.length ||
+                    releaseFilterSummary(item).newOnly
+                  "
+                  class="mt-1 flex flex-wrap gap-1"
+                >
+                  <UiBadge v-if="releaseFilterSummary(item).types.length">
+                    {{
+                      releaseFilterSummary(item)
+                        .types.map((type) => t(`monitor.release.${type}`))
+                        .join(' · ')
+                    }}
+                  </UiBadge>
+                  <UiBadge
+                    v-if="releaseFilterSummary(item).newOnly"
+                    tone="accent"
+                  >
+                    {{ t('monitor.newOnlyBadge') }}
+                  </UiBadge>
+                </span>
               </div>
             </div>
 
@@ -254,6 +285,7 @@
 
     <WatchEditDialog
       :watch="editing"
+      :cover="editing && tab === 'artist' ? artistCover(editing) : ''"
       @close="editing = null"
       @saved="onSaved"
     />
@@ -267,6 +299,7 @@ import { useLocalStorage } from '@vueuse/core'
 import AppIcon from '/src/components/ui/AppIcon.vue'
 import CoverArt from '/src/components/ui/CoverArt.vue'
 import UiButton from '/src/components/ui/UiButton.vue'
+import UiBadge from '/src/components/ui/UiBadge.vue'
 import UiChips from '/src/components/ui/UiChips.vue'
 import UiEmpty from '/src/components/ui/UiEmpty.vue'
 import UiIconButton from '/src/components/ui/UiIconButton.vue'
@@ -276,17 +309,22 @@ import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
 import UiSwitch from '/src/components/ui/UiSwitch.vue'
 import UiTabs from '/src/components/ui/UiTabs.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
+import ReleaseFilters from '/src/components/monitor/ReleaseFilters.vue'
 import WatchEditDialog from '/src/components/monitor/WatchEditDialog.vue'
 import WatchSourceBadge from '/src/components/monitor/WatchSourceBadge.vue'
 import { intervalOptions } from '/src/components/monitor/intervals'
+import API from '/src/model/api'
 import monitorAPI from '/src/model/monitor'
 import { useUi } from '/src/model/ui'
+import { artistPhotoSource } from '/src/lib/artistPhotoProxy'
 import { timeAgo } from '/src/lib/format'
 import {
   WATCH_SORT_KEYS,
   countWatches,
   filterWatches,
   sortWatches,
+  RELEASE_TYPES,
+  releaseFilterSummary,
   watchKind,
   watchKindOfUrl,
 } from '/src/lib/watches'
@@ -305,6 +343,9 @@ const newUrl = reactive({ playlist: '', artist: '' })
 const addError = reactive({ playlist: '', artist: '' })
 const wrongKind = ref(null)
 const newInterval = ref(360)
+// A new artist watch's filters (the artists tab's form).
+const newReleaseTypes = ref([...RELEASE_TYPES])
+const newOnly = ref(false)
 const checking = ref(new Set())
 const checkingAll = ref(false)
 const query = ref('')
@@ -323,6 +364,39 @@ const tab = computed(() => {
   if (route.params.tab === 'playlists') return 'playlist'
   return !counts.value.playlist && counts.value.artist ? 'artist' : 'playlist'
 })
+
+// Photos saved for the watched artists via the artist page's picker (see
+// artist_profile.py), asked for in one call whenever the artists tab opens or
+// its list changes. An artist is in here once the lookup has answered for
+// them: only then does one with no saved photo get the display-only photo
+// from the proxy (see lib/artistPhotoProxy.js) - and if the lookup fails,
+// they keep the initials, as before.
+const artistPhotos = ref({})
+const artistNames = computed(() =>
+  items.value.filter((i) => watchKind(i) === 'artist').map((i) => i.name)
+)
+let photosRequest = 0
+watch(
+  () => [tab.value, artistNames.value.join('\n')],
+  async ([currentTab]) => {
+    if (currentTab !== 'artist' || !artistNames.value.length) return
+    const request = ++photosRequest
+    try {
+      const res = await API.getArtistArtBulk(artistNames.value)
+      if (request === photosRequest) {
+        artistPhotos.value = { ...artistPhotos.value, ...(res.data || {}) }
+      }
+    } catch {
+      // No saved photos known: those artists keep their initials.
+    }
+  },
+  { immediate: true }
+)
+
+function artistCover(item) {
+  const entry = artistPhotos.value[item.name]
+  return artistPhotoSource(item.name, entry, entry !== undefined).cover
+}
 
 const tabs = computed(() => [
   {
@@ -346,7 +420,9 @@ const copy = computed(() =>
         urlLabel: t('monitor.urlLabelArtist'),
         urlPlaceholder: t('monitor.urlPlaceholderArtist'),
         add: t('monitor.watchArtist'),
-        explainer: t('monitor.explainerArtists'),
+        explainer: newOnly.value
+          ? t('monitor.explainerArtistsNewOnly')
+          : t('monitor.explainerArtists'),
         emptyTitle: t('monitor.emptyArtistsTitle'),
         emptyBody: t('monitor.emptyArtistsBody'),
       }
@@ -453,7 +529,13 @@ async function add() {
   }
   adding.value = true
   try {
-    const res = await monitorAPI.addMonitoredPlaylist(url, newInterval.value)
+    const res = await monitorAPI.addMonitoredPlaylist(
+      url,
+      newInterval.value,
+      kind === 'artist'
+        ? { release_types: newReleaseTypes.value, new_only: newOnly.value }
+        : {}
+    )
     items.value = [res.data, ...items.value]
     newUrl[kind] = ''
     ui.toast(t('toast.watching', { name: res.data.name }), { kind: 'success' })

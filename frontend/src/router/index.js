@@ -18,8 +18,16 @@ const routes = [
     component: () => import('/src/views/LinkView.vue'),
   },
   {
+    // An artist's most popular songs, to pick from before downloading.
+    path: '/link/top-songs',
+    name: 'TopSongs',
+    component: () => import('/src/views/TopSongsView.vue'),
+  },
+  {
     path: '/queue/:tab(active|queued|done|failed|all)?',
     name: 'Queue',
+    // Switching tabs keeps the page (and the mounted queue list).
+    meta: { viewKey: 'queue' },
     component: () => import('/src/views/QueueView.vue'),
   },
   {
@@ -54,6 +62,22 @@ const routes = [
     // Switching tabs keeps the page (and what was typed in it).
     meta: { viewKey: 'monitor' },
     component: () => import('/src/views/MonitorView.vue'),
+  },
+  {
+    // Artists the library doesn't have yet, suggested from the ones it does.
+    path: '/discover',
+    name: 'Discover',
+    component: () => import('/src/views/DiscoverView.vue'),
+  },
+  {
+    path: '/podcasts',
+    name: 'Podcasts',
+    component: () => import('/src/views/PodcastsView.vue'),
+  },
+  {
+    path: '/podcasts/show',
+    name: 'PodcastShow',
+    component: () => import('/src/views/PodcastShowView.vue'),
   },
   {
     path: '/settings/:section?',

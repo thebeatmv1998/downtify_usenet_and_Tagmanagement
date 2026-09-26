@@ -28,6 +28,8 @@ export default {
     library: 'Könyvtár',
     queue: 'Sor',
     monitor: 'Figyelő',
+    discover: 'Felfedezés',
+    podcasts: 'Podcastok',
     settings: 'Beállítások',
     more: 'Továbbiak',
     playlists: 'Lejátszási listák',
@@ -41,6 +43,10 @@ export default {
     play: 'Lejátszás',
     playAll: 'Összes lejátszása',
     playItem: '{name} lejátszása',
+    playPreview: '{name} előnézetének lejátszása',
+    pausePreview: '{name} előnézetének szüneteltetése',
+    previewLabel: 'Előnézet',
+    noPreview: 'Nem található előzetes ehhez: {name}',
     shuffle: 'Keverés',
     playNext: 'Lejátszás következőként',
     addToQueue: 'Hozzáadás a sorhoz',
@@ -60,7 +66,7 @@ export default {
     inputPlaceholder:
       'Spotify vagy YouTube Music link, vagy előadó, album, dal…',
     getIt: 'Letöltés',
-    hintSpotify: 'Számok, albumok és lejátszási listák',
+    hintSpotify: 'Számok, albumok, lejátszási listák és előadók',
     hintYoutube: 'YouTube Music dalok, albumok, lejátszási listák és előadók',
     hintCsv: 'CSV importálása (Soundiiz, Exportify…)',
     downloading: 'Letöltés folyamatban',
@@ -115,8 +121,6 @@ export default {
     typeEp: 'EP',
     unsupportedLink:
       'A Downtify nem tudja letölteni ezt a linket. Illessz be Spotify számot, albumot vagy listát, vagy YouTube Music linket.',
-    spotifyArtistUnsupported:
-      'Spotify előadóoldalak nem tölthetők le — keresd az előadót itt.',
     tipSearchTitle: 'Keresés név szerint',
     tipSearchBody:
       'Írj be előadót, albumot vagy dalt — a találatok a YouTube Musicból jönnek.',
@@ -152,6 +156,15 @@ export default {
     filterNew: 'Új',
     filterLibrary: 'A könyvtárban',
     filterQueue: 'A sorban',
+    topSongs: 'Top Songs',
+    topSongsOf: 'Top Songs of {artist}',
+    topSongsEmpty: 'Nem található népszerű dal ehhez az előadóhoz',
+    createPlaylist: 'Lejátszási lista létrehozása',
+    createPlaylistHint:
+      'A dalokat ebben a sorrendben lejátszási listaként menti, az előadó fotójával borítóként, ha a lejátszási lista borítója be van kapcsolva.',
+    selectAll: 'Összes kijelölése',
+    playCountSpotify: 'Lejátszások a Spotifyon',
+    playCountYoutubeMusic: 'Lejátszások a YouTube Musicon (hozzávetőleges)',
   },
   queue: {
     title: 'Sor',
@@ -349,6 +362,65 @@ export default {
     kicker: 'Előadó',
     notFound: 'Az előadó nem található',
     findMore: 'Továbbiak keresése',
+    relatedArtists: 'A rajongók ezt is szeretik',
+    topSongsLink: 'További népszerű számok',
+    linksTab: 'Linkek',
+    linksPlatforms: 'Streaming platformok',
+    linksSocial: 'Közösségi hálózatok',
+  },
+  artistArt: {
+    editPhoto: 'Fotó szerkesztése',
+    editArtist: 'Előadó szerkesztése',
+    titlePhoto: '{name} fotója',
+    titleBanner: '{name} bannere',
+    tabBanner: 'Banner',
+    tabProfile: 'Profil',
+    inUse: 'Használatban',
+    tabBio: 'Életrajz',
+    tabSocial: 'Közösségi média',
+    titleBio: '{name} életrajza',
+    titleSocial: '{name} közösségimédia-linkjei',
+    bioDescription: 'Írja meg vagy szerkessze saját maga az előadó életrajzát',
+    socialDescription:
+      'Adjon hozzá linkeket az előadó közösségimédia-profiljaihoz és weboldalához.',
+    bioPlaceholder: 'Még nincs életrajz — írjon ide egyet',
+    save: 'Mentés',
+    bioSaved: 'Életrajz elmentve',
+    bioSaveFailed: 'Nem sikerült elmenteni az életrajzot',
+    socialSaved: 'Közösségimédia-linkek elmentve',
+    socialSaveFailed: 'Nem sikerült elmenteni a közösségimédia-linkeket',
+    socialTwitter: 'Twitter / X',
+    socialFacebook: 'Facebook',
+    socialYoutube: 'YouTube',
+    socialInstagram: 'Instagram',
+    socialWebsite: 'Weboldal',
+    description:
+      'Használd a legnagyobb streamingplatformok képeit, illessz be egy internetes képlinket, vagy tölts fel egyet az eszközödről.',
+    searchPlaceholder: 'Internetes képlink vagy előadó neve',
+    upload: 'Feltöltés az eszközről',
+    noResults:
+      'Még nincs találat — keress rá az előadóra, vagy illessz be egy képlinket.',
+    saved: 'Kép mentve',
+    saveFailed: 'Nem sikerült menteni a képet',
+    searchFailed: 'Nem sikerült képeket keresni',
+    sourceLink: 'Link',
+    removePhoto: 'Fotó eltávolítása',
+    removeBanner: 'Banner eltávolítása',
+    removed: 'Kép eltávolítva',
+    removeFailed: 'Nem sikerült eltávolítani a képet',
+  },
+  artistBio: {
+    title: 'Életrajz',
+    fetchAppleMusic: 'Lekérés az Apple Music-ból',
+    fetchDeezer: 'Lekérés a Deezerből',
+    formed: '{year}-ban alakult',
+    born: 'Született: {date}',
+    genre: 'Műfaj:',
+    empty: 'Még nincs életrajz.',
+    showMore: 'Több mutatása',
+    showLess: 'Kevesebb mutatása',
+    loaded: 'Az életrajz betöltve — a megtartáshoz mentsd el',
+    fetchFailed: 'Nem sikerült életrajzot lekérni ehhez az előadóhoz',
   },
   playlists: {
     kicker: 'Lejátszási lista',
@@ -416,6 +488,8 @@ export default {
       artist: 'Lejátszás előadótól',
       library: 'Lejátszás a könyvtáradból',
       search: 'Lejátszás a keresésből',
+
+      podcast: 'Lejátszás podcastról',
     },
     goToAlbum: 'Album',
     goToArtist: 'Előadó',
@@ -465,6 +539,17 @@ export default {
       'A hangszínszabályzó nem indult el. A lejátszás nélküle folytatódik.',
   },
   monitor: {
+    releaseTypes: 'Letöltés',
+    releaseTypesAtLeastOne: 'Legalább egy megjelenéstípus maradjon',
+    release: { album: 'Albumok', single: 'Kislemezek', ep: 'EP-k' },
+    newOnly: 'Csak új megjelenések',
+    newOnlyHint:
+      'Kihagyja, amit az előadó már kiadott; csak a követés kezdete után megjelenők töltődnek le.',
+    newOnlyTurnOn:
+      'Mentés után minden már megjelent kimarad; csak a későbbi megjelenések töltődnek le.',
+    newOnlyTurnOff:
+      'Mentés után a kihagyott megjelenések a következő ellenőrzéskor letöltődnek.',
+    newOnlyBadge: 'Csak új',
     title: 'Lejátszásilista-figyelő',
     subtitle:
       'Ezeknek a listáknak és előadóknak az új számai automatikusan letöltődnek.',
@@ -514,6 +599,8 @@ export default {
       'Egy lista hozzáadása most letölti a teljes tartalmát, majd ütemezetten ellenőrzi és letölti az újakat.',
     explainerArtists:
       'Egy előadó hozzáadása most letölti a teljes diszkográfiáját, majd ütemezetten ellenőrzi és letölti az új kiadásokat.',
+    explainerArtistsNewOnly:
+      'Előadó hozzáadása most semmit sem tölt le; ütemezetten ellenőrzi, és letölti a kiválasztott típusok minden új megjelenését.',
     emptyPlaylistsTitle: 'Még nincs figyelt lista',
     emptyPlaylistsBody:
       'Illessz be fent egy listalinket a szinkronban tartáshoz.',
@@ -696,6 +783,12 @@ export default {
     coverSize: 'Borító mérete',
     coverSizeHint:
       'YouTube Music borítókhoz. A Spotify borítók mindig a legnagyobb méretűek.',
+    artistCover: 'Előadófotók automatikus beszerzése',
+    artistCoverHint:
+      'Letölti az előadó fotóját a .metadata/ArtistImage mappába; olyan szolgáltatásokban is használható, mint a Navidrome.',
+    artistCoverBanner: 'Előadóbannerek automatikus beszerzése',
+    artistCoverBannerHint:
+      'Letölti az előadó hero bannerét a gazdagabb megjelenésért, elmentve a .metadata/ArtistBannerImage mappába.',
     lyricsGroup: 'Dalszövegek',
     lyrics: 'Dalszövegek letöltése',
     lyricsHint:
@@ -822,6 +915,103 @@ export default {
     close: 'Most szóló bezárása',
     help: 'Billentyűparancsok',
   },
+  discover: {
+    title: 'Felfedezés',
+    subtitle:
+      'Előadók, akik még nincsenek meg neked – a könyvtárad és a hallgatott zenék alapján.',
+    refresh: 'Frissítés',
+    hiddenButton: 'Elrejtett előadók ({count})',
+    emptyLibraryTitle: 'Még nincs miből kiindulni',
+    emptyLibraryBody:
+      'A Felfedezés a könyvtáradban lévő előadók alapján ajánl. Előbb tölts le néhány zenét.',
+    findMusic: 'Zene keresése',
+    failed: 'Nem sikerült betölteni az ajánlásokat',
+    noneTitle: 'Nincs új ajánlás',
+    noneBody:
+      'Minden, a könyvtáradhoz ajánlott előadó már benne van, vagy el van rejtve. Tölts le vagy hallgass többet az újakért.',
+    partial:
+      'Néhány előadódat most nem sikerült ellenőrizni, ezért a lista a szokásosnál rövidebb. Próbáld újra később.',
+    because: 'Mert szereted: {names}',
+    moreFor: 'További lehetőségek: {name}',
+    findSongs: 'Dalok keresése',
+    openDeezer: 'Megnyitás a Deezeren',
+    notInterested: 'Nem érdekel',
+    hidden: '{name} többé nem lesz ajánlva',
+    undo: 'Visszavonás',
+    actionFailed: 'Hiba történt. Próbáld újra.',
+    hiddenTitle: 'Elrejtett előadók',
+    hiddenBody: 'Ezeket az előadókat a Felfedezés soha nem ajánlja.',
+    hideByName: 'Előadó elrejtése',
+    hideByNamePlaceholder: 'Előadó neve',
+    hide: 'Elrejtés',
+    unhide: 'Megjelenítés újra',
+    hiddenEmpty: 'Nincsenek elrejtett előadók.',
+    listensBody:
+      'Egy dal akkor számít a Felfedezéshez, ha a fele (vagy négy perce) lejátszódott.',
+    clearListens: 'Hallgatási előzmények törlése',
+    clearListensTitle: 'Törlöd a hallgatási előzményeket?',
+    clearListensBody:
+      'A Felfedezés elfelejti, mit hallgattál. A könyvtárad és a kedvelt dalaid nem változnak.',
+    listensCleared: 'Hallgatási előzmények törölve',
+    artistsTitle: 'Előadók neked',
+    showAll: 'Összes mutatása ({count})',
+    showLess: 'Kevesebb mutatása',
+    albumsTitle: 'Albumok neked',
+    albumsBody: 'Olyan előadók legismertebb albuma, akik tetszhetnek neked.',
+    moreAlbumsTitle: 'Még több az előadóidtól',
+    moreAlbumsBody:
+      'Már meglévő előadóid népszerű albumai, amelyek még nincsenek a könyvtáradban.',
+    playlistsTitle: 'Lejátszási listák neked',
+    playlistsBody:
+      'Spotify-mixek a legtöbbet hallgatott előadóid körül, és új előadók legjobbjai.',
+    radioFor: 'Mix {name} körül',
+    essentialsOf: '{name} legjobbjai',
+    collectionsFailed:
+      'Az albumokat és listákat most nem sikerült betölteni. Próbáld újra később.',
+    poweredBy:
+      'Az előadók a Deezer hasonló előadóiból, az albumok és listák a Spotifyról származnak.',
+  },
+  podcasts: {
+    title: 'Podcastok',
+    subtitle:
+      'Iratkozz fel egy műsorra, és az új epizódjai maguktól letöltődnek.',
+    addTitle: 'Podcast hozzáadása',
+    addBody:
+      'Illessz be egy RSS-hírcsatorna URL-t, egy Spotify műsor- vagy epizódlinket, vagy írj be egy nevet a kereséshez.',
+    findPlaceholder: 'RSS-hírcsatorna, Spotify-link, vagy egy műsor neve',
+    find: 'Keresés',
+    noResults: 'Nem található műsor',
+    findFailed: 'Ez a link vagy keresés nem működött — próbáld újra',
+    alreadySubscribed: 'Már feliratkoztál erre a műsorra',
+    keep: 'Megtartás',
+    retentionAll: 'Minden új epizód',
+    retentionCount: {
+      one: 'Legutóbbi epizód',
+      other: 'Legutóbbi {count} epizód',
+    },
+    subscribe: 'Feliratkozás',
+    subscribed: 'Feliratkoztál: {name}',
+    emptyTitle: 'Még nincs podcast',
+    emptyBody:
+      'Iratkozz fel fent egy műsorra, és az epizódjai itt jelennek meg.',
+    kicker: 'Podcast',
+    notFound: 'Már nem vagy feliratkozva erre a műsorra',
+    noEpisodesTitle: 'Még nincs epizód',
+    noEpisodesBody:
+      'A Downtify a saját ütemezése szerint ellenőrzi ezt a hírcsatornát.',
+    download: 'Epizód letöltése',
+    downloadFailed: 'Az epizódot nem sikerült letölteni',
+    played: 'Meghallgatva',
+    markPlayed: 'Megjelölés meghallgatottként',
+    markUnplayed: 'Megjelölés meg nem hallgatottként',
+    removeDownload: 'Letöltés eltávolítása',
+    resumeAt: 'Folytatás innen: {time}',
+    unsubscribe: 'Leiratkozás',
+    unsubscribeKeepFiles: 'Leiratkozás, letöltött epizódok megtartása',
+    skipBack: '15 másodperc vissza',
+    skipForward: '30 másodperc előre',
+    playbackSpeed: 'Lejátszási sebesség',
+  },
   confirm: {
     deleteTrackTitle: 'Törlöd: „{title}”?',
     deleteTracksTitle: 'Törlöd a(z) {count} számot?',
@@ -835,6 +1025,17 @@ export default {
       'A várakozó és kész elemek lekerülnek a listáról. A letöltött fájlok megmaradnak.',
     stopWatchingTitle: 'Leállítod „{name}” figyelését?',
     stopWatchingBody: 'A letöltött számok a könyvtáradban maradnak.',
+    removeEpisodeTitle: 'Eltávolítod „{name}” letöltését?',
+    removeEpisodeBody:
+      'Nem töltődik le újra automatikusan — bármikor újra letöltheted a műsor oldaláról.',
+    unsubscribeTitle: 'Leiratkozol a(z) „{name}” műsorról?',
+    unsubscribeBody: 'A letöltött epizódjai is törlődnek.',
+    unsubscribeKeepBody:
+      'A letöltött epizódok megmaradnak; csak a feliratkozás szűnik meg.',
+    removeArtistPhotoTitle: '{name} fotójának eltávolítása?',
+    removeArtistBannerTitle: '{name} bannerének eltávolítása?',
+    removeArtistArtBody:
+      'Ez csak a mentett képfájlt távolítja el — semmi mást nem érint.',
   },
   toast: {
     playingNext: {

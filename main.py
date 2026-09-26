@@ -31,6 +31,7 @@ from downtify import __version__, api, m3u
 from downtify.cookies import CookiesStore
 from downtify.cover_art import extract_cover_art
 from downtify.cover_cache import CoverArtCache
+from downtify.discover import DiscoverStore
 from downtify.downloader import Downloader
 from downtify.library_archive import (
     MAX_ARCHIVE_FILES,
@@ -60,10 +61,29 @@ from downtify.playlist_spotify_cache import (
     PlaylistSpotifyCache,
     playlist_spotify_cache_loop,
 )
+from downtify.podcasts import PodcastStore
 from downtify.track_index import TrackIndex
 from downtify.update_check import UpdateChecker, update_check_loop
 
 load_dotenv()
+
+
+class _Server(Server):
+    """Close tracked WebSockets before uvicorn waits on open connections.
+
+    Uvicorn's shutdown order is: stop accepting, ask connections to
+    close, *wait* for them, then run lifespan. The SPA keeps a
+    WebSocket plus HTTP keep-alive (queue poll). Waiting on those is
+    why the first Ctrl+C still served requests until a second press
+    set ``force_exit``.
+    """
+
+    async def shutdown(self, sockets=None):
+        try:
+            await api.state.connections.close_all()
+        except Exception:
+            logger.exception('Could not close WebSockets on shutdown')
+        await super().shutdown(sockets)
 
 
 class _InterceptHandler(logging.Handler):
@@ -246,6 +266,8 @@ def _open_library_stores(monitor_db_path: Path) -> None:
     api.state.playlist_spotify_cache = PlaylistSpotifyCache(library_db)
     api.state.lyrics_cache = LyricsLookupCache(library_db)
     api.state.likes = LikedTracks(library_db)
+    api.state.podcasts = PodcastStore(library_db)
+    api.state.discover = DiscoverStore(library_db)
     api.state.cover_cache = CoverArtCache(DATABASE_DIR / 'cover_cache')
     api.state.upgrade_runner = LibraryUpgradeRunner(
         LibraryUpgradeDB(library_db),
@@ -316,13 +338,14 @@ def build_app() -> FastAPI:
         _open_library_stores(db_path)
         # Keeps the cached Spotify track lists of known playlists fresh for
         # the playlist batch reports.
-        asyncio.create_task(
+        api.spawn_task(
             playlist_spotify_cache_loop(
                 api.state.playlist_spotify_cache,
                 api.known_spotify_playlist_ids,
-            )
+            ),
+            name='playlist-spotify-cache',
         )
-        asyncio.create_task(
+        api.spawn_task(
             monitor_loop(
                 db=api.state.monitor_db,
                 get_downloader=lambda: api.state.downloader,
@@ -330,17 +353,20 @@ def build_app() -> FastAPI:
                 loop=loop,
                 settings=api.state.settings,
                 get_library=api.library_stores,
-            )
+                get_podcasts=lambda: api.state.podcasts,
+            ),
+            name='monitor-loop',
         )
         # Separate hourly sweep that forgets a downloaded-track record once
         # its file is gone from the downloads directory — see
         # downtify/monitor.py:reconcile_loop for why this is a distinct,
         # slower cadence from the per-watch monitor_loop above.
-        asyncio.create_task(
+        api.spawn_task(
             reconcile_loop(
                 db=api.state.monitor_db,
                 get_downloader=lambda: api.state.downloader,
-            )
+            ),
+            name='reconcile-loop',
         )
         # Hourly check against GitHub Releases (see
         # downtify/update_check.py) so the footer can tell the user a
@@ -348,7 +374,10 @@ def build_app() -> FastAPI:
         # this loop's cached result — the request to GitHub never blocks
         # a page load.
         api.state.update_checker = UpdateChecker()
-        asyncio.create_task(update_check_loop(api.state.update_checker))
+        api.spawn_task(
+            update_check_loop(api.state.update_checker),
+            name='update-check-loop',
+        )
         # The liked songs playlist is a file; if it was deleted (or the
         # library moved) while Downtify was off, write it again.
         try:
@@ -364,6 +393,8 @@ def build_app() -> FastAPI:
                 logger.exception('Library upgrade: could not resume')
 
         yield
+
+        await api.shutdown_resources()
 
     app = FastAPI(
         lifespan=lifespan,
@@ -418,6 +449,9 @@ def build_app() -> FastAPI:
         slskd_settings=api._effective_slskd_settings(api.state.settings),
         usenet_settings=api._effective_usenet_settings(api.state.settings),
     )
+    # A finished download (from the UI or a monitor sweep alike) seeds its
+    # artist's profile in the background.
+    api.state.downloader.on_downloaded = api.enrich_artist_after_download
     api.providers.set_cover_resolution(
         api._clamp_cover_resolution(
             api.state.settings.get(
@@ -745,8 +779,12 @@ def main() -> None:
         log_level=args.log_level.lower(),
         log_config=None,
         workers=1,
+        # Do not wait on the SPA's keep-alive HTTP / leftover WS.
+        # A long wait is what kept answering requests after the first
+        # Ctrl+C until a second press set force_exit.
+        timeout_graceful_shutdown=1,
     )
-    server = Server(config)
+    server = _Server(config)
 
     logger.info(
         'Starting Downtify {} on http://{}:{}',
@@ -756,7 +794,33 @@ def main() -> None:
     )
     logger.info('Application log level (Loguru): {}', args.log_level.upper())
     loop.run_until_complete(server.serve())
+    return loop
 
 
 if __name__ == '__main__':
-    main()
+    exit_code = 0
+    loop = None
+    try:
+        loop = main()
+    except KeyboardInterrupt:
+        # uvicorn.capture_signals re-raises the captured SIGINT after a
+        # clean serve(); treat that as a normal exit, not a crash.
+        logger.info('Interrupted — exiting')
+    except Exception:
+        logger.exception('Server exited with an error')
+        exit_code = 1
+    finally:
+        # Force-exit (second Ctrl+C) can skip lifespan; still release the
+        # download pool so interpreter exit does not hang on yt-dlp.
+        # Idempotent when lifespan already ran shutdown_resources.
+        try:
+            if loop is not None:
+                loop.run_until_complete(api.shutdown_resources())
+        except Exception:
+            logger.exception('Shutdown cleanup failed')
+        api.release_thread_pools()
+        # Skip threading._python_exit joins on in-flight yt-dlp / iTunes
+        # / cover-fetch workers. Without this the process stays alive
+        # (and can look like it is still serving) until a second Ctrl+C.
+        # Do not loop.close() first — that waits on the same pools.
+        os._exit(exit_code)

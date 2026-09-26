@@ -28,6 +28,8 @@ export default {
     library: 'Kitaplık',
     queue: 'Kuyruk',
     monitor: 'İzleyici',
+    discover: 'Keşfet',
+    podcasts: 'Podcastler',
     settings: 'Ayarlar',
     more: 'Daha fazla',
     playlists: 'Çalma listeleri',
@@ -41,6 +43,10 @@ export default {
     play: 'Çal',
     playAll: 'Tümünü çal',
     playItem: '{name} çal',
+    playPreview: '{name} önizlemesini çal',
+    pausePreview: '{name} önizlemesini duraklat',
+    previewLabel: 'Önizleme',
+    noPreview: '{name} için önizleme bulunamadı',
     shuffle: 'Karıştır',
     playNext: 'Sıradaki olarak çal',
     addToQueue: 'Kuyruğa ekle',
@@ -60,7 +66,7 @@ export default {
     inputPlaceholder:
       'Spotify veya YouTube Music bağlantısı ya da sanatçı, albüm, şarkı…',
     getIt: 'İndir',
-    hintSpotify: 'Parçalar, albümler ve çalma listeleri',
+    hintSpotify: 'Parçalar, albümler, çalma listeleri ve sanatçılar',
     hintYoutube:
       'YouTube Music şarkıları, albümleri, çalma listeleri ve sanatçıları',
     hintCsv: 'CSV içe aktar (Soundiiz, Exportify…)',
@@ -119,8 +125,6 @@ export default {
     typeEp: 'EP',
     unsupportedLink:
       'Downtify bu bağlantıyı indiremiyor. Bir Spotify parçası, albümü veya çalma listesi ya da YouTube Music bağlantısı yapıştır.',
-    spotifyArtistUnsupported:
-      'Spotify sanatçı sayfaları indirilemez — sanatçıyı burada ara.',
     tipSearchTitle: 'Adla ara',
     tipSearchBody:
       'Bir sanatçı, albüm veya şarkı yaz — sonuçlar YouTube Music’ten gelir.',
@@ -156,6 +160,15 @@ export default {
     filterNew: 'Yeni',
     filterLibrary: 'Kitaplıkta',
     filterQueue: 'Kuyrukta',
+    topSongs: 'Top Songs',
+    topSongsOf: 'Top Songs of {artist}',
+    topSongsEmpty: 'Bu sanatçı için popüler şarkı bulunamadı',
+    createPlaylist: 'Çalma listesi oluştur',
+    createPlaylistHint:
+      'Şarkıları bu sırayla çalma listesi olarak kaydeder; çalma listesi kapağı açıksa sanatçının fotoğrafı kapak olur.',
+    selectAll: 'Tümünü seç',
+    playCountSpotify: 'Spotify’daki dinlenme sayısı',
+    playCountYoutubeMusic: 'YouTube Music’teki dinlenme sayısı (yaklaşık)',
   },
   queue: {
     title: 'Kuyruk',
@@ -351,6 +364,66 @@ export default {
     kicker: 'Sanatçı',
     notFound: 'Sanatçı bulunamadı',
     findMore: 'Daha fazlasını bul',
+    relatedArtists: 'Hayranların beğendiği diğerleri',
+    topSongsLink: 'Daha fazla popüler şarkı',
+    linksTab: 'Bağlantılar',
+    linksPlatforms: 'Yayın platformları',
+    linksSocial: 'Sosyal ağlar',
+  },
+  artistArt: {
+    editPhoto: 'Fotoğrafı düzenle',
+    editArtist: 'Sanatçıyı düzenle',
+    titlePhoto: '{name} fotoğrafı',
+    titleBanner: '{name} afişi',
+    tabBanner: 'Afiş',
+    tabProfile: 'Profil',
+    inUse: 'Kullanımda',
+    tabBio: 'Biyografi',
+    tabSocial: 'Sosyal medya',
+    titleBio: '{name} biyografisi',
+    titleSocial: '{name} sosyal medya bağlantıları',
+    bioDescription:
+      'Bu sanatçının biyografisini kendiniz yazın veya düzenleyin',
+    socialDescription:
+      'Bu sanatçının sosyal medya profillerine ve web sitesine bağlantılar ekleyin.',
+    bioPlaceholder: 'Henüz biyografi yok — buraya bir tane yazın',
+    save: 'Kaydet',
+    bioSaved: 'Biyografi kaydedildi',
+    bioSaveFailed: 'Biyografi kaydedilemedi',
+    socialSaved: 'Sosyal medya bağlantıları kaydedildi',
+    socialSaveFailed: 'Sosyal medya bağlantıları kaydedilemedi',
+    socialTwitter: 'Twitter / X',
+    socialFacebook: 'Facebook',
+    socialYoutube: 'YouTube',
+    socialInstagram: 'Instagram',
+    socialWebsite: 'Web sitesi',
+    description:
+      'Başlıca müzik platformlarındaki görselleri kullanın, bir web görsel bağlantısı yapıştırın veya cihazınızdan bir görsel yükleyin.',
+    searchPlaceholder: 'İnternet görsel bağlantısı veya sanatçı adı',
+    upload: 'Cihazdan yükle',
+    noResults:
+      'Henüz sonuç yok — sanatçıyı arayın veya bir görsel bağlantısı yapıştırın.',
+    saved: 'Görsel kaydedildi',
+    saveFailed: 'Bu görsel kaydedilemedi',
+    searchFailed: 'Görseller aranamadı',
+    sourceLink: 'Bağlantı',
+    removePhoto: 'Fotoğrafı kaldır',
+    removeBanner: 'Afişi kaldır',
+    removed: 'Görsel kaldırıldı',
+    removeFailed: 'Bu görsel kaldırılamadı',
+  },
+  artistBio: {
+    title: 'Biyografi',
+    fetchAppleMusic: "Apple Music'ten getir",
+    fetchDeezer: "Deezer'dan getir",
+    formed: '{year} yılında kuruldu',
+    born: '{date} doğumlu',
+    genre: 'Tür:',
+    empty: 'Henüz biyografi yok.',
+    showMore: 'Daha fazla göster',
+    showLess: 'Daha az göster',
+    loaded: "Biyografi yüklendi — saklamak için Kaydet'e basın",
+    fetchFailed: 'Bu sanatçı için biyografi alınamadı',
   },
   playlists: {
     kicker: 'Çalma listesi',
@@ -415,6 +488,8 @@ export default {
       artist: 'Sanatçıdan çalınıyor',
       library: 'Kitaplığından çalınıyor',
       search: 'Aramadan çalınıyor',
+
+      podcast: 'Podcastten çalınıyor',
     },
     goToAlbum: 'Albüm',
     goToArtist: 'Sanatçı',
@@ -465,6 +540,17 @@ export default {
     equalizerError: 'Ekolayzır başlatılamadı. Çalma onsuz devam ediyor.',
   },
   monitor: {
+    releaseTypes: 'İndir',
+    releaseTypesAtLeastOne: 'En az bir yayın türü bırakın',
+    release: { album: 'Albümler', single: 'Single’lar', ep: 'EP’ler' },
+    newOnly: 'Yalnızca yeni yayınlar',
+    newOnlyHint:
+      'Sanatçının zaten yayınladığı her şey atlanır; yalnızca takibe başladıktan sonra çıkanlar indirilir.',
+    newOnlyTurnOn:
+      'Kaydedince, zaten çıkmış her şey atlanır; yalnızca sonraki yayınlar indirilir.',
+    newOnlyTurnOff:
+      'Kaydedince, atlanan yayınlar bir sonraki kontrolde indirilir.',
+    newOnlyBadge: 'Yalnızca yeni',
     title: 'Çalma Listesi İzleyici',
     subtitle:
       'Bu çalma listelerinden ve sanatçılardan gelen yeni parçalar otomatik indirilir.',
@@ -514,6 +600,8 @@ export default {
       'Bir çalma listesi eklemek içindeki her şeyi hemen indirir, sonra listeyi belirlenen aralıkta kontrol edip eklenenleri indirir.',
     explainerArtists:
       'Bir sanatçı eklemek tüm diskografisini hemen indirir, sonra belirlenen aralıkta kontrol edip her yeni yayını indirir.',
+    explainerArtistsNewOnly:
+      'Sanatçı eklemek şimdilik hiçbir şey indirmez; planlı olarak kontrol edilir ve seçtiğiniz türlerdeki her yeni yayın indirilir.',
     emptyPlaylistsTitle: 'Henüz izlenen çalma listesi yok',
     emptyPlaylistsBody:
       'Senkronize tutmak için yukarıya bir çalma listesi bağlantısı yapıştır.',
@@ -693,6 +781,12 @@ export default {
     coverSize: 'Kapak boyutu',
     coverSizeHint:
       'YouTube Music kapakları için. Spotify kapakları her zaman en büyük boyuttadır.',
+    artistCover: 'Sanatçı fotoğraflarını otomatik al',
+    artistCoverHint:
+      'Sanatçı fotoğrafını .metadata/ArtistImage klasörüne indirir; Navidrome gibi servislerde de kullanılabilir.',
+    artistCoverBanner: 'Sanatçı afişlerini otomatik al',
+    artistCoverBannerHint:
+      'Sanatçının hero afişini daha zengin bir görünüm için indirir; .metadata/ArtistBannerImage klasörüne kaydedilir.',
     lyricsGroup: 'Şarkı sözleri',
     lyrics: 'Şarkı sözlerini indir',
     lyricsHint:
@@ -817,6 +911,101 @@ export default {
     close: 'Şimdi çalanı kapat',
     help: 'Kısayolları göster',
   },
+  discover: {
+    title: 'Keşfet',
+    subtitle:
+      'Henüz sahip olmadığınız sanatçılar; kitaplığınıza ve dinlediklerinize göre seçildi.',
+    refresh: 'Yenile',
+    hiddenButton: 'Gizlenen sanatçılar ({count})',
+    emptyLibraryTitle: 'Henüz dayanacak bir şey yok',
+    emptyLibraryBody:
+      'Keşfet, kitaplığınızdaki sanatçılara göre öneriler sunar. Önce biraz müzik indirin.',
+    findMusic: 'Müzik bul',
+    failed: 'Öneriler yüklenemedi',
+    noneTitle: 'Yeni öneri yok',
+    noneBody:
+      'Kitaplığınız için önerilen tüm sanatçılar zaten kitaplığınızda ya da gizli. Yeni öneriler için daha fazla indirin veya dinleyin.',
+    partial:
+      'Bazı sanatçılarınız şu anda kontrol edilemedi, bu yüzden liste her zamankinden kısa. Daha sonra tekrar deneyin.',
+    because: '{names} sevdiğiniz için',
+    moreFor: '{name} için diğer seçenekler',
+    findSongs: 'Şarkı bul',
+    openDeezer: 'Deezer’da aç',
+    notInterested: 'İlgilenmiyorum',
+    hidden: '{name} bir daha önerilmeyecek',
+    undo: 'Geri al',
+    actionFailed: 'Bir şeyler ters gitti. Tekrar deneyin.',
+    hiddenTitle: 'Gizlenen sanatçılar',
+    hiddenBody: 'Bu sanatçılar Keşfet’te hiçbir zaman önerilmez.',
+    hideByName: 'Bir sanatçıyı gizle',
+    hideByNamePlaceholder: 'Sanatçı adı',
+    hide: 'Gizle',
+    unhide: 'Yeniden göster',
+    hiddenEmpty: 'Gizlenen sanatçı yok.',
+    listensBody:
+      'Bir şarkı, yarısı (veya dört dakikası) çalındığında Keşfet için sayılır.',
+    clearListens: 'Dinleme geçmişini temizle',
+    clearListensTitle: 'Dinleme geçmişi temizlensin mi?',
+    clearListensBody:
+      'Keşfet dinlediklerinizi unutur. Kitaplığınız ve beğendiğiniz şarkılar olduğu gibi kalır.',
+    listensCleared: 'Dinleme geçmişi temizlendi',
+    artistsTitle: 'Sizin için sanatçılar',
+    showAll: 'Tümünü göster ({count})',
+    showLess: 'Daha az göster',
+    albumsTitle: 'Sizin için albümler',
+    albumsBody: 'Sevebileceğiniz sanatçıların en bilinen albümü.',
+    moreAlbumsTitle: 'Sanatçılarınızdan daha fazlası',
+    moreAlbumsBody:
+      'Zaten sahip olduğunuz sanatçıların henüz kitaplığınızda olmayan popüler albümleri.',
+    playlistsTitle: 'Sizin için çalma listeleri',
+    playlistsBody:
+      'En çok dinlediğiniz sanatçılar etrafında Spotify mix’leri ve yeni sanatçıların en iyileri.',
+    radioFor: '{name} etrafında mix',
+    essentialsOf: '{name} en iyileri',
+    collectionsFailed:
+      'Albümler ve çalma listeleri şu anda yüklenemedi. Daha sonra tekrar deneyin.',
+    poweredBy:
+      'Sanatçılar Deezer’ın benzer sanatçılarından; albümler ve çalma listeleri Spotify’dan gelir.',
+  },
+  podcasts: {
+    title: 'Podcastler',
+    subtitle:
+      'Bir programa abone olun, yeni bölümleri kendiliğinden indirilsin.',
+    addTitle: 'Podcast ekle',
+    addBody:
+      'Bir RSS besleme URL’si, Spotify program veya bölüm bağlantısı yapıştırın ya da aramak için bir isim yazın.',
+    findPlaceholder: 'RSS beslemesi, Spotify bağlantısı veya program adı',
+    find: 'Bul',
+    noResults: 'Program bulunamadı',
+    findFailed: 'Bu bağlantı veya arama çalışmadı — tekrar deneyin',
+    alreadySubscribed: 'Bu programa zaten abonesiniz',
+    keep: 'Sakla',
+    retentionAll: 'Her yeni bölüm',
+    retentionCount: {
+      one: 'Son bölüm',
+      other: 'Son {count} bölüm',
+    },
+    subscribe: 'Abone ol',
+    subscribed: '{name} aboneliği başladı',
+    emptyTitle: 'Henüz podcast yok',
+    emptyBody: 'Yukarıdan bir programa abone olun, bölümleri burada görünsün.',
+    kicker: 'Podcast',
+    notFound: 'Artık bu programa abone değilsiniz',
+    noEpisodesTitle: 'Henüz bölüm yok',
+    noEpisodesBody: 'Downtify bu beslemeyi kendi zamanlamasında kontrol eder.',
+    download: 'Bölümü indir',
+    downloadFailed: 'Bölüm indirilemedi',
+    played: 'Dinlendi',
+    markPlayed: 'Dinlendi olarak işaretle',
+    markUnplayed: 'Dinlenmedi olarak işaretle',
+    removeDownload: 'İndirmeyi kaldır',
+    resumeAt: '{time} konumundan devam et',
+    unsubscribe: 'Aboneliği iptal et',
+    unsubscribeKeepFiles: 'Aboneliği iptal et, indirilen bölümleri sakla',
+    skipBack: '15 saniye geri sar',
+    skipForward: '30 saniye ileri sar',
+    playbackSpeed: 'Oynatma hızı',
+  },
   confirm: {
     deleteTrackTitle: '“{title}” silinsin mi?',
     deleteTracksTitle: '{count} parça silinsin mi?',
@@ -830,6 +1019,17 @@ export default {
       'Bekleyen ve tamamlanan öğeler listeden kaldırılır. İndirilen dosyalar kalır.',
     stopWatchingTitle: '“{name}” izlemesi bırakılsın mı?',
     stopWatchingBody: 'İndirilen parçalar kitaplığında kalır.',
+    removeEpisodeTitle: '"{name}" indirmesi kaldırılsın mı?',
+    removeEpisodeBody:
+      'Otomatik olarak tekrar indirilmez — program sayfasından istediğiniz zaman yeniden indirebilirsiniz.',
+    unsubscribeTitle: '"{name}" aboneliği iptal edilsin mi?',
+    unsubscribeBody: 'İndirilen bölümleri de kaldırılır.',
+    unsubscribeKeepBody:
+      'İndirilen bölümler kalır; yalnızca abonelik kaldırılır.',
+    removeArtistPhotoTitle: '{name} fotoğrafı kaldırılsın mı?',
+    removeArtistBannerTitle: '{name} afişi kaldırılsın mı?',
+    removeArtistArtBody:
+      'Bu yalnızca kaydedilen görsel dosyasını kaldırır — başka hiçbir şeyi etkilemez.',
   },
   toast: {
     playingNext: {

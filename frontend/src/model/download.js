@@ -16,8 +16,11 @@ const STATUS = {
 const downloadQueue = ref([])
 // Bumped on every in-place item change so computed counts refresh.
 const queueVersion = ref(0)
+// Set while a loop applies many jobs, so the queue repaints once.
+let queueNotifyPaused = false
 
 function touchQueue() {
+  if (queueNotifyPaused) return
   downloadQueue.value = downloadQueue.value.slice()
   queueVersion.value += 1
 }
@@ -200,10 +203,15 @@ function ensureQueuePoll() {
 
 export async function syncQueueFromServer() {
   const res = await API.getQueue()
-  for (const job of res.data || []) {
-    if (!job.song) continue
-    const item = findItem(job.song) || appendSong(job.song)
-    applyServerJob(item, job)
+  queueNotifyPaused = true
+  try {
+    for (const job of res.data || []) {
+      if (!job.song) continue
+      const item = findItem(job.song) || appendSong(job.song)
+      applyServerJob(item, job)
+    }
+  } finally {
+    queueNotifyPaused = false
   }
   touchQueue()
   if (queueHasActiveItems()) ensureQueuePoll()
@@ -211,7 +219,12 @@ export async function syncQueueFromServer() {
 }
 
 API.onMessage((data) => {
-  if (!data || !data.song) return
+  if (!data) return
+  if (data.type === 'queue_reload') {
+    syncQueueFromServer().catch(() => {})
+    return
+  }
+  if (!data.song) return
   const item = findItem(data.song) || appendSong(data.song)
   if (data.status === 'done') {
     item.wsUpdate(data)
@@ -253,22 +266,35 @@ export function useDownloadManager() {
 
   /**
    * Queue already-resolved songs as one batch. `playlistUrl` makes it a
-   * playlist download (folder, M3U, playlist tracking).
+   * playlist download (folder, M3U, playlist tracking). Without a real
+   * playlist behind it (an artist's top songs), `playlistName` and
+   * `coverUrl` name the playlist and its cover instead, and `m3u`
+   * overrides the "generate M3U" setting for this batch.
    */
-  async function fromSongs(list, { playlistUrl = '' } = {}) {
+  async function fromSongs(
+    list,
+    { playlistUrl = '', playlistName = '', coverUrl = '', m3u } = {}
+  ) {
     const hints = playlistUrl ? { downtify_playlist_url: playlistUrl } : {}
     const songs = list.map((song, i) => ({
       ...song,
       ...hints,
       downtify_track_order: song.downtify_track_order ?? i,
     }))
-    for (const song of songs) upsertSong(song)
+    queueNotifyPaused = true
+    try {
+      for (const song of songs) upsertSong(song)
+    } finally {
+      queueNotifyPaused = false
+    }
     touchQueue()
     ensureQueuePoll()
     await API.downloadBatch({
       songs,
       playlist_url: playlistUrl,
-      generate_m3u: generateM3u(),
+      playlist_name: playlistName,
+      cover_url: coverUrl,
+      generate_m3u: m3u ?? generateM3u(),
     })
     await syncQueueFromServer().catch(() => {})
     return songs.length

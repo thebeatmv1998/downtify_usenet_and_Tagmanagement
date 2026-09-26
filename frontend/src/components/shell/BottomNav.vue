@@ -142,7 +142,12 @@ const hasUpdate = computed(() => Boolean(update.value?.update_available))
 
 const items = [
   { name: 'Home', icon: 'home', label: 'nav.home' },
-  { name: 'Search', icon: 'search', label: 'nav.search', match: ['Link'] },
+  {
+    name: 'Search',
+    icon: 'search',
+    label: 'nav.search',
+    match: ['Link', 'TopSongs'],
+  },
   {
     name: 'Library',
     icon: 'library',
@@ -152,7 +157,9 @@ const items = [
   { name: 'Queue', icon: 'download', label: 'nav.queue' },
 ]
 const moreLinks = [
+  { name: 'Discover', icon: 'sparkle', label: 'nav.discover' },
   { name: 'Monitor', icon: 'radar', label: 'nav.monitor' },
+  { name: 'Podcasts', icon: 'mic', label: 'nav.podcasts' },
   { name: 'Settings', icon: 'settings', label: 'nav.settings' },
 ]
 
