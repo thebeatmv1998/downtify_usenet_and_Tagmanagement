@@ -187,13 +187,20 @@ def check_slskd(cfg: dict[str, Any]) -> dict[str, Any]:
 
 
 # ── usenet (Newznab + SABnzbd) ───────────────────────────────────────
-def _sabnzbd_url(cfg: dict[str, Any], mode: str) -> str:
+def _sabnzbd_url(cfg: dict[str, Any]) -> str:
     base = str(cfg.get('base_url') or '').rstrip('/')
-    return f'{base}/sabnzbd/api?mode={mode}&output=json'
+    return f'{base}/sabnzbd/api'
 
 
-def _sabnzbd_params(cfg: dict[str, Any]) -> dict[str, str]:
-    return {'apikey': str(cfg.get('api_key') or '')}
+def _sabnzbd_params(cfg: dict[str, Any], mode: str) -> dict[str, str]:
+    # mode/output must go through params: httpx replaces a URL's embedded
+    # query string when params are passed, so baking them into the URL
+    # would send a request without mode at all.
+    return {
+        'mode': mode,
+        'output': 'json',
+        'apikey': str(cfg.get('api_key') or ''),
+    }
 
 
 def _sabnzbd_version(data: Any) -> Optional[str]:
@@ -219,9 +226,12 @@ def check_usenet(cfg: dict[str, Any]) -> dict[str, Any]:
 
     def _probe(with_key: bool) -> Any:
         try:
+            params = _sabnzbd_params(sab, 'version')
+            if not with_key:
+                del params['apikey']
             return _get(
-                _sabnzbd_url(sab, 'version'),
-                params=_sabnzbd_params(sab) if with_key else {},
+                _sabnzbd_url(sab),
+                params=params,
                 timeout=PROBE_TIMEOUT,
             )
         except Exception as exc:
@@ -262,7 +272,11 @@ def check_usenet(cfg: dict[str, Any]) -> dict[str, Any]:
         if isinstance(data, dict) and str(data.get('error') or '').strip():
             # SABnzbd answers auth problems with 200 + {"error": ...}, not
             # with a 4xx — it *is* SABnzbd, only the key is wrong/missing.
-            _log_failure('SABnzbd auth', data['error'])
+            message = str(data['error']).strip()
+            key = str(sab.get('api_key') or '')
+            if key and key in message:
+                message = message.replace(key, '***')
+            logger.info('SABnzbd auth check failed: {}', message)
             return _result([
                 _check('connection', STATUS_OK),
                 _check('auth', STATUS_FAIL, 'bad_key'),

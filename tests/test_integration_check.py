@@ -830,7 +830,11 @@ def _sabnzbd_mock_server():
                 self.end_headers()
                 return
             qs = parse_qs(path.query)
-            if qs.get('apikey') == ['good']:
+            # Strict: a request without mode/output is what a params-vs-URL
+            # query bug looks like, and must never look like a valid probe.
+            if qs.get('mode') != ['version'] or qs.get('output') != ['json']:
+                body = b'{"error": "API Key Required"}'
+            elif qs.get('apikey') == ['good']:
                 body = b'{"version": "4.5.0"}'
             elif not qs.get('apikey'):
                 body = b'{"error": "API Key Required"}'
