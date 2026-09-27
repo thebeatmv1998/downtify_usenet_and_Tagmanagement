@@ -56,8 +56,17 @@ and — unless disabled — removes the job and its files from SABnzbd's history
 
 YouTube aggressively gates datacenter IPs. If downloads or metadata lookups fail:
 
+- **Best fix — automatic PO Tokens via a sidecar container.** Add
+  [bgutil-ytdlp-pot-provider](https://github.com/Brainicism/bgutil-ytdlp-pot-provider)
+  from the Community Apps (or
+  `brainicism/bgutil-ytdlp-pot-provider` on Docker Hub, port 4416) to your
+  Unraid box, then set `DOWNTIFY_YT_POT_PROVIDER=http://<unraid-ip>:4416`
+  on the Downtify container. PO Tokens are generated on demand and the bot
+  check goes away — no cookies.txt needed. The plugin is already built into
+  this fork's image.
 - Upload a fresh `cookies.txt` in **Settings → YouTube cookies** (exported while
   logged into YouTube), or mount one and set `DOWNTIFY_COOKIES_FILE=/data/cookies.txt`.
+  Downtify re-reads the file on every download, so updating it needs no restart.
 - Optionally set `DOWNTIFY_YT_PO_TOKEN` (format `client.context+token`, e.g.
   `web.gvs+ABC123`) — see the yt-dlp wiki on PO Tokens.
 - `DOWNTIFY_YT_PLAYER_CLIENTS` overrides the yt-dlp player client order if the

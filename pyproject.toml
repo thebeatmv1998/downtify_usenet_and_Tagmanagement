@@ -13,6 +13,7 @@ dependencies = [
     "mutagen>=1.48.1",
     "uvicorn>=0.52.4",
     "websockets>=17.1",
+    "bgutil-ytdlp-pot-provider>=2.0.0",
     "yt-dlp>=2026.8.19",
     "ytmusicapi>=1.12.2",
 ]

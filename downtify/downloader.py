@@ -215,6 +215,17 @@ _SUPPRESSED_YT_WARNING_FRAGMENTS = (
     'n challenge solving failed: Some formats may be missing',
 )
 
+# Fragments from the installed bgutil PO Token provider plugin that only
+# matter when no provider is configured (DOWNTIFY_YT_POT_PROVIDER unset):
+# the plugin then probes its default localhost URL and says so, once per
+# source. When a provider IS configured, nothing is suppressed — a wrong
+# address must stay visible.
+_SUPPRESSED_POT_UNCONFIGURED_FRAGMENTS = (
+    'No base_url provided, defaulting to',
+    'Please make sure that the server is reachable at',
+    'server is not available',
+)
+
 
 class _YtdlpLogger:
     @staticmethod
@@ -227,8 +238,13 @@ class _YtdlpLogger:
 
     @staticmethod
     def warning(msg: str) -> None:
-        if not any(frag in msg for frag in _SUPPRESSED_YT_WARNING_FRAGMENTS):
-            logger.warning('yt-dlp: {}', msg)
+        if any(frag in msg for frag in _SUPPRESSED_YT_WARNING_FRAGMENTS):
+            return
+        if not _yt_pot_provider_url() and any(
+            frag in msg for frag in _SUPPRESSED_POT_UNCONFIGURED_FRAGMENTS
+        ):
+            return
+        logger.warning('yt-dlp: {}', msg)
 
     @staticmethod
     def error(msg: str) -> None:
@@ -254,20 +270,34 @@ def _yt_po_tokens() -> list[str]:
     return [t.strip() for t in raw.split(',') if t.strip()]
 
 
+def _yt_pot_provider_url() -> str:
+    """Base URL of a bgutil-ytdlp-pot-provider sidecar, if one is set.
+
+    Example: ``http://192.168.1.2:4416``. The provider generates PO
+    Tokens on demand, which is what actually keeps datacenter IPs out of
+    YouTube's "Sign in to confirm you're not a bot" check.
+    """
+    return os.getenv('DOWNTIFY_YT_POT_PROVIDER', '').strip().rstrip('/')
+
+
 def youtube_extractor_args() -> dict[str, Any]:
     """``extractor_args`` for yt-dlp's YouTube extractor.
 
     Shared by the download path and the plain-YouTube search in
     ``providers.py`` so both behave the same on IPs YouTube flags with
     the "Sign in to confirm you're not a bot" check: the ordered player
-    client list, plus any PO Tokens from ``DOWNTIFY_YT_PO_TOKEN`` (each
-    in yt-dlp's ``<client>.<context>+<token>`` form).
+    client list, any PO Tokens from ``DOWNTIFY_YT_PO_TOKEN`` (each in
+    yt-dlp's ``<client>.<context>+<token>`` form), and the
+    ``DOWNTIFY_YT_POT_PROVIDER`` sidecar for automatic token generation.
     """
 
     youtube_args: dict[str, Any] = {'player_client': _yt_player_clients()}
     po_tokens = _yt_po_tokens()
     if po_tokens:
         youtube_args['po_token'] = po_tokens
+    pot_provider = _yt_pot_provider_url()
+    if pot_provider:
+        youtube_args['youtubepot-bgutilhttp'] = [f'base_url={pot_provider}']
     return {'youtube': youtube_args}
 
 

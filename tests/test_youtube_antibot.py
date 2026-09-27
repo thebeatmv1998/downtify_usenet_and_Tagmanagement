@@ -265,3 +265,39 @@ def test_youtube_search_omits_cookiefile_when_none_configured(monkeypatch):
     assert 'cookiefile' not in _FakeYoutubeDL.captured
     youtube_args = _FakeYoutubeDL.captured['extractor_args']['youtube']
     assert 'po_token' not in youtube_args
+
+
+def test_extractor_args_omit_pot_provider_when_env_unset(monkeypatch):
+    monkeypatch.delenv('DOWNTIFY_YT_POT_PROVIDER', raising=False)
+    args = youtube_extractor_args()
+    assert 'youtubepot-bgutilhttp' not in args['youtube']
+
+
+def test_extractor_args_point_pot_provider_at_sidecar(monkeypatch):
+    monkeypatch.setenv('DOWNTIFY_YT_POT_PROVIDER', 'http://potside:4416/')
+    args = youtube_extractor_args()
+    assert args['youtube']['youtubepot-bgutilhttp'] == [
+        'base_url=http://potside:4416'
+    ]
+
+
+def test_plugin_warnings_are_quiet_without_a_provider(monkeypatch):
+    # The plugin probes its default localhost URL when no sidecar is
+    # configured; those notices are noise, not errors.
+    from downtify.downloader import _YtdlpLogger
+
+    monkeypatch.delenv('DOWNTIFY_YT_POT_PROVIDER', raising=False)
+    emitted: list[str] = []
+    monkeypatch.setattr(
+        'downtify.downloader.logger.warning', lambda m, *a, **k: emitted.append(str(m))
+    )
+    _YtdlpLogger.warning(
+        'No base_url provided, defaulting to http://127.0.0.1:4416'
+    )
+    assert emitted == []
+    # With a provider configured, the same message must stay visible.
+    monkeypatch.setenv('DOWNTIFY_YT_POT_PROVIDER', 'http://potside:4416')
+    _YtdlpLogger.warning(
+        'No base_url provided, defaulting to http://127.0.0.1:4416'
+    )
+    assert len(emitted) == 1

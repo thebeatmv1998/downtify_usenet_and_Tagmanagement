@@ -20,6 +20,9 @@ services:
       - DOWNTIFY_PORT=30321
       # https://downtify.henriquesebastiao.com/getting-started/environment-variables/#getting-a-cookiestxt
       # - DOWNTIFY_COOKIES_FILE=/cookies.txt
+      # Automatic PO Token generation via a bgutil-ytdlp-pot-provider
+      # sidecar container (the reliable fix for YouTube's bot check):
+      # - DOWNTIFY_YT_POT_PROVIDER=http://bgutil-pot:4416
       # - TZ=America/Sao_Paulo
       # - DOWNTIFY_MONITOR_SYNC_TIME=03:00
     dns:
