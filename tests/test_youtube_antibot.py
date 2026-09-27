@@ -325,3 +325,31 @@ def test_bot_check_message_suggests_the_pot_provider_when_unset(monkeypatch):
     )
     assert 'DOWNTIFY_YT_POT_PROVIDER' in message
     assert 'bgutil-ytdlp-pot-provider' in message
+
+
+def test_verbose_flag_enables_ytdlp_debug_output(monkeypatch):
+    emitted: list[str] = []
+
+    class _FakeLogger:
+        @staticmethod
+        def info(msg, *a, **k):
+            # loguru passes the template plus format args separately.
+            emitted.append(
+                str(msg).format(*a) if a else str(msg)
+            )
+
+        warning = info
+        error = info
+
+    monkeypatch.setattr(downloader_mod, 'logger', _FakeLogger)
+
+    monkeypatch.delenv('DOWNTIFY_YT_VERBOSE', raising=False)
+    downloader_mod._YtdlpLogger.debug('[youtube] [pot] hidden by default')
+    downloader_mod._YtdlpLogger.info('hidden too')
+    assert emitted == []
+
+    monkeypatch.setenv('DOWNTIFY_YT_VERBOSE', '1')
+    downloader_mod._YtdlpLogger.debug('[youtube] [pot] now visible')
+    downloader_mod._YtdlpLogger.info('info visible')
+    assert len(emitted) == 2
+    assert 'now visible' in emitted[0]

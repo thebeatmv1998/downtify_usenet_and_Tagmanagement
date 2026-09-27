@@ -227,14 +227,27 @@ _SUPPRESSED_POT_UNCONFIGURED_FRAGMENTS = (
 )
 
 
+def _yt_verbose_enabled() -> bool:
+    return os.getenv('DOWNTIFY_YT_VERBOSE', '').strip().lower() in {
+        '1',
+        'true',
+        'yes',
+    }
+
+
 class _YtdlpLogger:
     @staticmethod
     def debug(msg: str) -> None:
-        pass
+        if _yt_verbose_enabled():
+            # Verbose diagnostics: player clients tried, PO Token
+            # requests, YouTube's answers. Logged at info level so they
+            # reach the container log, which runs at info.
+            logger.info('yt-dlp: {}', str(msg)[:2000])
 
     @staticmethod
     def info(msg: str) -> None:
-        pass
+        if _yt_verbose_enabled():
+            logger.info('yt-dlp: {}', str(msg)[:2000])
 
     @staticmethod
     def warning(msg: str) -> None:
@@ -1307,6 +1320,15 @@ class Downloader:
             'yes',
         }:
             ydl_opts['source_address'] = '0.0.0.0'
+        # DOWNTIFY_YT_VERBOSE=1 routes yt-dlp's full debug output (player
+        # clients tried, PO Token requests, YouTube's answers) into the
+        # Downtify log — the surgical tool when downloads get bot-checked.
+        if os.getenv('DOWNTIFY_YT_VERBOSE', '').strip().lower() in {
+            '1',
+            'true',
+            'yes',
+        }:
+            ydl_opts['verbose'] = True
 
         # Cookies authenticate yt-dlp as a real browser session — needed
         # for age-restricted (explicit) tracks and whenever YouTube
