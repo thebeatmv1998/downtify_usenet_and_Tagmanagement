@@ -4,12 +4,24 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
 
 from loguru import logger
+
+# Spotify entity ids are base62 only — never '-' or '_'. YouTube Music
+# playlist ids (RDCLAK5uy…, OLAK5uy…) carry underscores, and pasted YT
+# Music playlists live in the same stores; the cache warmer must never
+# feed those to the Spotify embed endpoint.
+_SPOTIFY_ID_RE = re.compile(r'^[0-9A-Za-z]+$')
+
+
+def is_spotify_playlist_id(playlist_id: str) -> bool:
+    """True when *playlist_id* looks like a Spotify playlist id."""
+    return bool(_SPOTIFY_ID_RE.match(str(playlist_id or '').strip()))
 
 from . import spotify
 from .sqlite_utils import connect_sqlite
@@ -417,7 +429,9 @@ async def warm_uncached_playlists(
     warmed = 0
     for raw_id in spotify_ids:
         sid = str(raw_id or '').strip()
-        if not sid or await asyncio.to_thread(cache.get, sid) is not None:
+        if not sid or not is_spotify_playlist_id(sid):
+            continue
+        if await asyncio.to_thread(cache.get, sid) is not None:
             continue
         try:
             await asyncio.to_thread(

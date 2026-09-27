@@ -280,6 +280,7 @@ from .playlist_catalog import PlaylistCatalog
 from .playlist_spotify_cache import (
     PlaylistSpotifyCache,
     fetch_playlist_tracks,
+    is_spotify_playlist_id,
 )
 from .podcasts import (
     PODCASTS_DIRNAME,
@@ -2901,24 +2902,35 @@ def _song_row_hint(song: dict[str, Any]) -> dict[str, Any]:
 
 
 def _known_spotify_playlist_sources() -> dict[str, dict[str, Any]]:
-    """Merge Spotify playlist ids from batch store, catalog, and monitor."""
+    """Merge Spotify playlist ids from batch store, catalog, and monitor.
+
+    YouTube playlist ids (a pasted YT Music playlist also lives in the
+    stores) are filtered out — the Spotify embed endpoint only serves
+    Spotify ids and answering for them just produces retries.
+    """
 
     sources: dict[str, dict[str, Any]] = {}
+
+    def _add(sid: str, entry: dict[str, Any]) -> None:
+        if not is_spotify_playlist_id(sid):
+            return
+        sources.setdefault(sid, entry)
+
     if state.playlist_batch_store is not None:
         for batch in state.playlist_batch_store.list_latest_batches():
             sid = str(batch['spotify_playlist_id'] or '').strip()
             if not sid:
                 continue
-            sources[sid] = {
+            _add(sid, {
                 'playlist_name': batch['playlist_name'],
                 'playlist_url': batch['playlist_url'],
                 'expected_hint': int(batch.get('expected_count') or 0),
                 'batch': batch,
-            }
+            })
     if state.playlist_catalog is not None:
         for row in state.playlist_catalog.list_playlists_with_spotify_id():
             sid = str(row['spotify_id'] or '').strip()
-            if not sid:
+            if not sid or not is_spotify_playlist_id(sid):
                 continue
             if sid not in sources:
                 sources[sid] = {
@@ -2957,7 +2969,7 @@ def _known_spotify_playlist_sources() -> dict[str, dict[str, Any]]:
                     batch = batch_by_name.get(name)
                     if batch:
                         sid = str(batch['spotify_playlist_id']).strip()
-            if not sid or sid in sources:
+            if not sid or not is_spotify_playlist_id(sid) or sid in sources:
                 continue
             track_count = len(state.playlist_catalog.list_tracks(name))
             sources[sid] = {
@@ -2969,7 +2981,7 @@ def _known_spotify_playlist_sources() -> dict[str, dict[str, Any]]:
     if state.monitor_db is not None:
         for pl in state.monitor_db.list_playlists():
             sid = str(pl.spotify_id or '').strip()
-            if not sid:
+            if not sid or not is_spotify_playlist_id(sid):
                 continue
             if sid not in sources:
                 sources[sid] = {

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from unittest.mock import patch
 
@@ -107,3 +108,29 @@ def test_fetch_track_metadata_uses_playlist_cache(tmp_path: Path) -> None:
         track = fetch_track_metadata(tid, cache=cache, playlist_id=sid)
         mock_fetch.assert_not_called()
     assert track['name'] == 'Cached Song'
+
+
+def test_youtube_playlist_ids_are_not_warmed_as_spotify(tmp_path: Path):
+    """RDCLAK5uy… is a YouTube Music playlist id — the warmer used to
+    feed it to the Spotify embed endpoint and retry forever."""
+    from downtify import playlist_spotify_cache as psc
+
+    assert not psc.is_spotify_playlist_id('RDCLAK5uy_kWiJXUNLZM9EyS3GBGznl1ku8_cOos97U')
+    assert not psc.is_spotify_playlist_id('OLAK5uy_lHhvz0QidERkExcbanSKQCrzv6g')
+    assert psc.is_spotify_playlist_id('37i9dQZF1DXcBWIGoYBM5M')
+
+    cache = PlaylistSpotifyCache(tmp_path / 'cache.db')
+    called: list[str] = []
+    with patch.object(
+        psc.spotify,
+        'playlist_info_and_tracks',
+        lambda sid: called.append(sid) or ('Name', []),
+    ):
+        warmed = asyncio.run(psc.warm_uncached_playlists(
+            cache,
+            ['RDCLAK5uy_kWiJXUNLZM9EyS3GBGznl1ku8_cOos97U',
+             '37i9dQZF1DXcBWIGoYBM5M'],
+            delay_seconds=0,
+        ))
+    assert warmed == 1
+    assert called == ['37i9dQZF1DXcBWIGoYBM5M']

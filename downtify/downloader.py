@@ -270,6 +270,9 @@ def _yt_po_tokens() -> list[str]:
     return [t.strip() for t in raw.split(',') if t.strip()]
 
 
+_pot_provider_logged = False
+
+
 def _yt_pot_provider_url() -> str:
     """Base URL of a bgutil-ytdlp-pot-provider sidecar, if one is set.
 
@@ -277,7 +280,20 @@ def _yt_pot_provider_url() -> str:
     Tokens on demand, which is what actually keeps datacenter IPs out of
     YouTube's "Sign in to confirm you're not a bot" check.
     """
-    return os.getenv('DOWNTIFY_YT_POT_PROVIDER', '').strip().rstrip('/')
+    global _pot_provider_logged
+    url = os.getenv('DOWNTIFY_YT_POT_PROVIDER', '').strip().rstrip('/')
+    if not _pot_provider_logged:
+        # One line in the log that answers "is the sidecar wired up?"
+        # without needing to inspect the container environment.
+        _pot_provider_logged = True
+        if url:
+            logger.info('yt-dlp: PO Token provider configured at {}', url)
+        else:
+            logger.info(
+                'yt-dlp: no PO Token provider configured '
+                '(DOWNTIFY_YT_POT_PROVIDER unset)'
+            )
+    return url
 
 
 def youtube_extractor_args() -> dict[str, Any]:
@@ -377,6 +393,20 @@ def _translate_download_error(
     message = str(exc)
     if is_bot_check_error(message) and not is_age_restricted_error(message):
         name = song.get('name') or 'This track'
+        pot_url = _yt_pot_provider_url()
+        if pot_url:
+            pot_hint = (
+                f' The PO Token provider is configured at {pot_url} — if '
+                "this keeps happening, check Downtify's log for "
+                '"pot:bgutil" errors.'
+            )
+        else:
+            pot_hint = (
+                ' To fix this automatically, run the '
+                'bgutil-ytdlp-pot-provider sidecar container and set '
+                'DOWNTIFY_YT_POT_PROVIDER to its address (e.g. '
+                'http://192.168.1.2:4416).'
+            )
         if has_cookies:
             return RuntimeError(
                 f'YouTube blocked "{name}" with its "Sign in to confirm '
@@ -385,13 +415,13 @@ def _translate_download_error(
                 'logged into YouTube in your browser and upload it again '
                 'in Settings > YouTube cookies. If that alone is not '
                 'enough, set a PO Token via the DOWNTIFY_YT_PO_TOKEN '
-                'environment variable.'
+                f'environment variable.{pot_hint}'
             )
         return RuntimeError(
             f'YouTube blocked "{name}" with its "Sign in to confirm '
             'you\'re not a bot" check. Upload a YouTube cookies.txt in '
             'Settings > YouTube cookies (or set the '
-            'DOWNTIFY_COOKIES_FILE environment variable) to download it.'
+            f'DOWNTIFY_COOKIES_FILE environment variable).{pot_hint}'
         )
     if not is_age_restricted_error(message):
         return exc

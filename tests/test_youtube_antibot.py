@@ -304,3 +304,24 @@ def test_plugin_warnings_are_quiet_without_a_provider(monkeypatch):
         'No base_url provided, defaulting to http://127.0.0.1:4416'
     )
     assert len(emitted) == 1
+
+
+def test_bot_check_message_reports_the_pot_provider_state(monkeypatch):
+    monkeypatch.setenv('DOWNTIFY_YT_POT_PROVIDER', 'http://potside:4416')
+    message = str(
+        downloader_mod._translate_download_error(
+            _BOT_CHECK_ERROR, {'name': 'Some Track'}, has_cookies=False
+        )
+    )
+    assert 'PO Token provider is configured at http://potside:4416' in message
+
+
+def test_bot_check_message_suggests_the_pot_provider_when_unset(monkeypatch):
+    monkeypatch.delenv('DOWNTIFY_YT_POT_PROVIDER', raising=False)
+    message = str(
+        downloader_mod._translate_download_error(
+            _BOT_CHECK_ERROR, {'name': 'Some Track'}, has_cookies=False
+        )
+    )
+    assert 'DOWNTIFY_YT_POT_PROVIDER' in message
+    assert 'bgutil-ytdlp-pot-provider' in message
