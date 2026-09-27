@@ -478,7 +478,9 @@ def test_prowlarr_client_uses_native_endpoint_and_header(monkeypatch):
             }]
 
     def fake_get(url, params=None, headers=None, **kwargs):
-        calls.append((url, params or {}, headers or {}))
+        if isinstance(params, dict):
+            params = list(params.items())
+        calls.append((url, params or [], headers or {}))
         return FakeResp()
 
     monkeypatch.setattr(usenet.httpx, 'get', fake_get)
@@ -491,8 +493,13 @@ def test_prowlarr_client_uses_native_endpoint_and_header(monkeypatch):
     rows = client.search('artist track')  # noqa: F841
     assert calls == [(
         'http://prowlarr:9696/api/v1/search',
-        {'query': 'artist track', 'categories': '3000,3010',
-         'apikey': 'pk', 'limit': 100},
+        [
+            ('query', 'artist track'),
+            ('categories', '3000'),
+            ('categories', '3010'),
+            ('apikey', 'pk'),
+            ('limit', '100'),
+        ],
         {'X-Api-Key': 'pk'},
     )]
     assert rows[0]['title'] == 'Artist - Track FLAC'
@@ -501,7 +508,7 @@ def test_prowlarr_client_uses_native_endpoint_and_header(monkeypatch):
     assert client.fetch_nzb(rows[0]['nzb_url']) == b'nzb-bytes'
     assert calls[-1][0] == 'http://prowlarr:9696/1/download?token=x'
     assert calls[-1][2] == {'X-Api-Key': 'pk'}
-    assert calls[-1][1] == {'apikey': 'pk'}
+    assert calls[-1][1] == [('apikey', 'pk')]
 
 
 def test_configured_bitrate_bounds_filter_releases():
@@ -747,3 +754,47 @@ def test_delete_all_history_removes_every_entry(monkeypatch):
     deletes = [c for c in calls if c.get('name') == 'delete']
     assert sorted(c['value'] for c in deletes) == ['a', 'b']
     assert all(c['del_files'] == '1' for c in deletes)
+
+
+def test_newznab_fallback_translates_params_for_prowlarr(monkeypatch):
+    calls: list[tuple] = []
+
+    class FakeResp:
+        def __init__(self, status):
+            self.status_code = status
+            self.content = b''
+
+        def raise_for_status(self):
+            if self.status_code >= 400:
+                raise RuntimeError(f'HTTP {self.status_code}')
+
+    def fake_get(url, params=None, headers=None, **kwargs):
+        calls.append((url, params))
+        return FakeResp(404 if url.endswith('/api') else 200)
+
+    monkeypatch.setattr(usenet.httpx, 'get', fake_get)
+    client = usenet.NewznabClient({
+        'name': 'prowlarr',
+        'base_url': 'http://prowlarr:9696',
+        'api_key': 'pk',
+    })
+    client.search('artist track')
+    assert calls[0] == (
+        'http://prowlarr:9696/api',
+        {
+            't': 'search', 'q': 'artist track', 'cat': '3000,3010',
+            'apikey': 'pk', 'extended': '1', 'limit': '100',
+        },
+    )
+    # The retry speaks Prowlarr's REST dialect, not Newznab's — otherwise
+    # Prowlarr returns unfiltered results (or 400 on the categories value).
+    assert calls[1] == (
+        'http://prowlarr:9696/api/v1/search',
+        [
+            ('query', 'artist track'),
+            ('categories', '3000'),
+            ('categories', '3010'),
+            ('apikey', 'pk'),
+            ('limit', '100'),
+        ],
+    )

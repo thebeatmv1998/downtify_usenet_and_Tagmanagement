@@ -238,7 +238,9 @@ class NewznabClient:
                 **kwargs,
             )
             if resp.status_code == 404 and i < len(endpoints) - 1:
-                # Prowlarr-style base without the classic /api path.
+                # Prowlarr-style base without the classic /api path; speak
+                # its REST dialect on the retry.
+                params = _newznab_to_v1_params(params)
                 continue
             break
         resp.raise_for_status()
@@ -253,12 +255,15 @@ class NewznabClient:
             'apikey': self.api_key,
             'extended': '1',
             'limit': '100',
-        } if self.type == 'newznab' else {
-            'query': query,
-            'categories': '3000,3010',
-            'apikey': self.api_key,
-            'limit': 100,
-        })
+        } if self.type == 'newznab' else [
+            ('query', query),
+            # Prowlarr rejects a comma-joined categories value with 400;
+            # the API takes repeated parameters.
+            ('categories', '3000'),
+            ('categories', '3010'),
+            ('apikey', self.api_key),
+            ('limit', '100'),
+        ])
         if self.type == 'prowlarr':
             try:
                 rows = resp.json()
@@ -291,6 +296,26 @@ class NewznabClient:
         if url.startswith('http'):
             return url
         return f'{self.base_url}/{url.lstrip("/")}'
+
+
+def _newznab_to_v1_params(params: Any) -> Any:
+    """Translate Newznab search params to Prowlarr's REST /api/v1 dialect.
+
+    Used when a Newznab-typed client falls back from ``/api`` (404) to a
+    Prowlarr base: ``t=search``/``q``/``cat`` become ``query``/repeated
+    ``categories``, the Newznab-only fields are dropped.
+    """
+    if not isinstance(params, dict) or params.get('t') != 'search':
+        return params
+    out: list[tuple[str, str]] = [('query', str(params.get('q') or ''))]
+    for cat in str(params.get('cat') or '').split(','):
+        if cat.strip():
+            out.append(('categories', cat.strip()))
+    if str(params.get('apikey') or ''):
+        out.append(('apikey', str(params['apikey'])))
+    if str(params.get('limit') or ''):
+        out.append(('limit', str(params['limit'])))
+    return out
 
 
 def parse_newznab_xml(
