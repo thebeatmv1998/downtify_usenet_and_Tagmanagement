@@ -729,6 +729,13 @@ export default {
     usenetMinScore: 'En düşük eşleşme puanı',
     usenetDurationSeconds: 'Süre toleransı',
     usenetDurationPercent: 'Süre toleransı %',
+    usenetIndexerType: 'Tür',
+    usenetTypeNewznab: 'Newznab dizinleyici',
+    usenetTypeProwlarr: 'Prowlarr (yerel API)',
+    usenetFormats: 'Tercih edilen biçimler',
+    usenetFormatsHint: 'Sıra önemlidir: eşleştirmede önceki biçimler daha yüksek puan alır.',
+    usenetMinBitrate: 'En düşük bit hızı',
+    usenetMaxBitrate: 'En yüksek bit hızı',
     slskdInPlace: 'Dosyaları slskd klasöründe bırak',
     slskdInPlaceHint:
       'İndirme klasörüne kopyalamak yerine slskd’nin kaydettiği yerde etiketle.',

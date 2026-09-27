@@ -379,6 +379,8 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         'duration_tolerance_seconds': 10,
         'duration_tolerance_percent': 15,
         'extensions': ['flac', 'mp3'],
+        'min_bitrate': 0,
+        'max_bitrate': 0,
         'min_score': 5,
         'cleanup': True,
     },
@@ -601,6 +603,11 @@ def _effective_usenet_settings(settings: dict[str, Any]) -> dict[str, Any]:
             'name': str(row.get('name') or '').strip(),
             'base_url': str(row.get('base_url') or '').strip().rstrip('/'),
             'api_key': str(row.get('api_key') or '').strip(),
+            'type': (
+                'prowlarr'
+                if str(row.get('type') or '').strip().lower() == 'prowlarr'
+                else 'newznab'
+            ),
             'enabled': bool(row.get('enabled', True)),
         })
 
@@ -630,6 +637,8 @@ def _effective_usenet_settings(settings: dict[str, Any]) -> dict[str, Any]:
             'duration_tolerance_percent', 15, 1, 100
         ),
         'extensions': _usenet_extensions(raw),
+        'min_bitrate': bounded('min_bitrate', 0, 0, 2000),
+        'max_bitrate': bounded('max_bitrate', 0, 0, 4000),
         'min_score': bounded('min_score', 5, 0, 100),
         'cleanup': bool(raw.get('cleanup', True)),
         'max_parallel_downloads': _setting_int(

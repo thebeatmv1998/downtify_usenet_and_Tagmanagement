@@ -527,6 +527,12 @@ class Downloader:
                 .strip()
                 .rstrip('/'),
                 'api_key': str(row.get('api_key') or '').strip(),
+                'type': (
+                    'prowlarr'
+                    if str(row.get('type') or '').strip().lower()
+                    == 'prowlarr'
+                    else 'newznab'
+                ),
                 'enabled': bool(row.get('enabled', True)),
             })
 
@@ -571,6 +577,8 @@ class Downloader:
                 raw.get('duration_tolerance_percent'), 15, 1, 100
             ),
             'extensions': extensions,
+            'min_bitrate': _int(raw.get('min_bitrate'), 0, 0, 2000),
+            'max_bitrate': _int(raw.get('max_bitrate'), 0, 0, 4000),
             'min_score': _int(raw.get('min_score'), 5, 0, 100),
             'cleanup': bool(raw.get('cleanup', True)),
             'max_parallel_downloads': _int(
@@ -940,6 +948,15 @@ class Downloader:
                 return self._skip_existing(existing, progress_cb)
 
         video_id = song.get('youtube_id')
+        if (
+            video_id
+            and not song.get('youtube_id_override')
+            and not {'youtube-music', 'youtube'} & set(self.audio_providers)
+        ):
+            # YouTube Music playlists pin tracks to their exact video; with
+            # the YouTube sources disabled that pin must not bypass the
+            # source order — resolve the track like any other instead.
+            video_id = None
         if not video_id and (song.get('source') == 'youtube'):
             video_id = song.get('song_id')
 

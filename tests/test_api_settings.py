@@ -870,6 +870,7 @@ def test_effective_usenet_settings_normalizes_values():
             'name': 'NZBGeek',
             'base_url': 'https://api.nzbgeek.info',
             'api_key': 'key',
+            'type': 'newznab',
             'enabled': True,
         }
     ]

@@ -42,6 +42,8 @@ const settings = ref({
     duration_tolerance_seconds: 10,
     duration_tolerance_percent: 15,
     extensions: ['flac', 'mp3'],
+    min_bitrate: 0,
+    max_bitrate: 0,
     min_score: 5,
     cleanup: true,
   },

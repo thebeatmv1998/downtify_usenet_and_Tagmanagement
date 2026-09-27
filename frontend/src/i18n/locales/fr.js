@@ -739,6 +739,13 @@ export default {
     usenetMinScore: 'Score de correspondance minimal',
     usenetDurationSeconds: 'Tolérance de durée',
     usenetDurationPercent: 'Tolérance de durée %',
+    usenetIndexerType: 'Type',
+    usenetTypeNewznab: 'Indexeur Newznab',
+    usenetTypeProwlarr: 'Prowlarr (API native)',
+    usenetFormats: 'Formats préférés',
+    usenetFormatsHint: "L'ordre compte : les premiers formats obtiennent un meilleur score lors de la correspondance.",
+    usenetMinBitrate: 'Débit minimum',
+    usenetMaxBitrate: 'Débit maximum',
     slskdInPlace: 'Laisser les fichiers dans le dossier slskd',
     slskdInPlaceHint:
       'Les taguer là où slskd les a enregistrés au lieu de les copier dans votre dossier de téléchargements.',

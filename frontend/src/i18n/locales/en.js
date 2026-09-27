@@ -712,6 +712,13 @@ export default {
     usenetMinScore: 'Minimum match score',
     usenetDurationSeconds: 'Duration tolerance',
     usenetDurationPercent: 'Duration tolerance %',
+    usenetIndexerType: 'Type',
+    usenetTypeNewznab: 'Newznab indexer',
+    usenetTypeProwlarr: 'Prowlarr (native API)',
+    usenetFormats: 'Preferred formats',
+    usenetFormatsHint: 'Order matters: earlier formats score higher when matching releases.',
+    usenetMinBitrate: 'Minimum bitrate',
+    usenetMaxBitrate: 'Maximum bitrate',
     slskdInPlace: 'Leave files in the slskd folder',
     slskdInPlaceHint:
       'Tag them where slskd saved them instead of copying into your downloads folder.',

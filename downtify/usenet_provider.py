@@ -108,9 +108,14 @@ def _past_deadline(deadline: float) -> bool:
     return time.monotonic() >= deadline
 
 
-# ── Newznab ──────────────────────────────────────────────────────────
+# ── Newznab / Prowlarr ───────────────────────────────────────────────
 class NewznabClient:
-    """Minimal Newznab API client for one indexer."""
+    """Minimal Newznab API client for one indexer.
+
+    ``type`` selects the dialect: ``'newznab'`` (classic indexers, XML
+    responses at ``<base>/api``) or ``'prowlarr'`` (Prowlarr's native REST
+    API at ``<base>/api/v1/search``, JSON responses, ``X-Api-Key`` header).
+    """
 
     def __init__(self, indexer: dict[str, Any], timeout: int = 20):
         self.name = str(indexer.get('name') or '').strip() or 'indexer'
@@ -118,18 +123,29 @@ class NewznabClient:
             str(indexer.get('base_url') or '').strip().rstrip('/')
         )
         self.api_key = str(indexer.get('api_key') or '').strip()
+        self.type = (
+            'prowlarr'
+            if str(indexer.get('type') or '').strip().lower() == 'prowlarr'
+            else 'newznab'
+        )
         self.timeout = timeout
 
     def configured(self) -> bool:
         return bool(self.base_url and self.api_key)
 
-    def endpoints(self) -> list[str]:
-        """Candidate Newznab endpoints, first match wins.
+    def _headers(self) -> dict[str, str]:
+        return {'X-Api-Key': self.api_key} if self.type == 'prowlarr' else {}
 
-        Classic indexers serve the spec at ``<base>/api``; Prowlarr (and some
-        Hydra setups) expose it at ``<base>/api/v1/search`` instead. A base
-        that already ends in ``/api`` or ``/search`` is used verbatim.
+    def endpoints(self) -> list[str]:
+        """Candidate search endpoints, first match wins.
+
+        Classic indexers serve the spec at ``<base>/api``; Prowlarr (and
+        some Hydra setups) expose it at ``<base>/api/v1/search`` instead.
+        A base that already ends in ``/api`` or ``/search`` is used
+        verbatim. Prowlarr-type clients always use their native endpoint.
         """
+        if self.type == 'prowlarr':
+            return [f'{self.base_url}/api/v1/search']
         if self.base_url.endswith(('/api', '/search')):
             return [self.base_url]
         return [f'{self.base_url}/api', f'{self.base_url}/api/v1/search']
@@ -141,6 +157,7 @@ class NewznabClient:
             resp = httpx.get(
                 url,
                 params=params,
+                headers=self._headers(),
                 timeout=self.timeout,
                 follow_redirects=True,
                 **kwargs,
@@ -161,18 +178,44 @@ class NewznabClient:
             'apikey': self.api_key,
             'extended': '1',
             'limit': '100',
+        } if self.type == 'newznab' else {
+            'query': query,
+            'categories': '3000,3010',
+            'apikey': self.api_key,
+            'limit': 100,
         })
+        if self.type == 'prowlarr':
+            try:
+                rows = resp.json()
+            except ValueError:
+                logger.info(
+                    'usenet: non-JSON from prowlarr indexer={!r}',
+                    self.name,
+                )
+                return []
+            return parse_prowlarr_results(rows, self.name)
         return parse_newznab_xml(resp.content, self.name)
 
     def fetch_nzb(self, url: str) -> bytes:
         """Download the raw NZB bytes (used when SABnzbd can't fetch them)."""
         resp = httpx.get(
-            url,
+            self._absolute_url(url),
+            params=(
+                {'apikey': self.api_key}
+                if self.type == 'prowlarr' and 'apikey=' not in url
+                else None
+            ),
+            headers=self._headers(),
             timeout=self.timeout,
             follow_redirects=True,
         )
         resp.raise_for_status()
         return resp.content
+
+    def _absolute_url(self, url: str) -> str:
+        if url.startswith('http'):
+            return url
+        return f'{self.base_url}/{url.lstrip("/")}'
 
 
 def parse_newznab_xml(
@@ -223,6 +266,41 @@ def parse_newznab_xml(
     return rows
 
 
+def parse_prowlarr_results(
+    rows: Any, indexer_name: str = ''
+) -> list[dict[str, Any]]:
+    """Parse a Prowlarr native-API search response into release dicts.
+
+    Only usenet-protocol results are kept (SABnzbd cannot fetch torrents).
+    Prowlarr reports no duration and no password flag, so those checks are
+    left to the size/duration plausibility gate and the post-download tag
+    verification. Unparseable payloads return an empty list.
+    """
+    if not isinstance(rows, list):
+        return []
+    parsed: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        protocol = str(row.get('protocol') or '').strip().lower()
+        if protocol and protocol != 'usenet':
+            continue
+        title = str(row.get('title') or '').strip()
+        download_url = str(row.get('downloadUrl') or '').strip()
+        if not title or not download_url:
+            continue
+        parsed.append({
+            'indexer': str(row.get('indexer') or '') or indexer_name,
+            'title': title,
+            'nzb_url': download_url,
+            'size': _to_int(row.get('size')),
+            'grabs': _to_int(row.get('grabs') or row.get('seeders')),
+            'passworded': 0,
+            'duration': 0,
+        })
+    return parsed
+
+
 def _to_int(value: Any) -> int:
     try:
         return int(value or 0)
@@ -265,26 +343,42 @@ def _usenet_search_queries(song: dict[str, Any]) -> list[str]:
 def _release_extension_bonus(
     title: str, extensions: list[str]
 ) -> tuple[int, str]:
-    """Score bonus when the release title advertises a preferred format."""
+    """Score bonus when the release title advertises a preferred format.
+
+    The ``extensions`` list is the user's preference order: the first
+    format scores highest, later ones less, formats not listed none.
+    """
     folded = title.casefold()
-    for ext in extensions:
+    for idx, ext in enumerate(extensions):
+        bonus = (3, 2, 1)[min(idx, 2)]
         if ext == 'flac' and re.search(r'(?:^|[^a-z])flac(?:[^a-z]|$)', folded):
-            return 3, 'ext_flac'
+            return bonus, 'ext_flac'
         if ext == 'mp3' and (
             re.search(r'(?:^|[^a-z0-9])(?:320|mp3)(?:[^a-z0-9]|$)', folded)
         ):
-            return 2, 'ext_mp3'
+            return bonus, 'ext_mp3'
         if ext not in {'flac', 'mp3'} and ext in folded:
-            return 2, f'ext_{ext}'
+            return bonus, f'ext_{ext}'
     return 0, ''
 
 
-def _implied_bitrate_ok(size: int, duration: int) -> bool:
-    """Plausibility of the NZB size against the track's runtime."""
+def _implied_bitrate_ok(
+    size: int,
+    duration: int,
+    min_kbps: int = 0,
+    max_kbps: int = 0,
+) -> bool:
+    """Plausibility of the NZB size against the track's runtime.
+
+    ``min_kbps``/``max_kbps`` come from the settings (``0`` = use the
+    defaults), letting the user demand e.g. at least 256 kbps.
+    """
     if size <= 0 or duration <= 0:
         return True
     kbps = (size * 8) / (duration * 1000)
-    return _MIN_IMPLIED_KBPS <= kbps <= _MAX_IMPLIED_KBPS
+    low = min_kbps or _MIN_IMPLIED_KBPS
+    high = max_kbps or _MAX_IMPLIED_KBPS
+    return low <= kbps <= high
 
 
 def _score_usenet_candidate(  # noqa: PLR0914  # mirrors slskd scorer
@@ -334,7 +428,12 @@ def _score_usenet_candidate(  # noqa: PLR0914  # mirrors slskd scorer
             return None
 
     size = _to_int(release.get('size'))
-    if not _implied_bitrate_ok(size, duration or target_duration):
+    if not _implied_bitrate_ok(
+        size,
+        duration or target_duration,
+        _int_setting(settings or {}, 'min_bitrate', 0, minimum=0, maximum=2000),
+        _int_setting(settings or {}, 'max_bitrate', 0, minimum=0, maximum=4000),
+    ):
         return None
 
     score = 0

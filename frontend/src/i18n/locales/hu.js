@@ -729,6 +729,13 @@ export default {
     usenetMinScore: 'Minimális találati pontszám',
     usenetDurationSeconds: 'Hossztűrés',
     usenetDurationPercent: 'Hossztűrés %',
+    usenetIndexerType: 'Típus',
+    usenetTypeNewznab: 'Newznab indexelő',
+    usenetTypeProwlarr: 'Prowlarr (natív API)',
+    usenetFormats: 'Előnyben részesített formátumok',
+    usenetFormatsHint: 'A sorrend számít: a korábbi formátumok magasabb pontszámot kapnak egyezéskor.',
+    usenetMinBitrate: 'Minimális bitsebesség',
+    usenetMaxBitrate: 'Maximális bitsebesség',
     slskdInPlace: 'Fájlok hagyása az slskd mappában',
     slskdInPlaceHint:
       'Ott címkézi őket, ahová az slskd mentette, ahelyett hogy a letöltési mappába másolná.',

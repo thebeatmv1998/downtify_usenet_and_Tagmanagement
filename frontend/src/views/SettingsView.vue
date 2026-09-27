@@ -286,6 +286,52 @@
                       suffix="%"
                     />
                   </div>
+                  <div class="sm:col-span-2">
+                    <p class="text-sm font-semibold">
+                      {{ t('settings.usenetFormats') }}
+                    </p>
+                    <p class="text-xs text-pretty text-muted">
+                      {{ t('settings.usenetFormatsHint') }}
+                    </p>
+                    <div class="mt-2 flex flex-wrap gap-2">
+                      <label
+                        v-for="format in ['flac', 'mp3', 'm4a', 'ogg', 'opus']"
+                        :key="format"
+                        class="flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-sm"
+                        :class="
+                          s.usenet.extensions.includes(format)
+                            ? 'border-accent bg-accent-soft text-accent'
+                            : 'border-line-2 text-muted'
+                        "
+                      >
+                        <input
+                          v-model="s.usenet.extensions"
+                          type="checkbox"
+                          :value="format"
+                          class="sr-only"
+                        />
+                        {{ format.toUpperCase() }}
+                      </label>
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <UiInput
+                      v-model="s.usenet.min_bitrate"
+                      :label="t('settings.usenetMinBitrate')"
+                      type="number"
+                      min="0"
+                      max="2000"
+                      suffix="kbps"
+                    />
+                    <UiInput
+                      v-model="s.usenet.max_bitrate"
+                      :label="t('settings.usenetMaxBitrate')"
+                      type="number"
+                      min="0"
+                      max="4000"
+                      suffix="kbps"
+                    />
+                  </div>
                 </div>
                 <div class="flex flex-col gap-3 px-5 py-4">
                   <div>
@@ -307,21 +353,39 @@
                         :label="t('settings.usenetIndexerName')"
                         placeholder="NZBGeek"
                       />
+                      <UiSelect
+                        v-model="indexer.type"
+                        :options="[
+                          {
+                            value: 'newznab',
+                            label: t('settings.usenetTypeNewznab'),
+                          },
+                          {
+                            value: 'prowlarr',
+                            label: t('settings.usenetTypeProwlarr'),
+                          },
+                        ]"
+                        :label="t('settings.usenetIndexerType')"
+                      />
+                    </div>
+                    <div class="grid gap-3 sm:grid-cols-2">
                       <UiInput
                         v-model.trim="indexer.base_url"
                         :label="t('settings.usenetIndexerUrl')"
-                        placeholder="https://api.nzbgeek.info"
+                        :placeholder="
+                          indexer.type === 'prowlarr'
+                            ? 'http://prowlarr:9696'
+                            : 'https://api.nzbgeek.info'
+                        "
                         type="url"
                       />
+                      <UiInput
+                        v-model.trim="indexer.api_key"
+                        :label="t('settings.usenetIndexerKey')"
+                        type="password"
+                      />
                     </div>
-                    <div class="flex items-end gap-3">
-                      <div class="min-w-0 flex-1">
-                        <UiInput
-                          v-model.trim="indexer.api_key"
-                          :label="t('settings.usenetIndexerKey')"
-                          type="password"
-                        />
-                      </div>
+                    <div class="flex items-end justify-end gap-3">
                       <UiSwitch
                         v-model="indexer.enabled"
                         :aria-label="
@@ -902,6 +966,7 @@ function addUsenetIndexer() {
     name: '',
     base_url: '',
     api_key: '',
+    type: 'newznab',
     enabled: true,
   })
 }

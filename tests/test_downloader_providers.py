@@ -317,3 +317,66 @@ def test_no_audio_match_mentions_audio_when_usenet_enabled(
 
     with pytest.raises(RuntimeError, match='an audio match'):
         d.download(dict(_SONG))
+
+
+def test_pinned_youtube_id_is_ignored_when_youtube_disabled(
+    tmp_path, monkeypatch, no_youtube
+):
+    # YouTube Music playlists pin tracks to their exact video; with the
+    # YouTube sources disabled that pin must not bypass the source order.
+    usenet_dir = tmp_path / 'usenet'
+    source = usenet_dir / 'Artist - Track.mp3'
+    usenet_dir.mkdir()
+    _minimal_mp3(source)
+
+    calls: list[dict] = []
+
+    def _usenet(song, settings, progress_cb=None):
+        calls.append(song)
+        return source
+
+    monkeypatch.setattr(downloader_mod, 'download_from_usenet', _usenet)
+    monkeypatch.setattr(
+        downloader_mod,
+        'find_match',
+        lambda song: (_ for _ in ()).throw(
+            AssertionError('YouTube must not be searched')
+        ),
+    )
+    d = Downloader(
+        tmp_path / 'downloads',
+        audio_providers=['usenet'],
+        usenet_settings={'enabled': True},
+    )
+
+    pinned = dict(_SONG, youtube_id='vid12345678', source='youtube')
+    assert d.download(pinned) == 'Artist - Track.mp3'
+    assert len(calls) == 1
+    assert no_youtube == []
+
+
+def test_explicit_video_override_still_downloads_that_video(
+    tmp_path, monkeypatch, no_youtube
+):
+    # "Retry with this video" is an explicit user decision and keeps
+    # working even with the YouTube sources disabled.
+    monkeypatch.setattr(
+        downloader_mod, 'download_from_usenet', lambda *a, **k: None
+    )
+    monkeypatch.setattr(
+        downloader_mod, '_download_cover', lambda url: b'IMG'
+    )
+    d = Downloader(
+        tmp_path / 'downloads',
+        audio_providers=['usenet'],
+        usenet_settings={'enabled': True},
+    )
+
+    override = dict(
+        _SONG,
+        youtube_id='vid12345678',
+        youtube_id_override=True,
+        source='youtube',
+    )
+    assert d.download(override).endswith('.mp3')
+    assert no_youtube == ['https://music.youtube.com/watch?v=vid12345678']

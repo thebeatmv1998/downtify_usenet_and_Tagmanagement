@@ -337,13 +337,21 @@ def check_usenet(cfg: dict[str, Any]) -> dict[str, Any]:
         idx_resp = None
         for i, url in enumerate(endpoints):
             try:
-                idx_resp = _get(
-                    url,
-                    params={
+                if client.type == 'prowlarr':
+                    params = {
+                        'apikey': client.api_key,
+                        'query': 'test',
+                        'limit': 1,
+                    }
+                else:
+                    params = {
                         't': 'caps',
                         'apikey': client.api_key,
                         'output': 'json',
-                    },
+                    }
+                idx_resp = _get(
+                    url,
+                    params=params,
                     timeout=PROBE_TIMEOUT,
                 )
             except Exception as exc:

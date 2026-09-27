@@ -722,6 +722,13 @@ export default {
     usenetMinScore: 'Минимален резултат за съвпадение',
     usenetDurationSeconds: 'Толеранс на продължителността',
     usenetDurationPercent: 'Толеранс на продължителността %',
+    usenetIndexerType: 'Тип',
+    usenetTypeNewznab: 'Newznab индексатор',
+    usenetTypeProwlarr: 'Prowlarr (нативен API)',
+    usenetFormats: 'Предпочитани формати',
+    usenetFormatsHint: 'Редът има значение: по-ранните формати получават по-висока оценка при съвпадение.',
+    usenetMinBitrate: 'Минимален битрейт',
+    usenetMaxBitrate: 'Максимален битрейт',
     slskdInPlace: 'Остави файловете в папката на slskd',
     slskdInPlaceHint:
       'Тагва ги там, където slskd ги е запазил, вместо да ги копира в папката за изтегляния.',

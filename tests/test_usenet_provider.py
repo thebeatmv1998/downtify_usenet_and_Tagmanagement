@@ -423,3 +423,108 @@ def test_newznab_client_explicit_endpoint_used_verbatim(monkeypatch):
     assert client.endpoints() == ['http://prowlarr:9696/api/v1/search']
     client._get({'t': 'search'})
     assert calls == ['http://prowlarr:9696/api/v1/search']
+
+
+def test_parse_prowlarr_results_keeps_usenet_only():
+    rows = usenet.parse_prowlarr_results([
+        {
+            'protocol': 'usenet',
+            'indexer': 'NZBGeek',
+            'title': 'Artist - Track FLAC',
+            'downloadUrl': '/1/download?token=abc',
+            'size': 25_000_000,
+        },
+        {
+            'protocol': 'torrent',
+            'indexer': 'SomeTracker',
+            'title': 'Artist - Track FLAC',
+            'downloadUrl': '/9/download?token=def',
+            'size': 25_000_000,
+        },
+        {'protocol': 'usenet', 'title': 'no url'},
+    ], 'prowlarr')
+    assert len(rows) == 1
+    row = rows[0]
+    assert row['indexer'] == 'NZBGeek'
+    assert row['nzb_url'] == '/1/download?token=abc'
+    assert row['size'] == 25_000_000
+    assert row['passworded'] == 0
+
+
+def test_parse_prowlarr_results_bad_payload_returns_empty():
+    assert usenet.parse_prowlarr_results('nope', 'prowlarr') == []
+    assert usenet.parse_prowlarr_results(None, 'prowlarr') == []
+
+
+def test_prowlarr_client_uses_native_endpoint_and_header(monkeypatch):
+    calls: list[tuple[str, dict, dict]] = []
+
+    class FakeResp:
+        status_code = 200
+        content = b'nzb-bytes'
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return [{
+                'protocol': 'usenet',
+                'indexer': 'Geek',
+                'title': 'Artist - Track FLAC',
+                'downloadUrl': 'http://prowlarr:9696/1/download?token=x',
+                'size': 25_000_000,
+            }]
+
+    def fake_get(url, params=None, headers=None, **kwargs):
+        calls.append((url, params or {}, headers or {}))
+        return FakeResp()
+
+    monkeypatch.setattr(usenet.httpx, 'get', fake_get)
+    client = usenet.NewznabClient({
+        'name': 'Prowlarr',
+        'base_url': 'http://prowlarr:9696',
+        'api_key': 'pk',
+        'type': 'prowlarr',
+    })
+    rows = client.search('artist track')  # noqa: F841
+    assert calls == [(
+        'http://prowlarr:9696/api/v1/search',
+        {'query': 'artist track', 'categories': '3000,3010',
+         'apikey': 'pk', 'limit': 100},
+        {'X-Api-Key': 'pk'},
+    )]
+    assert rows[0]['title'] == 'Artist - Track FLAC'
+    # The proxied download URL is fetched with the API key both as header
+    # and query param (Prowlarr's download route accepts either).
+    assert client.fetch_nzb(rows[0]['nzb_url']) == b'nzb-bytes'
+    assert calls[-1][0] == 'http://prowlarr:9696/1/download?token=x'
+    assert calls[-1][2] == {'X-Api-Key': 'pk'}
+    assert calls[-1][1] == {'apikey': 'pk'}
+
+
+def test_configured_bitrate_bounds_filter_releases():
+    song = dict(_SONG)
+
+    def _release(size):
+        return {
+            'title': 'Artist - Track',
+            'size': size,
+            'duration': 200,
+            'passworded': 0,
+            'grabs': 0,
+        }
+
+    # 120 kbps implied bitrate: within the default plausibility window...
+    assert usenet._score_usenet_candidate(
+        song, _release(3_000_000), target_duration=200, settings={}
+    ) is not None
+    # ...but rejected when the user demands at least 320 kbps...
+    assert usenet._score_usenet_candidate(
+        song, _release(3_000_000), target_duration=200,
+        settings={'min_bitrate': 320},
+    ) is None
+    # ...or caps the maximum at 100 kbps.
+    assert usenet._score_usenet_candidate(
+        song, _release(3_000_000), target_duration=200,
+        settings={'max_bitrate': 100},
+    ) is None

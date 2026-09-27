@@ -731,6 +731,13 @@ export default {
     usenetMinScore: 'Ελάχιστη βαθμολογία αντιστοίχισης',
     usenetDurationSeconds: 'Ανοχή διάρκειας',
     usenetDurationPercent: 'Ανοχή διάρκειας %',
+    usenetIndexerType: 'Τύπος',
+    usenetTypeNewznab: 'Δείκτης Newznab',
+    usenetTypeProwlarr: 'Prowlarr (εγγενές API)',
+    usenetFormats: 'Προτιμώμενες μορφές',
+    usenetFormatsHint: 'Η σειρά έχει σημασία: οι πρώτες μορφές βαθμολογούνται υψηλότερα στην αντιστοίχιση.',
+    usenetMinBitrate: 'Ελάχιστο bitrate',
+    usenetMaxBitrate: 'Μέγιστο bitrate',
     slskdInPlace: 'Διατήρηση αρχείων στον φάκελο slskd',
     slskdInPlaceHint:
       'Επισήμανση εκεί όπου τα αποθήκευσε το slskd αντί για αντιγραφή στον φάκελο λήψεων.',

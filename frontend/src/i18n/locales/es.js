@@ -729,6 +729,13 @@ export default {
     usenetMinScore: 'Puntuación mínima de coincidencia',
     usenetDurationSeconds: 'Tolerancia de duración',
     usenetDurationPercent: 'Tolerancia de duración %',
+    usenetIndexerType: 'Tipo',
+    usenetTypeNewznab: 'Indexador Newznab',
+    usenetTypeProwlarr: 'Prowlarr (API nativa)',
+    usenetFormats: 'Formatos preferidos',
+    usenetFormatsHint: 'El orden importa: los primeros formatos puntúan más alto al comparar lanzamientos.',
+    usenetMinBitrate: 'Bitrate mínimo',
+    usenetMaxBitrate: 'Bitrate máximo',
     slskdInPlace: 'Dejar los archivos en la carpeta de slskd',
     slskdInPlaceHint:
       'Etiquetarlos donde slskd los guardó en lugar de copiarlos a tu carpeta de descargas.',
