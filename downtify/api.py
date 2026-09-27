@@ -641,9 +641,9 @@ def _effective_usenet_settings(settings: dict[str, Any]) -> dict[str, Any]:
 def _effective_audio_providers(settings: dict[str, Any]) -> list[str]:
     """Enabled audio providers in the configured order.
 
-    slskd and usenet are dropped while disabled. When the only provider
-    left is slskd or usenet, YouTube Music and YouTube are appended as
-    fallbacks so a track the audio provider can't find still downloads.
+    slskd and usenet are dropped while their integration is disabled. The
+    user's selection is respected as-is: a source the UI shows as disabled
+    must not be appended at runtime either.
     """
 
     slskd_enabled = bool(_effective_slskd_settings(settings).get('enabled'))
@@ -657,10 +657,24 @@ def _effective_audio_providers(settings: dict[str, Any]) -> list[str]:
             continue
         if name in AUDIO_PROVIDERS and name not in out:
             out.append(name)
-    if not out:
-        return ['youtube-music']
-    if out in (['slskd'], ['usenet']):
-        out += ['youtube-music', 'youtube']
+    return out or ['youtube-music']
+
+
+def _stored_audio_providers(settings: dict[str, Any]) -> list[str]:
+    """The user's audio-source selection for persistence.
+
+    Validated and deduplicated, but unlike
+    :func:`_effective_audio_providers` it neither drops sources whose
+    integration is currently disabled (they come back when it is enabled
+    again) nor appends anything — saving must not edit what the user
+    picked.
+    """
+
+    out: list[str] = []
+    for raw in settings.get('audio_providers') or []:
+        name = str(raw or '').strip()
+        if name in AUDIO_PROVIDERS and name not in out:
+            out.append(name)
     return out
 
 
@@ -4245,7 +4259,7 @@ async def update_settings_endpoint(
             else:
                 state.settings[key] = raw_value
         if {'audio_providers', 'slskd', 'usenet'} & set(payload):
-            state.settings['audio_providers'] = _effective_audio_providers(
+            state.settings['audio_providers'] = _stored_audio_providers(
                 state.settings
             )
         if state.downloader is not None:

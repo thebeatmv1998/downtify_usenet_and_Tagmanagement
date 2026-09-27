@@ -665,16 +665,17 @@ def test_effective_audio_providers_filters_invalid_and_dedupes():
     ]
 
 
-def test_effective_audio_providers_adds_youtube_fallback_when_only_slskd():
-    settings = {
+def test_effective_audio_providers_respects_a_single_slskd_or_usenet():
+    # The user's selection is not silently extended with YouTube sources:
+    # the UI promises only enabled sources are tried.
+    assert _effective_audio_providers({
         'audio_providers': ['slskd'],
         'slskd': {'enabled': True},
-    }
-    assert _effective_audio_providers(settings) == [
-        'slskd',
-        'youtube-music',
-        'youtube',
-    ]
+    }) == ['slskd']
+    assert _effective_audio_providers({
+        'audio_providers': ['usenet'],
+        'usenet': {'enabled': True},
+    }) == ['usenet']
 
 
 def test_effective_audio_providers_skips_slskd_when_disabled():
@@ -956,6 +957,24 @@ def test_update_settings_rejects_enabled_usenet_with_only_disabled_indexers(
     with pytest.raises(HTTPException) as exc_info:
         _update(monkeypatch, {'usenet': usenet})
     assert exc_info.value.status_code == 400
+
+
+def test_update_settings_keeps_a_usenet_only_source_order(
+    monkeypatch, tmp_path
+):
+    # Regression: saving used to persist computed fallbacks, so disabling
+    # every source but usenet re-checked YouTube Music/YouTube in the UI.
+    downloader = Downloader(tmp_path)
+    out = _update(
+        monkeypatch,
+        {
+            'audio_providers': ['usenet'],
+            'usenet': _enabled_usenet(),
+        },
+        downloader=downloader,
+    )
+    assert out['audio_providers'] == ['usenet']
+    assert downloader.audio_providers == ['usenet']
 
 
 def test_update_settings_applies_usenet_to_downloader(monkeypatch, tmp_path):
