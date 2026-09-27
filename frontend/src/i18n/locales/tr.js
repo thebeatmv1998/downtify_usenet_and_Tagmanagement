@@ -736,6 +736,8 @@ export default {
     usenetFormatsHint: 'Sıra önemlidir: eşleştirmede önceki biçimler daha yüksek puan alır.',
     usenetMinBitrate: 'En düşük bit hızı',
     usenetMaxBitrate: 'En yüksek bit hızı',
+    usenetPreferAlbums: 'Albüm sürümlerini tercih et',
+    usenetPreferAlbumsHint: "Usenet albüm odaklıdır: 'Sanatçı - Albüm' sürümlerini de ara, albümü indir ve istenen parçayı çıkar. Albümler öncelik alır.",
     slskdInPlace: 'Dosyaları slskd klasöründe bırak',
     slskdInPlaceHint:
       'İndirme klasörüne kopyalamak yerine slskd’nin kaydettiği yerde etiketle.',

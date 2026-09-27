@@ -44,6 +44,7 @@ const settings = ref({
     extensions: ['flac', 'mp3'],
     min_bitrate: 0,
     max_bitrate: 0,
+    prefer_albums: false,
     min_score: 5,
     cleanup: true,
   },

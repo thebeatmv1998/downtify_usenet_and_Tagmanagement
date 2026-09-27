@@ -92,7 +92,7 @@ def test_score_good_release():
         _SONG, release, target_duration=200, settings={}
     )
     assert scored is not None
-    score, reasons = scored
+    score, reasons, _kind = scored
     assert score >= 5
     assert 'ext_flac' in reasons
     assert 'grabs' in reasons
@@ -528,3 +528,114 @@ def test_configured_bitrate_bounds_filter_releases():
         song, _release(3_000_000), target_duration=200,
         settings={'max_bitrate': 100},
     ) is None
+
+
+_ALBUM_RELEASE = {
+    'indexer': 'idx',
+    'title': 'Artist - Album 2023 FLAC',
+    'nzb_url': 'https://idx.example/getnzb/album',
+    'size': 300_000_000,
+    'grabs': 20,
+    'passworded': 0,
+    'duration': 0,
+}
+
+
+def test_album_release_rejected_without_prefer_albums():
+    # Default: album-only releases don't match a track search at all.
+    assert _score_usenet_candidate(
+        _SONG, _ALBUM_RELEASE, target_duration=200, settings={}
+    ) is None
+
+
+def test_album_release_scores_with_prefer_albums():
+    settings = {'prefer_albums': True}
+    scored = _score_usenet_candidate(
+        _SONG, _ALBUM_RELEASE, target_duration=200, settings=settings
+    )
+    assert scored is not None
+    score, reasons, kind = scored
+    assert kind == 'album'
+    assert 'album' in reasons
+    ranked = _rank_usenet_candidates(_SONG, [_ALBUM_RELEASE], settings)
+    assert ranked[0]['match_kind'] == 'album'
+
+
+def test_album_releases_rank_ahead_of_tracks_when_preferred():
+    settings = {'prefer_albums': True}
+    ranked = _rank_usenet_candidates(
+        _SONG,
+        [_release(), _ALBUM_RELEASE],
+        settings,
+    )
+    assert ranked[0]['match_kind'] == 'album'
+    assert ranked[1]['match_kind'] == 'track'
+
+
+def _album_folder(tmp_path):
+    """An SABnzbd-style completed album folder with tagged tracks."""
+    from mutagen.id3 import ID3, TIT2, TPE1
+
+    from tests.test_downloader_extended import _minimal_mp3
+
+    album = tmp_path / 'Artist - Album 2023 FLAC' / 'Artist - Album'
+    album.mkdir(parents=True)
+    wanted = album / '04 - Track.mp3'
+    other = album / '05 - Other Song.mp3'
+    for path, title in ((wanted, 'Track'), (other, 'Other Song')):
+        _minimal_mp3(path)
+        tags = ID3()
+        tags.add(TIT2(encoding=3, text=title))
+        tags.add(TPE1(encoding=3, text='Artist'))
+        tags.save(str(path))
+    return album, wanted, other
+
+
+def test_pick_track_in_album_matches_by_tags(tmp_path):
+    album, wanted, other = _album_folder(tmp_path)
+    found = usenet._pick_track_in_album(album, dict(_SONG), {})
+    assert found == wanted
+    assert found != other
+
+
+def test_download_prefers_album_and_extracts_track(tmp_path, monkeypatch):
+    album, wanted, other = _album_folder(tmp_path)
+    settings = _settings(tmp_path, prefer_albums=True)
+    settings['extensions'] = ['flac', 'mp3']
+
+    monkeypatch.setattr(
+        usenet,
+        '_search_indexers',
+        lambda indexers, query: [_ALBUM_RELEASE, _release()],
+    )
+    # Queue the album (first-ranked candidate); its storage is the album dir.
+    monkeypatch.setattr(
+        SabnzbdClient,
+        'add_url',
+        lambda self, url, name: 'nzo-album'
+        if 'Album' in name
+        else 'nzo-track',
+    )
+    monkeypatch.setattr(
+        SabnzbdClient,
+        'queue_slot',
+        lambda self, nzo: {'nzo_id': nzo, 'percentage': 100},
+    )
+    monkeypatch.setattr(
+        SabnzbdClient,
+        'history_slot',
+        lambda self, nzo: {
+            'nzo_id': nzo,
+            'status': 'Completed',
+            'storage': str(album),
+        },
+    )
+    monkeypatch.setattr(
+        SabnzbdClient, 'delete_history', lambda self, nzo: None
+    )
+    monkeypatch.setattr(
+        usenet, 'verify_downloaded_file_matches_spotify', lambda p, s: True
+    )
+
+    found = download_from_usenet(dict(_SONG), settings)
+    assert found == wanted

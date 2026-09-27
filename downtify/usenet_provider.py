@@ -387,9 +387,16 @@ def _score_usenet_candidate(  # noqa: PLR0914  # mirrors slskd scorer
     *,
     target_duration: int,
     settings: Optional[dict[str, Any]] = None,
-) -> Optional[tuple[int, list[str]]]:
-    """Return (score, reasons) or None when hard requirements fail."""
+) -> Optional[tuple[int, list[str], str]]:
+    """Return (score, reasons, kind) or None when hard requirements fail.
+
+    ``kind`` is ``'track'`` for a release named after the track itself and
+    ``'album'`` for an album release matched via artist + album — the
+    latter only exists when ``prefer_albums`` is on.
+    """
+    settings = settings or {}
     tol = duration_tolerances_from_settings(settings)
+    prefer_albums = bool(settings.get('prefer_albums'))
     artist = _alnum_only(
         ' '.join(str(a) for a in (song.get('artists') or [])[:1])
     )
@@ -412,13 +419,22 @@ def _score_usenet_candidate(  # noqa: PLR0914  # mirrors slskd scorer
         (title and title in release_alnum)
         or (full_title and full_title != title and full_title in release_alnum)
     )
-    if (title or full_title) and not title_ok:
+    kind = 'track'
+    album_match = False
+    if not title_ok and prefer_albums and album and artist:
+        # Album releases are named after the album, not the track; with
+        # prefer_albums they are viable when artist and album both match.
+        album_match = album in release_alnum and artist in release_alnum
+        kind = 'album'
+    if (title or full_title) and not title_ok and not album_match:
         return None
-    if artist and artist not in release_alnum:
+    if artist and artist not in release_alnum and not album_match:
         return None
 
     duration = _to_int(release.get('duration'))
-    if duration and target_duration:
+    if not album_match and duration and target_duration:
+        # An album release's duration attribute is the whole record, so
+        # the per-track tolerance check only applies to track releases.
         if not media_duration_matches_song(
             song,
             duration,
@@ -428,11 +444,11 @@ def _score_usenet_candidate(  # noqa: PLR0914  # mirrors slskd scorer
             return None
 
     size = _to_int(release.get('size'))
-    if not _implied_bitrate_ok(
+    if not album_match and not _implied_bitrate_ok(
         size,
         duration or target_duration,
-        _int_setting(settings or {}, 'min_bitrate', 0, minimum=0, maximum=2000),
-        _int_setting(settings or {}, 'max_bitrate', 0, minimum=0, maximum=4000),
+        _int_setting(settings, 'min_bitrate', 0, minimum=0, maximum=2000),
+        _int_setting(settings, 'max_bitrate', 0, minimum=0, maximum=4000),
     ):
         return None
 
@@ -446,23 +462,24 @@ def _score_usenet_candidate(  # noqa: PLR0914  # mirrors slskd scorer
         score += 1
         reasons.append('artist')
 
-    if title and title in release_alnum:
-        score += 3
-        reasons.append('title')
-    elif full_title and full_title in release_alnum:
-        score += 2
-        reasons.append('title_full')
+    if not album_match:
+        if title and title in release_alnum:
+            score += 3
+            reasons.append('title')
+        elif full_title and full_title in release_alnum:
+            score += 2
+            reasons.append('title_full')
 
     if album and album in release_alnum:
         score += 2
         reasons.append('album')
 
-    if duration and target_duration:
+    if not album_match and duration and target_duration:
         if abs(target_duration - duration) <= _STRICT_DURATION_SECONDS:
             score += 3
             reasons.append('duration_3s')
 
-    raw_ext = (settings or {}).get('extensions') or ['flac', 'mp3']
+    raw_ext = settings.get('extensions') or ['flac', 'mp3']
     extensions = [
         str(e).strip().lower().lstrip('.') for e in raw_ext if str(e).strip()
     ] or ['flac', 'mp3']
@@ -475,7 +492,7 @@ def _score_usenet_candidate(  # noqa: PLR0914  # mirrors slskd scorer
         score += 1
         reasons.append('grabs')
 
-    return score, reasons
+    return score, reasons, kind
 
 
 def _rank_usenet_candidates(
@@ -485,6 +502,7 @@ def _rank_usenet_candidates(
 ) -> list[dict[str, Any]]:
     """Score and sort all viable releases (highest confidence first)."""
     target_duration = _song_duration_seconds(song)
+    prefer_albums = bool((settings or {}).get('prefer_albums'))
     ranked: list[dict[str, Any]] = []
     for release in releases:
         scored = _score_usenet_candidate(
@@ -495,19 +513,32 @@ def _rank_usenet_candidates(
         )
         if scored is None:
             continue
-        score, reasons = scored
+        score, reasons, kind = scored
         ranked.append({
             **release,
             'match_score': score,
             'match_reasons': reasons,
+            'match_kind': kind,
         })
+    _sort_ranked(ranked, prefer_albums)
+    return ranked
+
+
+def _sort_ranked(
+    ranked: list[dict[str, Any]], prefer_albums: bool
+) -> None:
+    """Sort in place: album releases first when preferred, then score."""
     ranked.sort(
         key=lambda row: (
+            (
+                0
+                if prefer_albums and row.get('match_kind') == 'album'
+                else 1
+            ),
             -_to_int(row.get('match_score')),
             -_to_int(row.get('grabs')),
         )
     )
-    return ranked
 
 
 def _song_duration_seconds(song: dict[str, Any]) -> int:
@@ -737,6 +768,85 @@ def _find_completed_file(
     return best
 
 
+def _find_album_track(
+    complete_dir: Path,
+    storage: str,
+    song: dict[str, Any],
+    settings: dict[str, Any],
+) -> Optional[Path]:
+    """Pick the wanted track out of a downloaded album folder.
+
+    The album NZB contains every track; the right one is chosen by tag
+    title and duration (falling back to the file name), so a wrong pick
+    never reaches the library. A single-file storage path is returned
+    as-is.
+    """
+    direct = Path(str(storage).replace('\\', '/')) if storage else None
+    if direct is not None and direct.is_file():
+        return direct
+
+    folder: Optional[Path] = None
+    if storage:
+        normalized = str(storage).replace('\\', '/').rstrip('/')
+        base = Path(normalized).name
+        if base:
+            candidate = complete_dir / base
+            if candidate.is_dir():
+                folder = candidate
+    if folder is None and complete_dir.is_dir():
+        folder = complete_dir
+    if folder is None:
+        return None
+    return _pick_track_in_album(folder, song, settings)
+
+
+def _pick_track_in_album(
+    folder: Path,
+    song: dict[str, Any],
+    settings: dict[str, Any],
+) -> Optional[Path]:
+    """Score every audio file in ``folder`` against the wanted track."""
+    title_key = _alnum_only(_primary_title(str(song.get('name') or '')))
+    full_key = _alnum_only(str(song.get('name') or ''))
+    target = _song_duration_seconds(song)
+    tol = duration_tolerances_from_settings(settings)
+    best: Optional[tuple[int, Path]] = None
+    try:
+        entries = sorted(folder.rglob('*'))
+    except OSError:
+        return None
+    for entry in entries:
+        if not entry.is_file():
+            continue
+        if entry.suffix.lower().lstrip('.') not in _AUDIO_EXTENSIONS:
+            continue
+        meta = read_audio_metadata(entry)
+        name_key = _alnum_only(entry.name)
+        meta_title = _alnum_only(str(meta.get('title') or ''))
+        score = 0
+        if title_key and title_key in meta_title:
+            score += 4
+        if title_key and title_key in name_key:
+            score += 3
+        if full_key and full_key != title_key and full_key in name_key:
+            score += 1
+        duration = int(float(meta.get('duration') or 0))
+        if (
+            target
+            and duration
+            and media_duration_matches_song(
+                song,
+                duration,
+                tolerance_seconds=tol['seconds'],
+                tolerance_percent=tol['percent'],
+            )
+        ):
+            score += 3
+        if score > 0 and (best is None or score > best[0]):
+            best = (score, entry)
+    return best[1] if best else None
+
+
 def _audio_files_in(
     folder: Path, release_name: str, song: dict[str, Any]
 ) -> Optional[Path]:
@@ -905,8 +1015,10 @@ def download_from_usenet(  # noqa: PLR0914  # search, rank, queue, poll, verify
 
     with _usenet_semaphore(settings):
         deadline = _usenet_deadline(settings)
+        prefer_albums = bool(settings.get('prefer_albums'))
         report(5.0, 'searching')
         ranked: list[dict[str, Any]] = []
+        seen_urls: set[str] = set()
         for query in queries:
             if _past_deadline(deadline):
                 logger.info(
@@ -916,21 +1028,29 @@ def download_from_usenet(  # noqa: PLR0914  # search, rank, queue, poll, verify
             releases = _search_indexers(indexers, query)
             if not releases:
                 continue
-            ranked = [
+            fresh = [
                 row
                 for row in _rank_usenet_candidates(song, releases, settings)
                 if _to_int(row.get('match_score')) >= min_score
+                and str(row.get('nzb_url') or '') not in seen_urls
             ]
-            if ranked:
+            for row in fresh:
+                seen_urls.add(str(row.get('nzb_url') or ''))
+            ranked.extend(fresh)
+            if ranked and not prefer_albums:
+                # Track-only mode keeps the old early exit; with album
+                # preference the album queries must run too.
                 break
-            logger.info(
-                'usenet: no confident match for query={!r} title={!r} '
-                'releases={} min_score={}',
-                query[:120],
-                song.get('name'),
-                len(releases),
-                min_score,
-            )
+            if not ranked:
+                logger.info(
+                    'usenet: no confident match for query={!r} title={!r} '
+                    'releases={} min_score={}',
+                    query[:120],
+                    song.get('name'),
+                    len(releases),
+                    min_score,
+                )
+        _sort_ranked(ranked, prefer_albums)
 
         if not ranked:
             logger.info(
@@ -991,12 +1111,18 @@ def download_from_usenet(  # noqa: PLR0914  # search, rank, queue, poll, verify
             if slot is None:
                 continue
 
-            found = _find_completed_file(
-                complete_dir,
-                str(slot.get('storage') or ''),
-                release_name,
-                spotify_row,
-            )
+            if release.get('match_kind') == 'album':
+                found = _find_album_track(
+                    complete_dir, str(slot.get('storage') or ''),
+                    spotify_row, settings,
+                )
+            else:
+                found = _find_completed_file(
+                    complete_dir,
+                    str(slot.get('storage') or ''),
+                    release_name,
+                    spotify_row,
+                )
             if found is None:
                 logger.info(
                     'usenet: completed file not found under {} nzo={} '

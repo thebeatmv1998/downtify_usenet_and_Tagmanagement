@@ -736,6 +736,8 @@ export default {
     usenetFormatsHint: 'A sorrend számít: a korábbi formátumok magasabb pontszámot kapnak egyezéskor.',
     usenetMinBitrate: 'Minimális bitsebesség',
     usenetMaxBitrate: 'Maximális bitsebesség',
+    usenetPreferAlbums: 'Album kiadások előnyben részesítése',
+    usenetPreferAlbumsHint: "A Usenet albumközpontú: keress 'Előadó - Album' kiadásokat is, töltsd le az albumot, és nyerd ki a kívánt számot. Az albumok előre kerülnek.",
     slskdInPlace: 'Fájlok hagyása az slskd mappában',
     slskdInPlaceHint:
       'Ott címkézi őket, ahová az slskd mentette, ahelyett hogy a letöltési mappába másolná.',

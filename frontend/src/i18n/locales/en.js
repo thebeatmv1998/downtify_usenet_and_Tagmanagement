@@ -719,6 +719,8 @@ export default {
     usenetFormatsHint: 'Order matters: earlier formats score higher when matching releases.',
     usenetMinBitrate: 'Minimum bitrate',
     usenetMaxBitrate: 'Maximum bitrate',
+    usenetPreferAlbums: 'Prefer album releases',
+    usenetPreferAlbumsHint: "Usenet is album-oriented: search releases named 'Artist - Album' too, download the album and extract the wanted track. Album releases rank first.",
     slskdInPlace: 'Leave files in the slskd folder',
     slskdInPlaceHint:
       'Tag them where slskd saved them instead of copying into your downloads folder.',

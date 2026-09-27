@@ -736,6 +736,8 @@ export default {
     usenetFormatsHint: 'El orden importa: los primeros formatos puntúan más alto al comparar lanzamientos.',
     usenetMinBitrate: 'Bitrate mínimo',
     usenetMaxBitrate: 'Bitrate máximo',
+    usenetPreferAlbums: 'Preferir álbumes completos',
+    usenetPreferAlbumsHint: "Usenet está orientado a álbumes: busca también lanzamientos 'Artista - Álbum', descarga el álbum y extrae la pista deseada. Los álbumes se priorizan.",
     slskdInPlace: 'Dejar los archivos en la carpeta de slskd',
     slskdInPlaceHint:
       'Etiquetarlos donde slskd los guardó en lugar de copiarlos a tu carpeta de descargas.',

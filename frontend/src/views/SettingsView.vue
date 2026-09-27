@@ -426,6 +426,15 @@
                     :aria-label="t('settings.usenetCleanup')"
                   />
                 </SettingRow>
+                <SettingRow
+                  :label="t('settings.usenetPreferAlbums')"
+                  :description="t('settings.usenetPreferAlbumsHint')"
+                >
+                  <UiSwitch
+                    v-model="s.usenet.prefer_albums"
+                    :aria-label="t('settings.usenetPreferAlbums')"
+                  />
+                </SettingRow>
               </template>
             </SettingGroup>
 

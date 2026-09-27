@@ -381,6 +381,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         'extensions': ['flac', 'mp3'],
         'min_bitrate': 0,
         'max_bitrate': 0,
+        'prefer_albums': False,
         'min_score': 5,
         'cleanup': True,
     },
@@ -639,6 +640,7 @@ def _effective_usenet_settings(settings: dict[str, Any]) -> dict[str, Any]:
         'extensions': _usenet_extensions(raw),
         'min_bitrate': bounded('min_bitrate', 0, 0, 2000),
         'max_bitrate': bounded('max_bitrate', 0, 0, 4000),
+        'prefer_albums': bool(raw.get('prefer_albums', False)),
         'min_score': bounded('min_score', 5, 0, 100),
         'cleanup': bool(raw.get('cleanup', True)),
         'max_parallel_downloads': _setting_int(

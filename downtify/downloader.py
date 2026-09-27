@@ -579,6 +579,7 @@ class Downloader:
             'extensions': extensions,
             'min_bitrate': _int(raw.get('min_bitrate'), 0, 0, 2000),
             'max_bitrate': _int(raw.get('max_bitrate'), 0, 0, 4000),
+            'prefer_albums': bool(raw.get('prefer_albums', False)),
             'min_score': _int(raw.get('min_score'), 5, 0, 100),
             'cleanup': bool(raw.get('cleanup', True)),
             'max_parallel_downloads': _int(
