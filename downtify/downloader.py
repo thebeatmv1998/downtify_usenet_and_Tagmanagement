@@ -295,10 +295,13 @@ def youtube_extractor_args() -> dict[str, Any]:
     po_tokens = _yt_po_tokens()
     if po_tokens:
         youtube_args['po_token'] = po_tokens
+    result: dict[str, Any] = {'youtube': youtube_args}
     pot_provider = _yt_pot_provider_url()
     if pot_provider:
-        youtube_args['youtubepot-bgutilhttp'] = [f'base_url={pot_provider}']
-    return {'youtube': youtube_args}
+        # Provider args are their own top-level extractor_args group —
+        # nesting them under 'youtube' is silently ignored by yt-dlp.
+        result['youtubepot-bgutilhttp'] = {'base_url': [pot_provider]}
+    return result
 
 
 _cookies_file_warned = False

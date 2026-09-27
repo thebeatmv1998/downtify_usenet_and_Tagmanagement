@@ -276,9 +276,12 @@ def test_extractor_args_omit_pot_provider_when_env_unset(monkeypatch):
 def test_extractor_args_point_pot_provider_at_sidecar(monkeypatch):
     monkeypatch.setenv('DOWNTIFY_YT_POT_PROVIDER', 'http://potside:4416/')
     args = youtube_extractor_args()
-    assert args['youtube']['youtubepot-bgutilhttp'] == [
-        'base_url=http://potside:4416'
-    ]
+    # The provider is its own top-level extractor_args group; nesting it
+    # under 'youtube' is silently ignored by yt-dlp.
+    assert args['youtubepot-bgutilhttp'] == {
+        'base_url': ['http://potside:4416']
+    }
+    assert 'youtubepot-bgutilhttp' not in args['youtube']
 
 
 def test_plugin_warnings_are_quiet_without_a_provider(monkeypatch):
