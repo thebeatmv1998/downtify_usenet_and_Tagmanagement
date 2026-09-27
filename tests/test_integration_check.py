@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import json
 import ssl
+from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import parse_qs, urlparse
 
@@ -22,7 +23,11 @@ from downtify.api import (
     _effective_navidrome_settings,
     _effective_slskd_settings,
 )
-from downtify.integration_check import check_navidrome, check_slskd
+from downtify.integration_check import (
+    check_navidrome,
+    check_slskd,
+    check_usenet,
+)
 from downtify.slskd_provider import SlskdClient
 
 # ── helpers ────────────────────────────────────────────────────────────
@@ -755,3 +760,57 @@ def test_a_failed_test_is_an_answer_not_an_error(monkeypatch, tmp_path):
     # A plain dict is returned, so the client gets a 200 to read.
     assert result['ok'] is False
     assert result['checks'][0]['code'] == 'unreachable'
+
+
+# ── usenet ─────────────────────────────────────────────────────────────
+
+
+def _usenet_cfg(tmp_path: Path) -> dict[str, Any]:
+    return {
+        'sabnzbd': {
+            'base_url': 'http://sab.example:8080',
+            'api_key': 'key',
+            'complete_dir': str(tmp_path),
+        },
+        'indexers': [],
+    }
+
+
+def test_sabnzbd_key_error_is_an_auth_failure_not_unknown_server(
+    monkeypatch, tmp_path
+):
+    # SABnzbd answers a wrong API key with 200 + {"error": ...}, not a 4xx.
+    monkeypatch.setattr(
+        integration_check,
+        '_get',
+        lambda url, **kw: _response(
+            200, json={'error': 'API Key incorrect'}
+        ),
+    )
+    result = check_usenet(_usenet_cfg(tmp_path))
+    checks = _by_id(result)
+    assert checks['connection']['status'] == 'ok'
+    assert checks['auth']['code'] == 'bad_key'
+
+
+def test_sabnzbd_that_is_not_sabnzbd_is_recognised(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        integration_check,
+        '_get',
+        lambda url, **kw: _response(200, text='<html>not json</html>'),
+    )
+    result = check_usenet(_usenet_cfg(tmp_path))
+    assert _by_id(result)['connection']['code'] == 'not_sabnzbd'
+
+
+def test_a_working_sabnzbd_with_a_read_folder_is_ok(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        integration_check,
+        '_get',
+        lambda url, **kw: _response(200, json={'version': '4.5.0'}),
+    )
+    result = check_usenet(_usenet_cfg(tmp_path))
+    checks = _by_id(result)
+    assert checks['connection']['status'] == 'ok'
+    assert checks['auth']['status'] == 'ok'
+    assert checks['folder']['status'] == 'ok'

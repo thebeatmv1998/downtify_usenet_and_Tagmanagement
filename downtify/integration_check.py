@@ -244,10 +244,19 @@ def check_usenet(cfg: dict[str, Any]) -> dict[str, Any]:
             )
         ])
     try:
-        version = _sabnzbd_version(resp.json())
+        data = resp.json()
     except ValueError:
-        version = None
+        data = None
+    version = _sabnzbd_version(data)
     if version is None:
+        if isinstance(data, dict) and str(data.get('error') or '').strip():
+            # SABnzbd answers auth problems with 200 + {"error": ...}, not
+            # with a 4xx — it *is* SABnzbd, only the key is wrong/missing.
+            _log_failure('SABnzbd auth', data['error'])
+            return _result([
+                _check('connection', STATUS_OK),
+                _check('auth', STATUS_FAIL, 'bad_key'),
+            ])
         return _result([_check('connection', STATUS_FAIL, 'not_sabnzbd')])
 
     checks = [_check('connection', STATUS_OK), _check('auth', STATUS_OK)]
