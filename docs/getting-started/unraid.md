@@ -64,6 +64,27 @@ YouTube aggressively gates datacenter IPs. If downloads or metadata lookups fail
   on the Downtify container. PO Tokens are generated on demand and the bot
   check goes away — no cookies.txt needed. The plugin is already built into
   this fork's image.
+- **When YouTube still answers `LOGIN_REQUIRED` on every player client**
+  (visible with `DOWNTIFY_YT_VERBOSE=1` in the log), only a signed-in
+  session helps. The **cookies-keeper** sidecar automates that: a
+  Chromium with a persistent profile whose YouTube session is exported
+  as a `cookies.txt` every 10 minutes — no manual re-uploads. Build it
+  from the repo (`docker/cookies-keeper/`), log in once, done:
+
+  ```sh
+  cd /mnt/user/appdata/downtify-src/docker/cookies-keeper
+  docker build -t cookies-keeper:latest .
+  # Docker → Add Container:
+  #   Repository: cookies-keeper:latest, WebUI port → 3000
+  #   Path: /mnt/user/appdata/cookies-keeper/config → /config
+  #   Path: /mnt/user/appdata/downtify → /out   (the Downtify /data volume)
+  ```
+
+  Open the container's web UI, log into youtube.com once — from then on
+  `/out/cookies.txt` refreshes itself. Point Downtify at it:
+  `DOWNTIFY_COOKIES_FILE=/data/cookies.txt` (Downtify re-reads the file
+  on every download; the keeper only overwrites it with an
+  authenticated jar, so a logged-out browser never clobbers it).
 - Upload a fresh `cookies.txt` in **Settings → YouTube cookies** (exported while
   logged into YouTube), or mount one and set `DOWNTIFY_COOKIES_FILE=/data/cookies.txt`.
   Downtify re-reads the file on every download, so updating it needs no restart.
