@@ -814,3 +814,86 @@ def test_a_working_sabnzbd_with_a_read_folder_is_ok(monkeypatch, tmp_path):
     assert checks['connection']['status'] == 'ok'
     assert checks['auth']['status'] == 'ok'
     assert checks['folder']['status'] == 'ok'
+
+
+def _sabnzbd_mock_server():
+    """A tiny SABnzbd-shaped HTTP server: /sabnzbd/api?mode=version."""
+
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    import threading
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            path = urlparse(self.path)
+            if path.path != '/sabnzbd/api':
+                self.send_response(404)
+                self.end_headers()
+                return
+            qs = parse_qs(path.query)
+            if qs.get('apikey') == ['good']:
+                body = b'{"version": "4.5.0"}'
+            elif not qs.get('apikey'):
+                body = b'{"error": "API Key Required"}'
+            else:
+                body = b'{"error": "API Key incorrect"}'
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *args):
+            pass
+
+    server = HTTPServer(('127.0.0.1', 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server
+
+
+def test_sabnzbd_check_hits_the_real_api_path_with_the_key(tmp_path):
+    # End-to-end: the check must call /sabnzbd/api with mode=version,
+    # output=json and the apikey merged into the query string.
+    server = _sabnzbd_mock_server()
+    try:
+        port = server.server_address[1]
+        cfg = _usenet_cfg(tmp_path)
+        cfg['sabnzbd']['base_url'] = f'http://127.0.0.1:{port}'
+        cfg['sabnzbd']['api_key'] = 'good'
+        checks = _by_id(check_usenet(cfg))
+        assert checks['connection']['status'] == 'ok'
+        assert checks['auth']['status'] == 'ok'
+
+        cfg['sabnzbd']['api_key'] = 'wrong-but-sabnzbd-shaped'
+        checks = _by_id(check_usenet(cfg))
+        assert checks['connection']['status'] == 'ok'
+        assert checks['auth']['code'] == 'bad_key'
+    finally:
+        server.shutdown()
+
+
+def test_sabnzbd_silent_key_refusal_is_not_mistaken_for_a_foreign_server(
+    monkeypatch, tmp_path
+):
+    # A SABnzbd that answers 200 without version and without an error for
+    # a bad key, but names itself on the unauthenticated probe.
+    def fake_get(url, **kwargs):
+        # The real _get hands params to httpx, which merges them into the
+        # query string — do the same here.
+        params = kwargs.get('params') or {}
+        if params.get('apikey'):
+            return _response(200, text='{}')
+        return _response(200, json={'version': '4.5.0'})
+
+    monkeypatch.setattr(integration_check, '_get', fake_get)
+    checks = _by_id(check_usenet(_usenet_cfg(tmp_path)))
+    assert checks['connection']['status'] == 'ok'
+    assert checks['auth']['code'] == 'bad_key'
+
+
+def test_a_foreign_server_still_reports_not_sabnzbd(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        integration_check,
+        '_get',
+        lambda url, **kw: _response(200, text='<html>router login</html>'),
+    )
+    checks = _by_id(check_usenet(_usenet_cfg(tmp_path)))
+    assert checks['connection']['code'] == 'not_sabnzbd'

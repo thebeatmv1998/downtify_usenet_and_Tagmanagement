@@ -217,14 +217,24 @@ def check_usenet(cfg: dict[str, Any]) -> dict[str, Any]:
     if not sab.get('base_url') or not sab.get('api_key'):
         return _result([_check('config', STATUS_FAIL, 'missing')])
 
+    def _probe(with_key: bool) -> Any:
+        try:
+            return _get(
+                _sabnzbd_url(sab, 'version'),
+                params=_sabnzbd_params(sab) if with_key else {},
+                timeout=PROBE_TIMEOUT,
+            )
+        except Exception as exc:
+            _log_failure('SABnzbd connection', exc)
+            raise
+
+    def _body_snippet(resp: Any) -> str:
+        text = str(getattr(resp, 'text', '') or '').strip()
+        return text[:120]
+
     try:
-        resp = _get(
-            _sabnzbd_url(sab, 'version'),
-            params=_sabnzbd_params(sab),
-            timeout=PROBE_TIMEOUT,
-        )
+        resp = _probe(True)
     except Exception as exc:
-        _log_failure('SABnzbd connection', exc)
         return _result([
             _check('connection', STATUS_FAIL, _transport_code(exc))
         ])
@@ -257,6 +267,31 @@ def check_usenet(cfg: dict[str, Any]) -> dict[str, Any]:
                 _check('connection', STATUS_OK),
                 _check('auth', STATUS_FAIL, 'bad_key'),
             ])
+        # A 200 without a version and without an error can mean "not
+        # SABnzbd" — or SABnzbd silently refusing an invalid key. One
+        # unauthenticated probe tells the two apart: a real SABnzbd answers
+        # ``mode=version`` even without a key (it is a public mode).
+        try:
+            pub_version = _sabnzbd_version(_probe(False).json())
+        except Exception:
+            pub_version = None
+        if pub_version is not None:
+            logger.info(
+                'SABnzbd check: server at {} is SABnzbd {} but rejected '
+                'the configured API key',
+                sab.get('base_url'),
+                pub_version,
+            )
+            return _result([
+                _check('connection', STATUS_OK),
+                _check('auth', STATUS_FAIL, 'bad_key'),
+            ])
+        logger.info(
+            'SABnzbd check: {} answered {} {!r} — not SABnzbd',
+            sab.get('base_url'),
+            resp.status_code,
+            _body_snippet(resp),
+        )
         return _result([_check('connection', STATUS_FAIL, 'not_sabnzbd')])
 
     checks = [_check('connection', STATUS_OK), _check('auth', STATUS_OK)]
