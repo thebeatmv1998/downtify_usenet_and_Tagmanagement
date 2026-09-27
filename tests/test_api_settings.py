@@ -1014,3 +1014,41 @@ def test_usenet_test_endpoint(monkeypatch):
     out = asyncio.run(api.test_usenet_endpoint(_JsonRequest(payload)))
     assert out['ok'] is True
     assert captured[0]['sabnzbd']['base_url'] == 'http://sab:8080'
+
+
+def test_usenet_cleanup_endpoint_deletes_history(monkeypatch):
+    monkeypatch.setattr(api.state, 'settings', dict(DEFAULT_SETTINGS))
+    deleted: list[str] = []
+
+    class _FakeClient:
+        def __init__(self, cfg):
+            pass
+
+        def configured(self):
+            return True
+
+        def delete_all_history(self):
+            deleted.append('x')
+            return 3
+
+    monkeypatch.setattr(api, 'UsenetSabnzbdClient', _FakeClient)
+    # A sync endpoint: callable directly, FastAPI runs it in a thread.
+    out = api.cleanup_usenet_endpoint()
+    assert out == {'deleted': 3}
+    assert len(deleted) == 1
+
+
+def test_usenet_cleanup_endpoint_requires_configuration(monkeypatch):
+    monkeypatch.setattr(api.state, 'settings', dict(DEFAULT_SETTINGS))
+
+    class _FakeClient:
+        def __init__(self, cfg):
+            pass
+
+        def configured(self):
+            return False
+
+    monkeypatch.setattr(api, 'UsenetSabnzbdClient', _FakeClient)
+    with pytest.raises(HTTPException) as exc_info:
+        asyncio.run(api.cleanup_usenet_endpoint())
+    assert exc_info.value.status_code == 400

@@ -484,6 +484,10 @@ function testUsenet(config) {
   return API.post('/api/usenet/test', config)
 }
 
+function cleanupUsenet() {
+  return API.post('/api/usenet/cleanup')
+}
+
 function setSettings(settings) {
   return API.post('/api/settings/update', settings, {
     params: { client_id: sessionID },
@@ -572,6 +576,7 @@ export default {
   testSlskd,
   testNavidrome,
   testUsenet,
+  cleanupUsenet,
   getCookiesStatus,
   uploadCookies,
   deleteCookies,

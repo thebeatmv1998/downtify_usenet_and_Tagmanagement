@@ -17,6 +17,7 @@ fires (process exit) just leaves the history entry behind — harmless.
 
 from __future__ import annotations
 
+import json
 import re
 import threading
 import time
@@ -48,6 +49,80 @@ ProgressCallback = Callable[[float, str, str], None]
 
 _USENET_SEM: Optional[threading.Semaphore] = None
 _USENET_SEM_LIMIT = 0
+
+# Albums already fetched via SABnzbd, ``album_key`` → folder inside the
+# mounted complete dir. Lets every song of the same album reuse one
+# download instead of re-fetching the album per track.
+_ALBUM_FOLDERS: dict[str, str] = {}
+_ALBUM_CACHE_PATH: Optional[Path] = None
+_ALBUM_CACHE_LOCK = threading.Lock()
+# In-flight album downloads: waiters reuse the folder instead of queueing
+# the same NZB again while the first fetch is still running.
+_ALBUM_EVENTS: dict[str, threading.Event] = {}
+
+
+def configure_album_cache(path: Optional[Path]) -> None:
+    """Point the album cache at a JSON file (call once at startup)."""
+    global _ALBUM_CACHE_PATH
+    with _ALBUM_CACHE_LOCK:
+        _ALBUM_CACHE_PATH = path
+        _ALBUM_FOLDERS.clear()
+        if path is not None and path.is_file():
+            try:
+                data = json.loads(path.read_text(encoding='utf-8'))
+            except (OSError, ValueError):
+                logger.info('usenet: album cache unreadable at {}', path)
+                return
+            if isinstance(data, dict):
+                _ALBUM_FOLDERS.update(
+                    {str(k): str(v) for k, v in data.items()}
+                )
+
+
+def _album_cache_save() -> None:
+    if _ALBUM_CACHE_PATH is None:
+        return
+    try:
+        _ALBUM_CACHE_PATH.write_text(
+            json.dumps(_ALBUM_FOLDERS), encoding='utf-8'
+        )
+    except OSError as exc:
+        logger.info('usenet: album cache save failed err={}', exc)
+
+
+def _album_cache_key(song: dict[str, Any]) -> str:
+    artist = ' '.join(
+        str(a) for a in (song.get('artists') or [])[:1]
+    ).strip()
+    album = str(song.get('album_name') or '').strip()
+    if not artist or not album:
+        return ''
+    return _alnum_only(f'{artist} {album}').casefold()
+
+
+def _album_cache_get(key: str) -> Optional[Path]:
+    """The cached album folder, or None (stale entries are dropped)."""
+    if not key:
+        return None
+    with _ALBUM_CACHE_LOCK:
+        folder = _ALBUM_FOLDERS.get(key)
+    if not folder:
+        return None
+    path = Path(folder)
+    if not path.is_dir():
+        with _ALBUM_CACHE_LOCK:
+            _ALBUM_FOLDERS.pop(key, None)
+        _album_cache_save()
+        return None
+    return path
+
+
+def _album_cache_put(key: str, folder: Path) -> None:
+    if not key:
+        return
+    with _ALBUM_CACHE_LOCK:
+        _ALBUM_FOLDERS[key] = str(folder)
+    _album_cache_save()
 
 
 def _usenet_parallel_limit(settings: dict[str, Any]) -> int:
@@ -675,6 +750,32 @@ class SabnzbdClient:
                 'usenet: history cleanup failed nzo={} err={}', nzo_id, exc
             )
 
+    def delete_all_history(self) -> int:
+        """Delete every history entry and its files (manual cleanup)."""
+        data = self._api({'mode': 'history'})
+        history = data.get('history')
+        slots = history.get('slots') if isinstance(history, dict) else None
+        deleted = 0
+        for slot in slots if isinstance(slots, list) else []:
+            nzo_id = str(slot.get('nzo_id') or '')
+            if not nzo_id:
+                continue
+            try:
+                self._api({
+                    'mode': 'history',
+                    'name': 'delete',
+                    'value': nzo_id,
+                    'del_files': '1',
+                })
+                deleted += 1
+            except Exception as exc:
+                logger.info(
+                    'usenet: history delete failed nzo={} err={}',
+                    nzo_id,
+                    exc,
+                )
+        return deleted
+
 
 def _find_slot(slots: Any, nzo_id: str) -> Optional[dict[str, Any]]:
     if not isinstance(slots, list):
@@ -1012,6 +1113,25 @@ def download_from_usenet(  # noqa: PLR0914  # search, rank, queue, poll, verify
     sab = settings.get('sabnzbd')
     sab = sab if isinstance(sab, dict) else {}
     complete_dir = Path(str(sab.get('complete_dir') or '/usenet'))
+    album_key = _album_cache_key(spotify_row)
+
+    # A previously downloaded album with this artist+album is still on
+    # disk: extract the track from it instead of re-downloading anything.
+    cached_album = _album_cache_get(album_key)
+    if cached_album is not None:
+        report(30.0, 'using downloaded album')
+        found = _pick_track_in_album(cached_album, spotify_row, settings)
+        if found is not None and verify_downloaded_file_matches_spotify(
+            found, spotify_row
+        ):
+            logger.info(
+                'usenet: reused cached album title={!r} album={!r}',
+                song.get('name'),
+                cached_album.name,
+            )
+            return found
+        if found is not None:
+            _discard_mismatched_download(found)
 
     with _usenet_semaphore(settings):
         deadline = _usenet_deadline(settings)
@@ -1073,95 +1193,151 @@ def download_from_usenet(  # noqa: PLR0914  # search, rank, queue, poll, verify
                 break
             release_name = str(release.get('title') or '')[:120]
             nzb_url = str(release.get('nzb_url') or '')
-            nzo_id: Optional[str] = None
+            is_album = release.get('match_kind') == 'album'
+
+            # Only one download per album: a parallel song of the same
+            # album waits for the in-flight fetch and reuses its folder.
+            owner_event: Optional[threading.Event] = None
+            if is_album and album_key:
+                with _ALBUM_CACHE_LOCK:
+                    event = _ALBUM_EVENTS.get(album_key)
+                    if event is None:
+                        owner_event = threading.Event()
+                        _ALBUM_EVENTS[album_key] = owner_event
+                if owner_event is None:
+                    report(40.0, 'waiting for album download')
+                    while not event.wait(1.0):
+                        if _past_deadline(deadline):
+                            break
+                    cached = _album_cache_get(album_key)
+                    found = (
+                        _pick_track_in_album(cached, spotify_row, settings)
+                        if cached is not None
+                        else None
+                    )
+                    if found is not None and (
+                        verify_downloaded_file_matches_spotify(
+                            found, spotify_row
+                        )
+                    ):
+                        logger.info(
+                            'usenet: reused album fetched in parallel '
+                            'title={!r}',
+                            song.get('name'),
+                        )
+                        return found
+                    if found is not None:
+                        _discard_mismatched_download(found)
+                    continue
+
             try:
-                nzo_id = client.add_url(nzb_url, release_name)
-            except Exception as exc:
-                logger.info(
-                    'usenet: addurl failed title={!r} release={!r} err={}',
-                    song.get('name'),
-                    release_name,
-                    exc,
-                )
-            if nzo_id is None:
-                # Some indexers only serve NZBs to the logged-in client;
-                # fetch the bytes ourselves and upload them instead.
-                indexer = next(
-                    (c for c in indexers if c.name == release.get('indexer')),
-                    indexers[0],
-                )
+                nzo_id: Optional[str] = None
                 try:
-                    nzb_bytes = indexer.fetch_nzb(nzb_url)
-                    nzo_id = client.add_file(nzb_bytes, release_name)
+                    nzo_id = client.add_url(nzb_url, release_name)
                 except Exception as exc:
                     logger.info(
-                        'usenet: addfile fallback failed title={!r} '
-                        'release={!r} err={}',
+                        'usenet: addurl failed title={!r} release={!r} '
+                        'err={}',
                         song.get('name'),
                         release_name,
                         exc,
                     )
-            if nzo_id is None:
-                continue
+                if nzo_id is None:
+                    # Some indexers only serve NZBs to the logged-in
+                    # client; fetch the bytes ourselves and upload them
+                    # instead.
+                    indexer = next(
+                        (
+                            c for c in indexers
+                            if c.name == release.get('indexer')
+                        ),
+                        indexers[0],
+                    )
+                    try:
+                        nzb_bytes = indexer.fetch_nzb(nzb_url)
+                        nzo_id = client.add_file(nzb_bytes, release_name)
+                    except Exception as exc:
+                        logger.info(
+                            'usenet: addfile fallback failed title={!r} '
+                            'release={!r} err={}',
+                            song.get('name'),
+                            release_name,
+                            exc,
+                        )
+                if nzo_id is None:
+                    continue
 
-            slot = _wait_for_sabnzbd(
-                client, nzo_id, settings,
-                progress_cb=progress_cb, deadline=deadline,
-            )
-            if slot is None:
-                continue
+                slot = _wait_for_sabnzbd(
+                    client, nzo_id, settings,
+                    progress_cb=progress_cb, deadline=deadline,
+                )
+                if slot is None:
+                    continue
 
-            if release.get('match_kind') == 'album':
-                found = _find_album_track(
-                    complete_dir, str(slot.get('storage') or ''),
-                    spotify_row, settings,
-                )
-            else:
-                found = _find_completed_file(
-                    complete_dir,
-                    str(slot.get('storage') or ''),
-                    release_name,
-                    spotify_row,
-                )
-            if found is None:
+                if is_album:
+                    found = _find_album_track(
+                        complete_dir, str(slot.get('storage') or ''),
+                        spotify_row, settings,
+                    )
+                else:
+                    found = _find_completed_file(
+                        complete_dir,
+                        str(slot.get('storage') or ''),
+                        release_name,
+                        spotify_row,
+                    )
+                if found is None:
+                    logger.info(
+                        'usenet: completed file not found under {} nzo={} '
+                        'release={!r}',
+                        complete_dir,
+                        nzo_id,
+                        release_name,
+                    )
+                    continue
+
+                if not verify_downloaded_file_matches_spotify(
+                    found, spotify_row
+                ):
+                    meta = read_audio_metadata(found)
+                    mismatch_row = {
+                        **spotify_row,
+                        'name': str(meta.get('title') or ''),
+                        'artists': list(meta.get('artists') or []),
+                        'library_from_tags': True,
+                    }
+                    logger.info(
+                        'usenet: tags mismatch after download {}; trying '
+                        'next candidate ({}/{}) file={!r}',
+                        spotify_file_tag_mismatch_label(mismatch_row),
+                        attempt_idx,
+                        len(ranked),
+                        _file_basename(found.name)[:120],
+                    )
+                    _discard_mismatched_download(found)
+                    continue
+
+                if is_album and album_key:
+                    # Keep the album folder for the album's other songs;
+                    # the manual cleanup button removes it on demand.
+                    _album_cache_put(album_key, found.parent)
+                elif bool(settings.get('cleanup', True)):
+                    _schedule_cleanup(client, nzo_id)
                 logger.info(
-                    'usenet: completed file not found under {} nzo={} '
+                    'usenet: picked score={} reasons={} indexer={!r} '
                     'release={!r}',
-                    complete_dir,
-                    nzo_id,
+                    release.get('match_score'),
+                    ','.join(release.get('match_reasons') or []),
+                    release.get('indexer'),
                     release_name,
                 )
-                continue
-
-            if not verify_downloaded_file_matches_spotify(found, spotify_row):
-                meta = read_audio_metadata(found)
-                mismatch_row = {
-                    **spotify_row,
-                    'name': str(meta.get('title') or ''),
-                    'artists': list(meta.get('artists') or []),
-                    'library_from_tags': True,
-                }
-                logger.info(
-                    'usenet: tags mismatch after download {}; trying next '
-                    'candidate ({}/{}) file={!r}',
-                    spotify_file_tag_mismatch_label(mismatch_row),
-                    attempt_idx,
-                    len(ranked),
-                    _file_basename(found.name)[:120],
-                )
-                _discard_mismatched_download(found)
-                continue
-
-            if bool(settings.get('cleanup', True)):
-                _schedule_cleanup(client, nzo_id)
-            logger.info(
-                'usenet: picked score={} reasons={} indexer={!r} release={!r}',
-                release.get('match_score'),
-                ','.join(release.get('match_reasons') or []),
-                release.get('indexer'),
-                release_name,
-            )
-            return found
+                return found
+            finally:
+                if owner_event is not None:
+                    owner_event.set()
+                    with _ALBUM_CACHE_LOCK:
+                        if _ALBUM_EVENTS.get(album_key) is owner_event:
+                            _ALBUM_EVENTS.pop(album_key, None)
 
         logger.info(
             'usenet: all candidates failed title={!r} tried={}',

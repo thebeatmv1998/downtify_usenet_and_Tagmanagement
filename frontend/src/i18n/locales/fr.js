@@ -747,6 +747,10 @@ export default {
     usenetMinBitrate: 'Débit minimum',
     usenetMaxBitrate: 'Débit maximum',
     usenetPreferAlbums: 'Préférer les albums',
+    usenetCleanupNow: 'Nettoyer SABnzbd maintenant',
+    usenetCleanupNowHint: "Supprime tous les travaux terminés et leurs fichiers de SABnzbd — y compris les dossiers d'albums conservés pour réutilisation.",
+    usenetCleanupDone: '{count} travail(aux) terminé(s) et leurs fichiers supprimés de SABnzbd.',
+    usenetCleanupFailed: 'Le nettoyage de SABnzbd a échoué — vérifiez les paramètres de connexion.',
     usenetPreferAlbumsHint: "Usenet est orienté albums : cherche aussi les sorties 'Artiste - Album', télécharge l'album et extrait le morceau voulu. Les albums passent en premier.",
     slskdInPlace: 'Laisser les fichiers dans le dossier slskd',
     slskdInPlaceHint:

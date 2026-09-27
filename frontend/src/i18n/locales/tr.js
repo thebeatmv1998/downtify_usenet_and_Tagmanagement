@@ -737,6 +737,10 @@ export default {
     usenetMinBitrate: 'En düşük bit hızı',
     usenetMaxBitrate: 'En yüksek bit hızı',
     usenetPreferAlbums: 'Albüm sürümlerini tercih et',
+    usenetCleanupNow: "SABnzbd'yi şimdi temizle",
+    usenetCleanupNowHint: "SABnzbd'deki tüm tamamlanmış işleri ve dosyalarını siler — yeniden kullanılmak üzere saklanan albüm klasörleri dahil.",
+    usenetCleanupDone: "{count} tamamlanmış iş ve dosyaları SABnzbd'den kaldırıldı.",
+    usenetCleanupFailed: 'SABnzbd temizliği başarısız oldu — bağlantı ayarlarını kontrol edin.',
     usenetPreferAlbumsHint: "Usenet albüm odaklıdır: 'Sanatçı - Albüm' sürümlerini de ara, albümü indir ve istenen parçayı çıkar. Albümler öncelik alır.",
     slskdInPlace: 'Dosyaları slskd klasöründe bırak',
     slskdInPlaceHint:

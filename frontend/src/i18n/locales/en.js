@@ -720,6 +720,10 @@ export default {
     usenetMinBitrate: 'Minimum bitrate',
     usenetMaxBitrate: 'Maximum bitrate',
     usenetPreferAlbums: 'Prefer album releases',
+    usenetCleanupNow: 'Clean up SABnzbd now',
+    usenetCleanupNowHint: 'Deletes every finished job and its files from SABnzbd — including album folders kept for reuse.',
+    usenetCleanupDone: 'Removed {count} finished job(s) and their files from SABnzbd.',
+    usenetCleanupFailed: 'SABnzbd cleanup failed — check the connection settings.',
     usenetPreferAlbumsHint: "Usenet is album-oriented: search releases named 'Artist - Album' too, download the album and extract the wanted track. Album releases rank first.",
     slskdInPlace: 'Leave files in the slskd folder',
     slskdInPlaceHint:

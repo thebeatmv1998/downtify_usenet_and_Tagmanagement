@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import pytest
+
 import downtify.usenet_provider as usenet
 from downtify.usenet_provider import (
     SabnzbdClient,
@@ -639,3 +641,109 @@ def test_download_prefers_album_and_extracts_track(tmp_path, monkeypatch):
 
     found = download_from_usenet(dict(_SONG), settings)
     assert found == wanted
+
+
+@pytest.fixture(autouse=True)
+def _reset_album_cache():
+    usenet.configure_album_cache(None)
+    yield
+    usenet.configure_album_cache(None)
+
+
+def test_album_downloaded_once_and_reused_for_more_songs(tmp_path, monkeypatch):
+    album, wanted, other = _album_folder(tmp_path)
+    settings = _settings(tmp_path, prefer_albums=True)
+
+    searches: list[str] = []
+    monkeypatch.setattr(
+        usenet,
+        '_search_indexers',
+        lambda indexers, query: searches.append(query) or [_ALBUM_RELEASE],
+    )
+    monkeypatch.setattr(
+        SabnzbdClient, 'add_url', lambda self, url, name: 'nzo1'
+    )
+    monkeypatch.setattr(
+        SabnzbdClient,
+        'queue_slot',
+        lambda self, nzo: {'nzo_id': nzo, 'percentage': 100},
+    )
+    monkeypatch.setattr(
+        SabnzbdClient,
+        'history_slot',
+        lambda self, nzo: {
+            'nzo_id': nzo,
+            'status': 'Completed',
+            'storage': str(album),
+        },
+    )
+    monkeypatch.setattr(
+        SabnzbdClient, 'delete_history', lambda self, nzo: None
+    )
+    monkeypatch.setattr(
+        usenet, 'verify_downloaded_file_matches_spotify', lambda p, s: True
+    )
+
+    # A different song from the same album.
+    song2 = {
+        'name': 'Other Song',
+        'artists': ['Artist'],
+        'album_name': 'Album',
+        'duration': 200_000,
+    }
+    first = download_from_usenet(dict(_SONG), settings)
+    assert first == wanted
+    # The album folder is now cached for artist+album — the second song of
+    # the same album must not touch the indexers or SABnzbd again.
+    monkeypatch.setattr(
+        SabnzbdClient,
+        'add_url',
+        lambda *a, **k: (_ for _ in ()).throw(
+            AssertionError('album must not be downloaded twice')
+        ),
+    )
+    second = download_from_usenet(dict(song2), settings)
+    assert second == other
+    assert len(searches) >= 1
+
+
+def test_album_cache_survives_restart(tmp_path):
+    album, _wanted, _other = _album_folder(tmp_path)
+    cache_file = tmp_path / 'usenet_albums.json'
+    usenet.configure_album_cache(cache_file)
+    usenet._album_cache_put(usenet._album_cache_key(dict(_SONG)), album)
+    assert cache_file.is_file()
+
+    # A fresh process loads the same mapping.
+    usenet.configure_album_cache(cache_file)
+    assert usenet._album_cache_get(
+        usenet._album_cache_key(dict(_SONG))
+    ) == album
+
+
+def test_album_cache_drops_stale_folders(tmp_path):
+    usenet.configure_album_cache(None)
+    key = usenet._album_cache_key(dict(_SONG))
+    usenet._album_cache_put(key, tmp_path / 'gone')
+    assert usenet._album_cache_get(key) is None
+
+
+def test_delete_all_history_removes_every_entry(monkeypatch):
+    calls: list[dict] = []
+
+    def fake_api(self, params):
+        calls.append(params)
+        if params.get('name') == 'delete':
+            return {}
+        return {'history': {'slots': [
+            {'nzo_id': 'a'}, {'nzo_id': 'b'}, {},
+        ]}}
+
+    monkeypatch.setattr(SabnzbdClient, '_api', fake_api)
+    client = SabnzbdClient({'sabnzbd': {
+        'base_url': 'http://sab:8080', 'api_key': 'k',
+    }})
+    assert client.delete_all_history() == 2
+    deletes = [c for c in calls if c.get('name') == 'delete']
+    assert sorted(c['value'] for c in deletes) == ['a', 'b']
+    assert all(c['del_files'] == '1' for c in deletes)

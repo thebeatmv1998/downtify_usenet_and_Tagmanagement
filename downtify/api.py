@@ -299,7 +299,10 @@ from .track_index import (
     resolve_existing_download,
 )
 from .update_check import UpdateChecker
-from .usenet_provider import reset_usenet_parallelism
+from .usenet_provider import (
+    SabnzbdClient as UsenetSabnzbdClient,
+    reset_usenet_parallelism,
+)
 
 MIN_PARALLEL_DOWNLOADS = 1
 
@@ -4366,6 +4369,23 @@ async def test_slskd_endpoint(request: Request) -> dict[str, Any]:
         'slskd': payload or (saved if isinstance(saved, dict) else {}),
     })
     return await asyncio.to_thread(integration_check.check_slskd, cfg)
+
+
+@router.post('/api/usenet/cleanup')
+def cleanup_usenet_endpoint() -> dict[str, Any]:
+    """Delete every finished SABnzbd history entry and its files.
+
+    Manual counterpart of the automatic per-track cleanup: album folders
+    kept for reuse are removed here too.
+    """
+
+    cfg = _effective_usenet_settings(state.settings)
+    client = UsenetSabnzbdClient(cfg)
+    if not client.configured():
+        raise HTTPException(
+            status_code=400, detail='usenet_not_configured'
+        )
+    return {'deleted': client.delete_all_history()}
 
 
 @router.post('/api/usenet/test')

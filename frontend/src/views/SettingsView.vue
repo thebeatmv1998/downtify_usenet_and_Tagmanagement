@@ -416,6 +416,25 @@
                     :config="s.usenet"
                     :url="s.usenet.sabnzbd.base_url"
                   />
+                  <div class="mt-3 flex items-center gap-3">
+                    <UiButton
+                      variant="secondary"
+                      icon="trash"
+                      :disabled="usenetCleaning"
+                      @click="cleanupSabnzbd"
+                    >
+                      {{ t('settings.usenetCleanupNow') }}
+                    </UiButton>
+                    <p
+                      v-if="usenetCleanupText"
+                      class="text-xs text-pretty text-muted"
+                    >
+                      {{ usenetCleanupText }}
+                    </p>
+                  </div>
+                  <p class="mt-2 text-xs text-pretty text-muted">
+                    {{ t('settings.usenetCleanupNowHint') }}
+                  </p>
                 </div>
                 <SettingRow
                   :label="t('settings.usenetCleanup')"
@@ -967,6 +986,24 @@ const section = computed(() => {
 
 function needsValue(value) {
   return String(value ?? '').trim() ? '' : t('settings.required')
+}
+
+const usenetCleaning = ref(false)
+const usenetCleanupText = ref('')
+
+async function cleanupSabnzbd() {
+  usenetCleaning.value = true
+  usenetCleanupText.value = ''
+  try {
+    const res = await API.cleanupUsenet()
+    usenetCleanupText.value = t('settings.usenetCleanupDone', {
+      count: res.data?.deleted ?? 0,
+    })
+  } catch {
+    usenetCleanupText.value = t('settings.usenetCleanupFailed')
+  } finally {
+    usenetCleaning.value = false
+  }
 }
 
 function addUsenetIndexer() {

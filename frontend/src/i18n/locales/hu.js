@@ -737,6 +737,10 @@ export default {
     usenetMinBitrate: 'Minimális bitsebesség',
     usenetMaxBitrate: 'Maximális bitsebesség',
     usenetPreferAlbums: 'Album kiadások előnyben részesítése',
+    usenetCleanupNow: 'SABnzbd takarítása most',
+    usenetCleanupNowHint: 'Törli az összes befejezett feladatot és fájljait a SABnzbd-ből — beleértve az újrahasznosításhoz megőrzött albummappákat is.',
+    usenetCleanupDone: '{count} befejezett feladat és fájljai eltávolítva a SABnzbd-ből.',
+    usenetCleanupFailed: 'A SABnzbd takarítás sikertelen — ellenőrizze a kapcsolat beállításait.',
     usenetPreferAlbumsHint: "A Usenet albumközpontú: keress 'Előadó - Album' kiadásokat is, töltsd le az albumot, és nyerd ki a kívánt számot. Az albumok előre kerülnek.",
     slskdInPlace: 'Fájlok hagyása az slskd mappában',
     slskdInPlaceHint:

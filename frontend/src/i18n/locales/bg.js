@@ -730,6 +730,10 @@ export default {
     usenetMinBitrate: 'Минимален битрейт',
     usenetMaxBitrate: 'Максимален битрейт',
     usenetPreferAlbums: 'Предпочитай албумни издания',
+    usenetCleanupNow: 'Почисти SABnzbd сега',
+    usenetCleanupNowHint: 'Изтрива всички завършени задачи и файловете им от SABnzbd — включително папките с албуми, запазени за повторна употреба.',
+    usenetCleanupDone: 'Премахнати {count} завършени задачи и техните файлове от SABnzbd.',
+    usenetCleanupFailed: 'Почистването на SABnzbd не успя — проверете настройките за връзка.',
     usenetPreferAlbumsHint: "Usenet е ориентиран към албуми: търси и издания с име 'Изпълнител - Албум', изтегли албума и извлечи желания трак. Албумните издания се класират първи.",
     slskdInPlace: 'Остави файловете в папката на slskd',
     slskdInPlaceHint:

@@ -27,7 +27,7 @@ from load_dotenv import load_dotenv
 from loguru import logger
 from uvicorn import Config, Server
 
-from downtify import __version__, api, m3u
+from downtify import __version__, api, m3u, usenet_provider
 from downtify.cookies import CookiesStore
 from downtify.cover_art import extract_cover_art
 from downtify.cover_cache import CoverArtCache
@@ -416,6 +416,9 @@ def build_app() -> FastAPI:
     settings_path = DATABASE_DIR / 'settings.json'
     api.state.settings_path = settings_path
     api.state.settings = api._load_settings(settings_path)
+    # Album folders fetched via usenet, remembered across restarts so a
+    # batch download reuses one album download for all its songs.
+    usenet_provider.configure_album_cache(DATABASE_DIR / 'usenet_albums.json')
 
     # Lives alongside settings.json in the /data volume so an uploaded
     # cookies.txt survives container updates.

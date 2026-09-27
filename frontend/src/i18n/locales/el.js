@@ -739,6 +739,10 @@ export default {
     usenetMinBitrate: 'Ελάχιστο bitrate',
     usenetMaxBitrate: 'Μέγιστο bitrate',
     usenetPreferAlbums: 'Προτίμηση κυκλοφοριών άλμπουμ',
+    usenetCleanupNow: 'Καθαρισμός του SABnzbd τώρα',
+    usenetCleanupNowHint: 'Διαγράφει κάθε ολοκληρωμένη εργασία και τα αρχεία της από το SABnzbd — συμπεριλαμβανομένων των φακέλων άλμπουμ που κρατήθηκαν για επαναχρησιμοποίηση.',
+    usenetCleanupDone: 'Αφαιρέθηκαν {count} ολοκληρωμένες εργασίες και τα αρχεία τους από το SABnzbd.',
+    usenetCleanupFailed: 'Ο καθαρισμός του SABnzbd απέτυχε — ελέγξτε τις ρυθμίσεις σύνδεσης.',
     usenetPreferAlbumsHint: "Το Usenet είναι προσανατολισμένο σε άλμπουμ: αναζήτησε και κυκλοφορίες 'Καλλιτέχνης - Άλμπουμ', κατέβασε το άλμπουμ και εξάγε το επιθυμητό κομμάτι. Τα άλμπουμ κατατάσσονται πρώτα.",
     slskdInPlace: 'Διατήρηση αρχείων στον φάκελο slskd',
     slskdInPlaceHint:
