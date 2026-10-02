@@ -10,7 +10,8 @@ wheels/
 
 .python-version
 .vscode
-docker/
+docker/*
+!docker/cookies-keeper/
 
 .env
 
