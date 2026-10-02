@@ -10,7 +10,7 @@ All environment variables are optional. Downtify works out of the box without an
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DOWNTIFY_PORT` | `8000` | Port the server listens on inside the container. Change the left side of the port mapping to expose a different host port. |
+| `DOWNTIFY_PORT` | _(unset)_ | Port the server listens on (inside the container). Unset: the port chosen in **Settings → Server → Port**, else `8000`. Set, it wins and the Settings field is locked. Change the left side of the port mapping to expose a different host port. See [Changing the port](../features/server.md#changing-the-port). |
 | `DOWNLOAD_DIR` | `/downloads` | Directory where audio files are saved. Override if you mount your library at a custom path. |
 | `HOST` | `0.0.0.0` | Bind address for the web server. |
 | `DOWNTIFY_LOG_LEVEL` | `info` | Application log level (`debug`, `info`, `warning`, …). |
@@ -27,6 +27,18 @@ environment:
   - TZ=America/Sao_Paulo
   - DOWNTIFY_MONITOR_SYNC_TIME=03:00
 ```
+
+## Mobile apps and sign-in
+
+See [Mobile Apps](../features/mobile-apps.md) and [Users & Sign-in](../features/users.md). Signing in is required unless `DOWNTIFY_DISABLE_AUTH` is `true`; `DOWNTIFY_REQUIRE_SIGN_IN` from earlier versions is no longer used (a warning is logged while it's set).
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DOWNTIFY_DISABLE_AUTH` | `false` | `true` turns accounts off: nobody signs in, and whoever reaches the server uses it as the admin. The sign-in page, the sign-out buttons, **Settings → Users** and the account part of **Settings → General** disappear. Paired apps keep working. Set it back to `false` (or remove it) and sign-in is required again, with the accounts as they were. See [Users & Sign-in](../features/users.md#turning-accounts-off). |
+| `DOWNTIFY_TRUSTED_PROXIES` | _(unset)_ | Comma-separated addresses or networks of your reverse proxy (e.g. `172.18.0.0/16,10.0.0.5`). Only requests from these have their `X-Forwarded-For`, `X-Forwarded-Proto` and `X-Forwarded-Host` headers believed — for the client address that sign-in and pairing attempts are rate-limited by, the secure flag on the sign-in cookie, and the same-site check. Unset: those headers are ignored. |
+| `DOWNTIFY_DISCOVERY` | `true` | `false` stops announcing the server on the local network (mDNS, `_downtify._tcp`), which the apps use to list it under *Found on this network*. In Docker's bridge network the announcement doesn't reach the LAN anyway — see [Docker Compose](docker-compose.md#finding-the-server-from-the-apps). |
+| `DOWNTIFY_TRANSCODE_CACHE_MB` | `2048` | Largest size, in MB, the cache of transcoded copies (`/data/transcode_cache`) is kept under; least recently played copies go first. |
+| `DOWNTIFY_TRANSCODE_CONCURRENCY` | `2` | How many songs are transcoded at once for the apps' smaller streaming qualities. |
 
 ## Health check
 

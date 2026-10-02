@@ -12,6 +12,41 @@ const API = axios.create({
 
 const sessionID = uuidv4()
 
+// ── Sign-in: a 401 anywhere means this browser has to sign in; a 403
+// that something needs an admin is worth telling the user ─────────────
+const unauthorizedListeners = new Set()
+const forbiddenListeners = new Set()
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const url = String(error?.config?.url || '')
+    const status = error?.response?.status
+    if (status === 401 && !url.startsWith('/api/auth/')) {
+      for (const fn of unauthorizedListeners) fn()
+    }
+    if (
+      status === 403 &&
+      error?.response?.data?.detail === 'This needs an admin' &&
+      !error?.config?.quiet
+    ) {
+      for (const fn of forbiddenListeners) fn()
+    }
+    return Promise.reject(error)
+  }
+)
+
+/** Called when a request is refused for lack of sign-in. */
+function onUnauthorized(fn) {
+  unauthorizedListeners.add(fn)
+  return () => unauthorizedListeners.delete(fn)
+}
+
+/** Called when a signed-in user's request needs an admin. */
+function onForbidden(fn) {
+  forbiddenListeners.add(fn)
+  return () => forbiddenListeners.delete(fn)
+}
+
 getVersion()
 
 // ── WebSocket: progress events, reconnecting with backoff ────────────
@@ -97,6 +132,47 @@ function searchAlbums(query) {
 
 function searchArtists(query) {
   return API.get('/api/artists/search', { params: { query } })
+}
+
+// Deezer's own global "what's trending" chart - `{ tracks, albums, artists }`.
+function getChart(limit = 25) {
+  return API.get('/api/discover/chart', { params: { limit } })
+}
+
+// ── Finder (Deezer-only search and artist/album/track columns) ──────
+// `{ songs, albums, artists }`, every row carrying its Deezer ids.
+function finderSearch(query) {
+  return API.get('/api/finder/search', { params: { query } })
+}
+
+function finderArtist(artistId, lang) {
+  return API.get('/api/finder/artist', {
+    params: { artist_id: artistId, lang },
+  })
+}
+
+// An artist's songs, shaped like a Finder search (albums/artists empty).
+function finderArtistSongs(artistId, name) {
+  return API.get('/api/finder/artist/songs', {
+    params: { artist_id: artistId, name },
+  })
+}
+
+function finderArtistAlbums(artistId) {
+  return API.get('/api/finder/artist/albums', {
+    params: { artist_id: artistId },
+  })
+}
+
+// `{ <album id>: <track count> }` - up to 50 ids at once.
+function finderTrackCounts(albumIds) {
+  return API.get('/api/finder/albums/track_counts', {
+    params: { ids: albumIds.join(',') },
+  })
+}
+
+function finderAlbum(albumId) {
+  return API.get('/api/finder/album', { params: { album_id: albumId } })
 }
 
 // ── Artist photo & banner ───────────────────────────────────────────
@@ -263,8 +339,24 @@ function listPlaylists() {
   return API.get('/playlists')
 }
 
-function listTracks() {
-  return API.get('/tracks')
+function listTracks(params = {}) {
+  return API.get('/tracks', { params })
+}
+
+function getLibrarySummary() {
+  return API.get('/api/library/summary')
+}
+
+function getLibraryAlbums() {
+  return API.get('/api/library/albums')
+}
+
+function getLibraryArtists() {
+  return API.get('/api/library/artists')
+}
+
+function lookupLibrarySongs(songs) {
+  return API.post('/api/library/lookup', { songs })
 }
 
 function getLyrics(file) {
@@ -296,8 +388,35 @@ function deleteLibraryPlaylist(playlistName) {
   })
 }
 
+function createLibraryPlaylist(name) {
+  return API.post('/api/library/playlists', { name })
+}
+
+function editLibraryPlaylistTracks(name, { add = [], remove = [] } = {}) {
+  return API.post('/api/library/playlists/tracks', { name, add, remove })
+}
+
+function renameLibraryPlaylist(name, newName) {
+  return API.post('/api/library/playlists/rename', {
+    name,
+    new_name: newName,
+  })
+}
+
 function reconcileLibrary() {
   return API.post('/api/library/reconcile')
+}
+
+function syncExternalLibrary(folders) {
+  return API.post('/api/library/external/sync', { folders })
+}
+
+function getExternalSync() {
+  return API.get('/api/library/external/sync')
+}
+
+function unmapExternalFolder(folder) {
+  return API.post('/api/library/external/unmap', { folder })
 }
 
 // ── Liked songs ──────────────────────────────────────────────────────
@@ -314,6 +433,129 @@ function clearLikes() {
   return API.post('/api/likes/clear')
 }
 
+// ── Sign-in, paired apps and the server's identity ─────────────────
+function getAuthStatus() {
+  return API.get('/api/auth/status')
+}
+
+function login(username, password) {
+  return API.post('/api/auth/login', { username, password })
+}
+
+function logout() {
+  return API.post('/api/auth/logout')
+}
+
+// ── Your account ──────────────────────────────────────────────────────
+function getMe() {
+  return API.get('/api/me')
+}
+
+function renameMe(username) {
+  return API.patch('/api/me', { username })
+}
+
+function changeMyPassword(currentPassword, newPassword) {
+  return API.put('/api/me/password', {
+    current_password: currentPassword,
+    new_password: newPassword,
+  })
+}
+
+function setPreferences(prefs) {
+  return API.put('/api/me/preferences', prefs)
+}
+
+function signOutEverywhere() {
+  return API.post('/api/me/sign-out-everywhere')
+}
+
+// ── Users and activity (admins) ───────────────────────────────────────
+function listUsers() {
+  return API.get('/api/users')
+}
+
+function createUser(user) {
+  return API.post('/api/users', user)
+}
+
+function updateUser(id, changes) {
+  return API.patch(`/api/users/${encodeURIComponent(id)}`, changes)
+}
+
+function deleteUser(id) {
+  return API.delete(`/api/users/${encodeURIComponent(id)}`)
+}
+
+function getActivity(params = {}) {
+  return API.get('/api/activity', { params })
+}
+
+function getNowPlaying() {
+  return API.get('/api/activity/now')
+}
+
+/** Tell the server what this tab plays (for the admins' Activity page). */
+function reportPlayback(report) {
+  return API.post('/api/activity/playback', report, { quiet: true })
+}
+
+function listDevices() {
+  return API.get('/api/auth/devices')
+}
+
+function renameDevice(id, name) {
+  return API.patch(`/api/auth/devices/${encodeURIComponent(id)}`, { name })
+}
+
+function revokeDevice(id) {
+  return API.delete(`/api/auth/devices/${encodeURIComponent(id)}`)
+}
+
+function revokeAll() {
+  return API.post('/api/auth/revoke-all')
+}
+
+function startPairing() {
+  return API.post('/api/auth/pairing')
+}
+
+function getPairing(id) {
+  return API.get(`/api/auth/pairing/${encodeURIComponent(id)}`)
+}
+
+function cancelPairing(id) {
+  return API.delete(`/api/auth/pairing/${encodeURIComponent(id)}`)
+}
+
+function getServerInfo() {
+  return API.get('/api/server/info')
+}
+
+function renameServer(name) {
+  return API.patch('/api/server', { name })
+}
+
+// ── Replacing a track's audio ─────────────────────────────────────
+function getReplaceCandidates(file, query = '') {
+  return API.get('/api/library/replace/candidates', {
+    params: { file, query },
+  })
+}
+
+function replaceAudio(file, videoId) {
+  return API.post('/api/library/replace', { file, video_id: videoId })
+}
+
+function getServerPort() {
+  return API.get('/api/server/port')
+}
+
+/** Save the port; `restart` restarts the server on it right away. */
+function setServerPort(port, restart = false) {
+  return API.put('/api/server/port', { port: Number(port), restart })
+}
+
 // ── Discover ───────────────────────────────────────────────────────
 // `library`: [{ name, tracks, liked }] per library artist.
 function getDiscover(library) {
@@ -325,8 +567,14 @@ function findPreview({ artist, title, duration }) {
   return API.get('/api/preview', { params: { artist, title, duration } })
 }
 
-function getDiscoverCollections(payload) {
-  return API.post('/api/discover/collections', payload)
+// Albums and playlists in two answers: Deezer's first (quick), then what
+// Spotify adds, matched to Deezer - see downtify/discover.py.
+function getDiscoverDeezerCollections(payload) {
+  return API.post('/api/discover/collections/deezer', payload)
+}
+
+function getDiscoverSpotifyCollections(payload) {
+  return API.post('/api/discover/collections/spotify', payload)
 }
 
 function recordListen(artist) {
@@ -470,6 +718,12 @@ function getSettings() {
   return API.get('/api/settings', { params: { client_id: sessionID } })
 }
 
+function suggestDirs(path) {
+  return API.get('/api/fs/dirs', {
+    params: { path: path || '', client_id: sessionID },
+  })
+}
+
 // Try an integration with the values as they are in the form, saved or
 // not. A failed test is still a 200: the answer says what's wrong.
 function testSlskd(config) {
@@ -498,6 +752,13 @@ export default {
   search,
   searchAlbums,
   searchArtists,
+  getChart,
+  finderSearch,
+  finderArtist,
+  finderArtistSongs,
+  finderArtistAlbums,
+  finderTrackCounts,
+  finderAlbum,
   getArtistArt,
   getArtistArtBulk,
   searchArtistArt,
@@ -530,18 +791,60 @@ export default {
   listDownloads,
   listPlaylists,
   listTracks,
+  getLibrarySummary,
+  getLibraryAlbums,
+  getLibraryArtists,
+  lookupLibrarySongs,
   getLyrics,
   deleteDownload,
   deleteDownloadsBatch,
   deleteLibraryPlaylist,
+  createLibraryPlaylist,
+  editLibraryPlaylistTracks,
+  renameLibraryPlaylist,
   prepareLibraryArchive,
   libraryArchiveURL,
   reconcileLibrary,
+  syncExternalLibrary,
+  getExternalSync,
+  unmapExternalFolder,
   getLikes,
   setLike,
   clearLikes,
+  clientId: sessionID,
+  onUnauthorized,
+  onForbidden,
+  getAuthStatus,
+  login,
+  logout,
+  getMe,
+  renameMe,
+  changeMyPassword,
+  setPreferences,
+  signOutEverywhere,
+  listUsers,
+  createUser,
+  updateUser,
+  deleteUser,
+  getActivity,
+  getNowPlaying,
+  reportPlayback,
+  listDevices,
+  renameDevice,
+  revokeDevice,
+  revokeAll,
+  startPairing,
+  getPairing,
+  cancelPairing,
+  getServerInfo,
+  renameServer,
+  getServerPort,
+  setServerPort,
+  getReplaceCandidates,
+  replaceAudio,
   getDiscover,
-  getDiscoverCollections,
+  getDiscoverDeezerCollections,
+  getDiscoverSpotifyCollections,
   findPreview,
   recordListen,
   clearListens,
@@ -572,6 +875,7 @@ export default {
   clearQueue,
   clearCompletedQueue,
   getSettings,
+  suggestDirs,
   setSettings,
   testSlskd,
   testNavidrome,

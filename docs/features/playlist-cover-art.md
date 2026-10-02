@@ -6,7 +6,7 @@ icon: lucide/image
 
 Downtify can save a playlist's own cover next to its [M3U file](m3u-export.md), so media servers and file browsers show the real artwork for the playlist instead of a generic icon.
 
-Off by default. Turn it on in **Settings → Downloads & files → Save playlist cover art**.
+On by default. Turn it off in **Settings → Downloads & files → Save playlist cover art**.
 
 ## Where the file goes
 
@@ -48,7 +48,7 @@ Failing to resolve or download the cover (a network error, a playlist with no ar
 
 ## In the Downtify interface
 
-A playlist that has its own artwork shows it everywhere the Library lists playlists — the grid, the playlist page, the sidebar and the player. Playlists without one keep the grid of four covers taken from the tracks they contain.
+A playlist that has its own artwork (downloaded with a Spotify or YouTube playlist) shows it everywhere the Library lists playlists — the grid, the playlist page, the sidebar and the player. Playlists without one, and playlists you create in the Library, show a mosaic of up to four distinct track covers: two side by side, three as a tall left tile plus two stacked on the right, four as a 2×2 grid. The same collage is written as `<playlist-name>.jpg` beside a manual playlist's M3U so Navidrome sees it too, and it is rebuilt whenever you add or remove songs.
 
 ## Navidrome
 

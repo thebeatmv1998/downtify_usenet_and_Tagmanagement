@@ -8,20 +8,20 @@ anyio==4.15.1
     # via
     #   httpx
     #   starlette
-bgutil-ytdlp-pot-provider==2.0.0
+bgutil-ytdlp-pot-provider==2.0.1
     # via downtify
 certifi==2026.7.22
     # via
     #   httpcore
     #   httpx
     #   requests
-charset-normalizer==3.5.1
+charset-normalizer==3.5.2
     # via requests
 click==8.5.0
     # via uvicorn
 colorama==0.4.6 ; sys_platform == 'win32'
     # via loguru
-fastapi==0.141.1
+fastapi==0.142.2
     # via downtify
 feedparser==6.0.14
     # via downtify
@@ -40,17 +40,21 @@ idna==3.20
     #   anyio
     #   httpx
     #   requests
+ifaddr==0.2.0
+    # via zeroconf
 load-dotenv==0.1.0
     # via downtify
 loguru==0.7.3
     # via downtify
 mutagen==1.48.1
     # via downtify
+opentelemetry-api==1.45.0
+    # via fastapi
 pydantic==2.13.5
     # via fastapi
 pydantic-core==2.46.5
     # via pydantic
-python-dotenv==1.2.3
+python-dotenv==1.2.4
     # via load-dotenv
 requests==2.34.2
     # via ytmusicapi
@@ -60,6 +64,7 @@ typing-extensions==4.16.0
     # via
     #   anyio
     #   fastapi
+    #   opentelemetry-api
     #   pydantic
     #   pydantic-core
     #   starlette
@@ -79,4 +84,6 @@ win32-setctime==1.2.0 ; sys_platform == 'win32'
 yt-dlp==2026.8.19
     # via downtify
 ytmusicapi==1.12.3
+    # via downtify
+zeroconf==0.151.5
     # via downtify

@@ -250,7 +250,12 @@ def song_for_track(
     if not (refresh_metadata and spotify_id):
         return song
     try:
-        remote = spotify.track_from_id(spotify_id)
+        # The album lookup costs two more requests; only a file with no
+        # album tag of its own needs it (single-track downloads before the
+        # fix that made them fetch it).
+        remote = spotify.track_from_id(
+            spotify_id, with_album=not song.get('album_name')
+        )
     except Exception:
         logger.opt(exception=True).debug(
             'Library upgrade: Spotify lookup failed for {}', spotify_id
@@ -360,7 +365,9 @@ class UpgradeDeps:
 
 
 def resolve_track(stored_path: str, ctx: LibraryContext) -> Optional[Path]:
-    return locate_library_file(stored_path, ctx.download_dir, ctx.slskd_dir)
+    return locate_library_file(
+        stored_path, ctx.download_dir, ctx.slskd_dir, ctx.extra_dirs
+    )
 
 
 @dataclass
@@ -455,7 +462,11 @@ def _write_upgrade(
                 or (keep.data if keep is not None else None),
             )
         if new_lyrics is not None:
-            embed_lyrics(stage.staged, new_lyrics)
+            embed_lyrics(
+                stage.staged,
+                new_lyrics,
+                sidecar=stage.staged.with_suffix('.lrc'),
+            )
     except Exception as exc:
         _discard(stage)
         logger.opt(exception=True).warning(
@@ -468,8 +479,12 @@ def _write_upgrade(
         staged_lrc.unlink(missing_ok=True)
         return 'The rewritten file did not verify; kept the original'
     if new_lyrics is not None and staged_lrc.exists():
-        # embed_lyrics wrote the .lrc beside the working copy.
-        os.replace(str(staged_lrc), str(full.with_suffix('.lrc')))
+        dest_lrc = lyrics_mod.lrc_path_for(full)
+        dest_lrc.parent.mkdir(parents=True, exist_ok=True)
+        os.replace(str(staged_lrc), str(dest_lrc))
+        beside = full.with_suffix('.lrc')
+        if dest_lrc != beside:
+            beside.unlink(missing_ok=True)
     return None
 
 

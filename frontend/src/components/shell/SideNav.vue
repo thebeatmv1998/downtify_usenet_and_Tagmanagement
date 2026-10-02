@@ -68,7 +68,7 @@
         class="flex h-11 items-center gap-2.5 rounded-control px-3 transition-colors hover:bg-surface-2/60"
       >
         <CoverArt
-          :src="playlist.cover || playlist.covers[0] || ''"
+          :src="playlist.cover"
           :covers="playlist.covers"
           :name="playlist.title"
           rounded="rounded-[7px]"
@@ -83,7 +83,7 @@
             playlist.title
           }}</span>
           <span class="tabular text-[11px] text-faint">{{
-            t('common.tracks', { count: playlist.tracks.length })
+            t('common.tracks', { count: itemTrackCount(playlist) })
           }}</span>
         </span>
       </RouterLink>
@@ -121,6 +121,21 @@
         <span :class="labelClass">{{ t('nav.settings') }}</span>
       </RouterLink>
       <button
+        v-if="auth.user.value && !auth.authDisabled.value"
+        type="button"
+        class="flex h-10 items-center gap-3 rounded-control px-3 text-left text-sm font-medium text-muted transition-colors hover:bg-surface-2/60 hover:text-fg"
+        :title="t('nav.signOutAs', { name: auth.user.value.username })"
+        @click="auth.signOut"
+      >
+        <AppIcon name="log-out" :size="18" />
+        <span :class="labelClass">{{ t('nav.signOut') }}</span>
+        <span
+          class="truncate text-[12px] text-faint"
+          :class="collapsed ? 'hidden' : 'hidden xl:inline'"
+          >{{ auth.user.value.username }}</span
+        >
+      </button>
+      <button
         type="button"
         class="hidden h-10 items-center gap-3 rounded-control px-3 text-left text-sm font-medium text-faint transition-colors hover:bg-surface-2/60 hover:text-fg xl:flex"
         :title="collapsed ? t('nav.expand') : t('nav.collapse')"
@@ -148,6 +163,8 @@ import AppIcon from '../ui/AppIcon.vue'
 import AppLogo from '../ui/AppLogo.vue'
 import CoverArt from '../ui/CoverArt.vue'
 import { useI18n } from '/src/i18n'
+import { itemTrackCount } from '/src/lib/library'
+import { useAuth } from '/src/model/auth'
 import { useLibrary } from '/src/model/library'
 import { useUpdateCheck } from '/src/model/updateCheck'
 import { usePendingCount } from './navState'
@@ -155,6 +172,7 @@ import { usePendingCount } from './navState'
 const { t } = useI18n()
 const route = useRoute()
 const library = useLibrary()
+const auth = useAuth()
 const pending = usePendingCount()
 const update = useUpdateCheck().status
 const collapsed = useLocalStorage('downtify-sidebar-collapsed', false)
@@ -178,7 +196,12 @@ const items = [
     match: ['Album', 'Artist', 'Playlist'],
   },
   { name: 'Queue', icon: 'download', label: 'nav.queue' },
-  { name: 'Discover', icon: 'sparkle', label: 'nav.discover' },
+  {
+    name: 'Discover',
+    icon: 'sparkle',
+    label: 'nav.discover',
+    match: ['FinderBrowse'],
+  },
   { name: 'Monitor', icon: 'radar', label: 'nav.monitor' },
   {
     name: 'Podcasts',
@@ -186,6 +209,7 @@ const items = [
     label: 'nav.podcasts',
     match: ['PodcastShow'],
   },
+  { name: 'Charts', icon: 'trending', label: 'nav.charts' },
 ]
 
 function isActive(item) {
@@ -198,7 +222,7 @@ const labelClass = computed(() =>
 
 const recentPlaylists = computed(() =>
   [...library.playlists.value]
-    .filter((playlist) => playlist.tracks.length)
+    .filter((playlist) => itemTrackCount(playlist))
     // The liked songs stay at the top; the rest are the newest.
     .sort((a, b) => Number(b.liked) - Number(a.liked) || b.added - a.added)
     .slice(0, 6)

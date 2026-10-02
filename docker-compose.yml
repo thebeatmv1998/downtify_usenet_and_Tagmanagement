@@ -5,10 +5,12 @@ services:
     restart: unless-stopped
     build: .
     ports:
-      - '8000:30321'
+      - '8000:8000'
     volumes:
       - ./docker/downloads:/downloads
       - ./docker/data:/data
+      # Existing music folders (container path goes in Settings):
+      # - ./mp3:/music/collection
       # slskd's download folder, when using the slskd audio source:
       # - ./docker/slskd:/slskd
       # SABnzbd's "Completed Downloads" folder, when using the usenet audio
@@ -17,6 +19,9 @@ services:
       # - ./docker/usenet:/usenet
       # - ./docker/cookies.txt:/cookies.txt
     environment:
+      # Automatic PO Token generation via a bgutil-ytdlp-pot-provider
+      # sidecar container (the reliable fix for YouTube's bot check):
+      # - DOWNTIFY_YT_POT_PROVIDER=http://bgutil-pot:4416
       - DOWNTIFY_PORT=30321
       # https://downtify.henriquesebastiao.com/getting-started/environment-variables/#getting-a-cookiestxt
       # - DOWNTIFY_COOKIES_FILE=/cookies.txt

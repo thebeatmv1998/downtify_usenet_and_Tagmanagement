@@ -31,6 +31,7 @@
             :class="section === item.id ? 'text-accent' : ''"
           />
           {{ item.label }}
+          <ExperimentalBadge v-if="item.experimental" class="lg:ml-auto" />
         </RouterLink>
       </nav>
 
@@ -42,7 +43,11 @@
         <div :key="section" class="flex min-w-0 flex-col gap-8">
           <!-- General -->
           <template v-if="section === 'general'">
-            <SettingGroup :title="t('settings.appearance')">
+            <AccountSettings v-if="!auth.authDisabled.value" />
+            <SettingGroup
+              :title="t('settings.appearance')"
+              :description="t('settings.personalHint')"
+            >
               <SettingRow
                 :label="t('settings.theme')"
                 :description="t('settings.themeHint')"
@@ -86,8 +91,8 @@
               </SettingRow>
             </SettingGroup>
             <SettingGroup :title="t('settings.playerGroup')">
-              <!-- Per device and applied at once, like the theme: it isn't
-                   part of what "Save" sends to the server. -->
+              <!-- Yours, and applied at once like the theme: it isn't part
+                   of what "Save" sends to the server (model/account.js). -->
               <SettingRow
                 :label="t('settings.showLyrics')"
                 :description="t('settings.showLyricsHint')"
@@ -104,7 +109,7 @@
                 :description="t('settings.searchAlbumsHint')"
               >
                 <UiSwitch
-                  v-model="s.search_albums"
+                  v-model="account.searchAlbums.value"
                   :aria-label="t('settings.searchAlbums')"
                 />
               </SettingRow>
@@ -651,6 +656,28 @@
                   "
                 />
               </SettingRow>
+              <SettingRow
+                :label="t('settings.syncDelay')"
+                :description="t('settings.syncDelayHint')"
+                stacked
+              >
+                <PresetPicker
+                  :model-value="s.external_sync_delay_seconds"
+                  :presets="
+                    sm.settingsOptions.external_sync_delay_seconds_presets
+                  "
+                  :min="sm.settingsOptions.external_sync_delay_seconds_min"
+                  :max="sm.settingsOptions.external_sync_delay_seconds_max"
+                  unit="s"
+                  :format="(v) => `${v}s`"
+                  :custom-label="t('settings.custom')"
+                  @update:model-value="
+                    (v) =>
+                      (s.external_sync_delay_seconds =
+                        clampExternalSyncDelaySeconds(v))
+                  "
+                />
+              </SettingRow>
             </SettingGroup>
           </template>
 
@@ -693,6 +720,27 @@
                 <UiSwitch
                   v-model="s.download_lyrics"
                   :aria-label="t('settings.lyrics')"
+                />
+              </SettingRow>
+              <SettingRow
+                v-if="s.download_lyrics"
+                :label="t('settings.lyricsLrcBeside')"
+                :description="t('settings.lyricsLrcBesideHint')"
+              >
+                <UiSwitch
+                  v-model="s.lyrics_lrc_beside"
+                  :aria-label="t('settings.lyricsLrcBeside')"
+                />
+              </SettingRow>
+              <SettingRow
+                v-if="s.download_lyrics && !s.lyrics_lrc_beside"
+                :label="t('settings.lyricsLrcFolder')"
+                :description="t('settings.lyricsLrcFolderHint')"
+                stacked
+              >
+                <PathSuggestInput
+                  v-model="s.lyrics_lrc_dir"
+                  :placeholder="t('settings.lyricsLrcFolderPlaceholder')"
                 />
               </SettingRow>
               <SettingRow
@@ -818,6 +866,29 @@
                 </p>
               </SettingRow>
             </SettingGroup>
+            <ExternalLibrarySettings />
+          </template>
+
+          <!-- Apps: pairing, sign-in, the server's name -->
+          <template v-else-if="section === 'users'">
+            <UsersSettings />
+          </template>
+
+          <template v-else-if="section === 'activity'">
+            <ActivitySettings />
+          </template>
+
+          <template v-else-if="section === 'server'">
+            <SettingGroup
+              :title="t('settings.networkGroup')"
+              :description="t('settings.networkHint')"
+            >
+              <ServerPortSetting />
+            </SettingGroup>
+          </template>
+
+          <template v-else-if="section === 'apps'">
+            <AppsSettings />
           </template>
 
           <!-- About -->
@@ -932,10 +1003,18 @@ import UiSegmented from '/src/components/ui/UiSegmented.vue'
 import UiSelect from '/src/components/ui/UiSelect.vue'
 import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
 import UiSwitch from '/src/components/ui/UiSwitch.vue'
+import ExperimentalBadge from '/src/components/ui/ExperimentalBadge.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
 import CookiesCard from '/src/components/settings/CookiesCard.vue'
 import ConnectionTest from '/src/components/settings/ConnectionTest.vue'
+import ExternalLibrarySettings from '/src/components/settings/ExternalLibrarySettings.vue'
+import PathSuggestInput from '/src/components/settings/PathSuggestInput.vue'
 import PresetPicker from '/src/components/settings/PresetPicker.vue'
+import AccountSettings from '/src/components/settings/AccountSettings.vue'
+import ActivitySettings from '/src/components/settings/ActivitySettings.vue'
+import AppsSettings from '/src/components/settings/AppsSettings.vue'
+import ServerPortSetting from '/src/components/settings/ServerPortSetting.vue'
+import UsersSettings from '/src/components/settings/UsersSettings.vue'
 import SettingGroup from '/src/components/settings/SettingGroup.vue'
 import SettingRow from '/src/components/settings/SettingRow.vue'
 import SourceOrder from '/src/components/settings/SourceOrder.vue'
@@ -944,10 +1023,14 @@ import API from '/src/model/api'
 import {
   clampCoverResolution,
   clampDownloadDelaySeconds,
+  clampExternalSyncDelaySeconds,
   clampParallelDownloads,
   useSettingsManager,
 } from '/src/model/settings'
 import { usePlayer } from '/src/model/player'
+import { useAccount } from '/src/model/account'
+import { useAuth } from '/src/model/auth'
+import { settingsSectionsFor } from '/src/lib/auth'
 import { usePlayerPrefs } from '/src/model/playerPrefs'
 import { useTheme } from '/src/model/theme'
 import { useUi } from '/src/model/ui'
@@ -957,6 +1040,8 @@ import { useI18n } from '/src/i18n'
 const { t, locale, setLocale, locales } = useI18n()
 const route = useRoute()
 const sm = useSettingsManager()
+const auth = useAuth()
+const account = useAccount()
 const theme = useTheme()
 const { showLyrics } = usePlayerPrefs()
 const ui = useUi()
@@ -967,15 +1052,59 @@ const hasTrack = computed(() => !!player.currentTrack.value)
 const s = sm.settings
 const version = localStorage.getItem('version')
 
-const sections = computed(() => [
-  { id: 'general', icon: 'sliders', label: t('settings.general') },
-  { id: 'sources', icon: 'download', label: t('settings.sources') },
-  { id: 'files', icon: 'folder', label: t('settings.files') },
-  { id: 'tags', icon: 'tag', label: t('settings.tags') },
-  { id: 'navidrome', icon: 'server', label: 'Navidrome' },
-  { id: 'library', icon: 'library', label: t('settings.library') },
-  { id: 'about', icon: 'info', label: t('settings.about') },
-])
+// Normal users see General, Apps and About; the rest is the server's,
+// an admin's to change.
+const sections = computed(() =>
+  settingsSectionsFor(
+    auth.user.value?.role,
+    [
+      { id: 'general', icon: 'sliders', label: t('settings.general') },
+      {
+        id: 'sources',
+        icon: 'download',
+        label: t('settings.sources'),
+        admin: true,
+      },
+      { id: 'files', icon: 'folder', label: t('settings.files'), admin: true },
+      { id: 'tags', icon: 'tag', label: t('settings.tags'), admin: true },
+      { id: 'navidrome', icon: 'server', label: 'Navidrome', admin: true },
+      {
+        id: 'library',
+        icon: 'library',
+        label: t('settings.library'),
+        admin: true,
+      },
+      {
+        id: 'users',
+        icon: 'users',
+        label: t('settings.users'),
+        admin: true,
+        accounts: true,
+      },
+      {
+        id: 'activity',
+        icon: 'activity',
+        label: t('settings.activity'),
+        admin: true,
+      },
+      {
+        id: 'server',
+        icon: 'hard-drive',
+        label: t('settings.server'),
+        admin: true,
+      },
+      {
+        id: 'apps',
+        icon: 'monitor',
+        label: t('settings.apps'),
+        // The apps themselves are still being built (AppsSettings).
+        experimental: true,
+      },
+      { id: 'about', icon: 'info', label: t('settings.about') },
+    ],
+    { authDisabled: auth.authDisabled.value }
+  )
+)
 
 const section = computed(() => {
   const requested = String(route.params.section || '')

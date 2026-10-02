@@ -21,6 +21,8 @@ export const NAV = [
     title: 'Features',
     items: [
       { title: 'Overview', page: 'features/index.md' },
+      { title: 'Charts', page: 'features/charts.md' },
+      { title: 'Finder', page: 'features/finder.md' },
       { title: 'Download Settings', page: 'features/download-settings.md' },
       { title: 'Playlist Monitor', page: 'features/playlist-monitor.md' },
       { title: 'Top Songs', page: 'features/top-songs.md' },
@@ -29,9 +31,17 @@ export const NAV = [
       { title: 'Liked Songs', page: 'features/liked-songs.md' },
       { title: 'Podcasts', page: 'features/podcasts.md' },
       { title: 'Discover', page: 'features/discover.md' },
+      { title: 'Users & Sign-in', page: 'features/users.md' },
+      { title: 'Mobile Apps', page: 'features/mobile-apps.md' },
+      { title: 'Server Settings', page: 'features/server.md' },
       { title: 'slskd & Navidrome', page: 'features/slskd-navidrome.md' },
       { title: 'Library Catalog', page: 'features/library-catalog.md' },
+      {
+        title: 'Existing music folders',
+        page: 'features/external-library.md',
+      },
       { title: 'Upgrade Library', page: 'features/library-upgrade.md' },
+      { title: 'Replace Audio', page: 'features/replace-audio.md' },
       { title: 'M3U Export', page: 'features/m3u-export.md' },
       { title: 'Playlist Cover Art', page: 'features/playlist-cover-art.md' },
       {
@@ -52,6 +62,7 @@ export const NAV = [
   { title: 'How It Works', page: 'how-it-works.md' },
   { title: 'Troubleshooting', page: 'troubleshooting.md' },
   { title: 'API Reference', page: 'api-reference.md' },
+  { title: 'Mobile Client Contract', page: 'mobile-client-contract.md' },
   { title: 'Contributing', page: 'contributing.md' },
   { title: 'Changelog', page: 'changelog.md' },
 ]

@@ -9,7 +9,7 @@ A library built up over time carries whatever each Downtify version could do whe
 Open it from **Library → Upgrade library**.
 
 ::: info Audio files are never replaced
-An upgrade rewrites **artwork, lyrics and tags**. It does not fetch a different audio file, so a track that was matched to the wrong song, a live version or a remix stays as it is — delete it and download it again. See [Why audio isn't replaced](#why-audio-isnt-replaced).
+An upgrade rewrites **artwork, lyrics and tags**. It does not fetch a different audio file, so a track that was matched to the wrong song, a live version or a remix stays as it is — use [Replace audio](replace-audio.md) on that track to pick the right version. See [Why audio isn't replaced](#why-audio-isnt-replaced).
 :::
 
 ## How it works
@@ -24,12 +24,12 @@ An upgrade rewrites **artwork, lyrics and tags**. It does not fetch a different 
 |----------|--------------|----------------|
 | **Upgrade artwork** | Replaces a cover smaller than your target size | Spotify, Apple Music (iTunes), YouTube Music |
 | **Add missing lyrics** | Fills in lyrics for tracks that have none, embedded and as an `.lrc` sidecar | Your [lyrics providers](lyrics.md), in your order |
-| **Refresh tags** | Fills in album, album artist, release date and track number | Spotify |
+| **Refresh tags** | Fills in album, album artist, release date and track number — including the album older single-track downloads are missing | Spotify |
 
 A track counts as behind when:
 
 - its embedded cover's short side is **smaller than the target size** (a track with no cover at all counts too);
-- it has **neither** embedded lyrics **nor** an `.lrc` sidecar next to it;
+- it has **neither** embedded lyrics **nor** an `.lrc` sidecar (next to the file or in the lyrics folder from Settings);
 - any of **album**, **album artist**, **year** or **track number** is missing from its tags.
 
 **Refresh tags** only works for tracks Downtify still has a Spotify track ID for — the ones it downloaded from a Spotify link, kept in the [track index](library-catalog.md#what-gets-stored). Other tracks are queued but come back as *Nothing to do*.

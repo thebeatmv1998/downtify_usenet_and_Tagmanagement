@@ -15,24 +15,39 @@ import logging
 import mimetypes
 import os
 import sys
+import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
-from fastapi import Body, FastAPI, HTTPException
+from fastapi import Body, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from load_dotenv import load_dotenv
 from loguru import logger
+from starlette.middleware.gzip import GZipMiddleware
 from uvicorn import Config, Server
 
-from downtify import __version__, api, m3u, usenet_provider
+from downtify import (
+    __version__,
+    account_routes,
+    api,
+    auth_routes,
+    m3u,
+    mobile_routes,
+    usenet_provider,
+)
+from downtify.activity import ActivityLog
+from downtify.auth import AuthMiddleware, AuthStore, auth_disabled_from_env
 from downtify.cookies import CookiesStore
 from downtify.cover_art import extract_cover_art
 from downtify.cover_cache import CoverArtCache
+from downtify.cover_thumbs import CoverThumbs
 from downtify.discover import DiscoverStore
+from downtify.discovery import Announcer, discovery_enabled
 from downtify.downloader import Downloader
+from downtify.external_sync import ExternalSyncJob
 from downtify.library_archive import (
     MAX_ARCHIVE_FILES,
     ArchiveTicketStore,
@@ -40,29 +55,50 @@ from downtify.library_archive import (
     stream_library_zip,
 )
 from downtify.library_catalog import (
+    TRACK_QUERY_LIMIT_MAX,
+    filter_library_entries,
+    list_entries_for_stored_paths,
     list_library_entries,
     list_library_paths,
+    listing_for_request,
     resolve_library_file,
     resolve_library_image,
 )
 from downtify.library_cleanup import remove_track_leftovers
 from downtify.library_metadata_cache import LibraryMetadataCache
-from downtify.library_paths import SLSKD_LIBRARY_PREFIX, library_stored_path
+from downtify.library_paths import library_file_root
+from downtify.library_paths_cache import (
+    bind_listing_store,
+    set_listing_refresh_fn,
+    set_listing_refresh_gate,
+)
+from downtify.library_sync import LibrarySync
 from downtify.library_upgrade import LibraryUpgradeRunner, UpgradeDeps
 from downtify.library_upgrade_db import LibraryUpgradeDB
-from downtify.likes import LikedTracks, is_liked_playlist
+from downtify.likes import LikedTracks
 from downtify.lyrics import read_track_lyrics
 from downtify.lyrics_cache import LyricsLookupCache
 from downtify.monitor import PlaylistMonitorDB, monitor_loop, reconcile_loop
 from downtify.navidrome_index import NavidromeIndex
 from downtify.playlist_batches import PlaylistBatchStore, ensure_batch_records
 from downtify.playlist_catalog import PlaylistCatalog
+from downtify.playlist_listing import list_library_playlists
 from downtify.playlist_spotify_cache import (
     PlaylistSpotifyCache,
     playlist_spotify_cache_loop,
 )
 from downtify.podcasts import PodcastStore
+from downtify.server_identity import ServerIdentity
+from downtify.server_port import (
+    DEFAULT_PORT,
+    resolve_port,
+    restart_wanted,
+    set_restart_handler,
+    write_runtime_port,
+)
+from downtify.telemetry import redact_url_secrets
 from downtify.track_index import TrackIndex
+from downtify.transcode import transcoder_from_env
 from downtify.update_check import UpdateChecker, update_check_loop
 
 load_dotenv()
@@ -99,8 +135,10 @@ class _InterceptHandler(logging.Handler):
         while frame and frame.f_code.co_filename == logging.__file__:
             frame = frame.f_back  # type: ignore[assignment]
             depth += 1
+        # Request lines (uvicorn.access) may carry a signed URL's
+        # signature or a WebSocket ticket.
         logger.opt(depth=depth, exception=record.exc_info).log(
-            level, record.getMessage()
+            level, redact_url_secrets(record.getMessage())
         )
 
 
@@ -131,7 +169,12 @@ DOWNLOAD_DIR = Path(os.getenv('DOWNLOAD_DIR', '/downloads'))
 DATABASE_DIR = Path(os.getenv('DATABASE_DIR', '/data'))
 WEB_GUI_LOCATION = os.getenv('WEB_GUI_LOCATION', '/downtify/frontend/dist')
 DEFAULT_HOST = os.getenv('HOST', '0.0.0.0')
-DEFAULT_PORT = int(os.getenv('DOWNTIFY_PORT', os.getenv('PORT', '8000')))
+# Where the server listens, for the LAN announcement; set by main().
+_LISTEN: dict[str, Any] = {
+    'host': DEFAULT_HOST,
+    'port': DEFAULT_PORT,
+    'source': 'default',
+}
 
 
 class SPAStaticFiles(StaticFiles):
@@ -173,33 +216,38 @@ _ARCHIVE_TICKETS = ArchiveTicketStore()
 
 
 def _library_root_for(
-    file: str, base: Path, slskd_dir: Optional[Path]
+    file: str,
+    base: Path,
+    slskd_dir: Optional[Path],
+    extra_dirs: tuple[Path, ...] = (),
 ) -> tuple[Path, str]:
     """``(root, path relative to root)`` for a library path.
 
     ``slskd/...`` paths are slskd downloads left in place under the slskd
-    folder; everything else is relative to the downloads folder.
+    folder; ``ext/<id>/...`` paths are extra library folders. Everything
+    else is relative to the downloads folder.
     """
-    text = str(file or '').replace('\\', '/')
-    if slskd_dir is not None and text.startswith(SLSKD_LIBRARY_PREFIX):
-        return slskd_dir.resolve(), text[len(SLSKD_LIBRARY_PREFIX) :]
-    return base, text
+    return library_file_root(file, base, slskd_dir, extra_dirs)
 
 
 def _delete_track_file(
-    file: str, base: Path, slskd_dir: Optional[Path] = None
+    file: str,
+    base: Path,
+    slskd_dir: Optional[Path] = None,
+    extra_dirs: tuple[Path, ...] = (),
 ) -> dict:
     """Delete one track (``file``, relative to ``base``) plus its
     sidecars, and prune the folder it leaves behind if it's now empty.
 
     ``slskd/...`` paths are resolved against ``slskd_dir`` instead, with the
-    same cleanup, and pruning stops at the slskd folder.
+    same cleanup, and pruning stops at the slskd folder. Extra-folder
+    tracks (``ext/<id>/...``) resolve against ``extra_dirs``.
 
     Returns ``{'deleted': True}`` or ``{'deleted': False, 'error': str}``
     — this is the exact shape ``DELETE /delete`` has always returned;
     ``DELETE /delete/batch`` reuses it per file.
     """
-    root, relative = _library_root_for(file, base, slskd_dir)
+    root, relative = _library_root_for(file, base, slskd_dir, extra_dirs)
     # Resolve and confine to its root to prevent path traversal.
     try:
         full = (root / relative).resolve()
@@ -217,7 +265,10 @@ def _delete_track_file(
 
 
 def _delete_tracks_batch(
-    files: list[str], base: Path, slskd_dir: Optional[Path] = None
+    files: list[str],
+    base: Path,
+    slskd_dir: Optional[Path] = None,
+    extra_dirs: tuple[Path, ...] = (),
 ) -> dict:
     """Delete every file in ``files`` (each relative to ``base``).
 
@@ -235,7 +286,9 @@ def _delete_tracks_batch(
         raise ValueError(
             f'Cannot delete more than {MAX_BATCH_DELETE} files in one request'
         )
-    results = {f: _delete_track_file(f, base, slskd_dir) for f in files}
+    results = {
+        f: _delete_track_file(f, base, slskd_dir, extra_dirs) for f in files
+    }
     deleted = sum(1 for r in results.values() if r['deleted'])
     return {
         'deleted_count': deleted,
@@ -253,6 +306,26 @@ def _spotify_id_for_library_file(stored_path: str) -> str:
     return index.spotify_id_for_filename(stored_path) or ''
 
 
+def _downloads_using_disk() -> bool:
+    """True while a queue job is writing audio (yt-dlp / ffmpeg)."""
+
+    return any(
+        str(job.get('status') or '') in {'queued', 'downloading'}
+        for job in api.state.download_jobs.values()
+    )
+
+
+def _warm_library_listing() -> None:
+    """Build ``GET /tracks`` in the background so the first UI load is warm."""
+
+    try:
+        ctx = api.library_context()
+        set_listing_refresh_fn(lambda: list_library_entries(ctx))
+        list_library_entries(ctx)
+    except Exception:
+        logger.opt(exception=True).debug('Library listing warm failed')
+
+
 def _open_library_stores(monitor_db_path: Path) -> None:
     """Open the library catalog/index/cache stores in /data and backfill the
     track index and playlist catalog from Playlist Monitor history."""
@@ -261,12 +334,18 @@ def _open_library_stores(monitor_db_path: Path) -> None:
     api.state.track_index = TrackIndex(library_db)
     api.state.navidrome_index = NavidromeIndex(library_db)
     api.state.metadata_cache = LibraryMetadataCache(library_db)
+    bind_listing_store(library_db)
+    set_listing_refresh_gate(_downloads_using_disk)
     api.state.playlist_catalog = PlaylistCatalog(library_db)
     api.state.playlist_batch_store = PlaylistBatchStore(library_db)
     api.state.playlist_spotify_cache = PlaylistSpotifyCache(library_db)
     api.state.lyrics_cache = LyricsLookupCache(library_db)
     api.state.likes = LikedTracks(library_db)
     api.state.podcasts = PodcastStore(library_db)
+    # The mobile API (downtify/mobile_routes.py).
+    api.state.library_sync = LibrarySync(library_db)
+    api.state.transcoder = transcoder_from_env(DATABASE_DIR)
+    api.state.cover_thumbs = CoverThumbs(DATABASE_DIR / 'cover_thumbs')
     api.state.discover = DiscoverStore(library_db)
     api.state.cover_cache = CoverArtCache(DATABASE_DIR / 'cover_cache')
     api.state.upgrade_runner = LibraryUpgradeRunner(
@@ -279,6 +358,9 @@ def _open_library_stores(monitor_db_path: Path) -> None:
             lyrics_cache=api.state.lyrics_cache,
             publish=api.broadcast_upgrade_progress,
         ),
+    )
+    api.state.external_sync = ExternalSyncJob(
+        DATABASE_DIR / 'external_sync.json'
     )
     ctx = api.library_context()
     try:
@@ -320,6 +402,43 @@ def _open_library_stores(monitor_db_path: Path) -> None:
         logger.exception('Playlist batch sync from library failed')
 
 
+def open_auth_store() -> AuthStore:
+    """The sign-in store in /data (``downtify_auth.db``, ``.auth_secret``).
+
+    The first start creates the admin ``admin`` / ``downtify``; on a
+    server that ran an older version before (its files are in /data),
+    the web app also tells whoever signs in next that accounts exist now.
+    """
+
+    DATABASE_DIR.mkdir(parents=True, exist_ok=True)
+    existing = any(
+        (DATABASE_DIR / name).exists()
+        for name in (
+            'settings.json',
+            'downtify_monitor.db',
+            'downtify_auth.db',
+        )
+    )
+    if os.getenv('DOWNTIFY_REQUIRE_SIGN_IN', '').strip():
+        logger.warning(
+            'DOWNTIFY_REQUIRE_SIGN_IN is no longer used: signing in is '
+            'always required. Remove it from your configuration.'
+        )
+    disabled = auth_disabled_from_env()
+    if disabled:
+        logger.warning(
+            'DOWNTIFY_DISABLE_AUTH is on: no sign-in, anyone who can reach '
+            'this server uses it as the admin. Only for a server nobody '
+            'else can reach.'
+        )
+    return AuthStore(
+        DATABASE_DIR / 'downtify_auth.db',
+        DATABASE_DIR / '.auth_secret',
+        existing_install=existing,
+        auth_disabled=disabled,
+    )
+
+
 def build_app() -> FastAPI:
     DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
     DATABASE_DIR.mkdir(parents=True, exist_ok=True)
@@ -336,6 +455,11 @@ def build_app() -> FastAPI:
         db_path = DATABASE_DIR / 'downtify_monitor.db'
         api.state.monitor_db = PlaylistMonitorDB(db_path)
         _open_library_stores(db_path)
+        threading.Thread(
+            target=_warm_library_listing,
+            name='downtify-library-warm',
+            daemon=True,
+        ).start()
         # Keeps the cached Spotify track lists of known playlists fresh for
         # the playlist batch reports.
         api.spawn_task(
@@ -378,6 +502,16 @@ def build_app() -> FastAPI:
             update_check_loop(api.state.update_checker),
             name='update-check-loop',
         )
+        # "Found on this network" in the apps (downtify/discovery.py).
+        if discovery_enabled() and api.state.identity is not None:
+            announcer = Announcer(
+                api.state.identity,
+                version=__version__,
+                port=_LISTEN['port'],
+                host=_LISTEN['host'],
+            )
+            if await announcer.start():
+                api.state.discovery = announcer
         # The liked songs playlist is a file; if it was deleted (or the
         # library moved) while Downtify was off, write it again.
         try:
@@ -394,6 +528,9 @@ def build_app() -> FastAPI:
 
         yield
 
+        if api.state.discovery is not None:
+            await api.state.discovery.stop()
+            api.state.discovery = None
         await api.shutdown_resources()
 
     app = FastAPI(
@@ -405,13 +542,39 @@ def build_app() -> FastAPI:
         ),
         version=__version__,
     )
+    # Sign-in and paired apps (downtify/auth.py). Added before CORS so
+    # CORS stays outermost and answers preflights without credentials.
+    api.state.identity = ServerIdentity(DATABASE_DIR)
+    # Where this server listens (downtify/server_port.py), for Settings.
+    api.state.listen = _LISTEN
+    api.state.auth = open_auth_store()
+    api.state.activity = ActivityLog(DATABASE_DIR / 'downtify_activity.db')
+    app.add_middleware(
+        AuthMiddleware,
+        get_store=lambda: api.state.auth,
+        get_tickets=lambda: api.state.ws_tickets,
+    )
+    # No credentials across origins: the web app is served from this same
+    # origin, and apps send a token header. Allowing credentials with a
+    # wildcard origin would let any website use a signed-in browser.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=['*'],
-        allow_credentials=True,
+        allow_credentials=False,
         allow_methods=['*'],
         allow_headers=['*'],
+        # What a Cast receiver (or any player on another origin) reading
+        # a signed stream URL needs to see to seek.
+        expose_headers=[
+            'Accept-Ranges',
+            'Content-Length',
+            'Content-Range',
+            'ETag',
+            'X-Downtify-Transcoded',
+        ],
     )
+    # Compress large JSON listings (``GET /tracks``) for the web UI.
+    app.add_middleware(GZipMiddleware, minimum_size=1000)
 
     settings_path = DATABASE_DIR / 'settings.json'
     api.state.settings_path = settings_path
@@ -452,6 +615,8 @@ def build_app() -> FastAPI:
         slskd_settings=api._effective_slskd_settings(api.state.settings),
         usenet_settings=api._effective_usenet_settings(api.state.settings),
     )
+    api.normalize_lyrics_location(api.state.settings)
+    api.bind_lrc_resolver()
     # A finished download (from the UI or a monitor sweep alike) seeds its
     # artist's profile in the background.
     api.state.downloader.on_downloaded = api.enrich_artist_after_download
@@ -463,63 +628,44 @@ def build_app() -> FastAPI:
         )
     )
     app.include_router(api.router)
+    app.include_router(auth_routes.router)
+    app.include_router(account_routes.router)
+    app.include_router(mobile_routes.router)
 
     @app.get('/list')
     def list_downloads(refresh: bool = False) -> list[str]:
         """Every playable library file: the downloads folder (recursively,
         so per-playlist folders show up), slskd downloads left in place
-        (``slskd/...``) and files known to the track index.
+        (``slskd/...``), extra folders from Settings (``ext/<id>/...``)
+        and files known to the track index.
 
         The directory scan is cached briefly; ``?refresh=true`` forces a
         rescan.
         """
         if refresh:
-            api.invalidate_library_paths_cache()
+            api.invalidate_library_paths_cache(drop_entries=True)
         return list_library_paths(api.library_context())
 
     @app.get('/playlists')
     def list_playlists() -> list[dict]:
-        """List downloaded playlists, derived from the ``.m3u`` files
-        Downtify already writes for playlist/album downloads and
-        Playlist Monitor sweeps (see ``downtify/m3u.py``).
-
-        Each M3U file on disk is one playlist, regardless of whether
-        *Organize by artist/album* put its tracks in a per-playlist
-        folder or scattered them into artist/album folders — the M3U is
-        the one place that still records "these tracks belong together,
-        in this order" either way. Single tracks and albums downloaded
-        without an M3U (e.g. via the YouTube Music album endpoint)
-        aren't playlists and don't show up here.
-        """
-        base = DOWNLOAD_DIR.resolve()
-        if not base.exists():
-            return []
-        slskd_dir = api.library_context().slskd_dir
-        playlists: list[dict] = []
-        for m3u_path in sorted(base.rglob('*.m3u')):
-            tracks = m3u.read_m3u_tracks(m3u_path, base, slskd_dir)
-            if not tracks:
-                continue
-            # The sidecar artwork save_playlist_cover writes beside the
-            # M3U, when the playlist has one of its own.
-            cover = m3u_path.with_suffix('.jpg')
-            playlists.append({
-                'name': m3u_path.stem,
-                'files': tracks,
-                'count': len(tracks),
-                'cover': (
-                    library_stored_path(cover, base, slskd_dir)
-                    if cover.is_file()
-                    else ''
-                ),
-                # The playlist of hearted songs, not a downloaded one.
-                'liked': is_liked_playlist(m3u_path.stem),
-            })
-        playlists.sort(key=lambda p: (not p['liked'], p['name'].casefold()))
-        return playlists
+        """List downloaded playlists - see
+        ``downtify.playlist_listing.list_library_playlists``."""
+        ctx = api.library_context()
+        return list_library_playlists(
+            ctx.download_dir,
+            ctx.slskd_dir,
+            ctx.extra_dirs,
+            stale_ok=True,
+        )
 
     @app.get('/tracks')
-    def list_tracks() -> list[dict]:
+    def list_tracks(
+        playlist: str = '',
+        artist: str = '',
+        album: str = '',
+        q: str = '',
+        limit: int = Query(0, ge=0, le=TRACK_QUERY_LIMIT_MAX),
+    ) -> list[dict]:
         """List library tracks with metadata read from embedded tags.
 
         Powers the player's and Library's "only this artist" / "only
@@ -527,13 +673,41 @@ def build_app() -> FastAPI:
         particular isn't reliably derivable from the filename or folder
         layout unless *Organize by artist/album* is on.
 
+        ``?playlist=``, ``?artist=``, ``?album=`` and ``?q=`` return a
+        subset so pages that show one list do not download the whole
+        library. ``?limit=`` caps that subset (search picker).
+
         Each row has ``file``, ``artist`` and ``album``, plus ``title``,
         ``has_cover`` and, when the file belongs to a downloaded
         playlist, ``playlists``. Tags are cached in /data per file and
         re-read only when the file's modification time or size changes.
+        The assembled listing is reused until audio files are added or
+        removed, and is snapshotted so a restart does not walk every
+        file again.
         """
-        tracks = list_library_entries(api.library_context())
-        tracks.sort(key=lambda t: t['file'])
+        ctx = api.library_context()
+        name = str(playlist or '').strip()
+        if name:
+            found = list_library_playlists(
+                ctx.download_dir, ctx.slskd_dir, ctx.extra_dirs
+            )
+            match = next(
+                (
+                    item
+                    for item in found
+                    if str(item.get('name') or '') == name
+                ),
+                None,
+            )
+            files = list(match.get('files') or []) if match else []
+            tracks = list_entries_for_stored_paths(ctx, files)
+        else:
+            tracks = listing_for_request(ctx)
+            tracks.sort(key=lambda t: t['file'])
+        if artist or album or q or limit:
+            tracks = filter_library_entries(
+                tracks, artist=artist, album=album, q=q, limit=limit
+            )
         return tracks
 
     @app.get('/media/{file_path:path}')
@@ -541,7 +715,8 @@ def build_app() -> FastAPI:
         """Serve a library file by its library path.
 
         Covers what the ``/downloads`` static mount can't: slskd downloads
-        left in place under the slskd folder (``slskd/...``).
+        left in place under the slskd folder (``slskd/...``) and extra
+        library folders (``ext/<id>/...``).
         """
         full = resolve_library_file(file_path, api.library_context())
         if full is None:
@@ -629,17 +804,21 @@ def build_app() -> FastAPI:
         )
 
     @app.delete('/delete')
-    async def delete_download(file: str) -> dict:
+    async def delete_download(file: str, request: Request) -> dict:
+        ctx = api.library_context()
         result = await asyncio.to_thread(
             _delete_track_file,
             file,
             DOWNLOAD_DIR.resolve(),
-            api.library_context().slskd_dir,
+            ctx.slskd_dir,
+            ctx.extra_dirs,
         )
+        await api.log_activity(request, 'delete', file)
         return await api.after_library_delete({file: result}, result)
 
     @app.delete('/delete/batch')
     async def delete_downloads_batch(
+        request: Request,
         files: list[str] = Body(..., embed=True),
     ) -> dict:
         """Delete several tracks in one request.
@@ -651,14 +830,22 @@ def build_app() -> FastAPI:
         path or a file that's already gone doesn't stop the rest.
         """
         try:
+            ctx = api.library_context()
             result = await asyncio.to_thread(
                 _delete_tracks_batch,
                 files,
                 DOWNLOAD_DIR.resolve(),
-                api.library_context().slskd_dir,
+                ctx.slskd_dir,
+                ctx.extra_dirs,
             )
         except ValueError as exc:
             raise HTTPException(status_code=413, detail=str(exc)) from exc
+        await api.log_activity(
+            request,
+            'delete',
+            files[0] if len(files) == 1 else f'{len(files)} files',
+            {'files': files[:50]},
+        )
         return await api.after_library_delete(result['results'], result)
 
     @app.get('/lyrics')
@@ -684,11 +871,7 @@ def build_app() -> FastAPI:
 
         data: bytes | None = None
         mime: str | None = None
-        cache = (
-            api.state.cover_cache
-            if api.state.settings.get('cache_cover_art')
-            else None
-        )
+        cache = api.state.cover_cache
         if cache is not None:
             hit = cache.lookup(file, full)
             if hit is not None:
@@ -699,7 +882,7 @@ def build_app() -> FastAPI:
                 raise HTTPException(
                     status_code=404, detail='No embedded cover'
                 )
-            if cache is not None:
+            if api.state.settings.get('cache_cover_art') and cache is not None:
                 cache.store(file, full, data, mime or 'image/jpeg')
         return Response(
             content=data,
@@ -753,7 +936,9 @@ def _parse_args() -> argparse.Namespace:
     # existing Docker images keep starting cleanly.
     parser.add_argument('mode', nargs='?', default='web')
     parser.add_argument('--host', default=DEFAULT_HOST)
-    parser.add_argument('--port', type=int, default=DEFAULT_PORT)
+    # Unset: DOWNTIFY_PORT, then the port chosen in Settings, then 8000
+    # (downtify/server_port.py).
+    parser.add_argument('--port', type=int, default=None)
     parser.add_argument('--log-level', default='info')
     parser.add_argument('--keep-alive', action='store_true')
     parser.add_argument('--keep-sessions', action='store_true')
@@ -762,11 +947,31 @@ def _parse_args() -> argparse.Namespace:
     return args
 
 
+def _auth_reset() -> None:
+    """``python main.py auth-reset``: the way back in after a forgotten
+    password - the admin ``admin`` gets the password ``downtify`` again
+    (and is created, as an admin, if it was deleted or renamed). Other
+    users and paired apps are left alone."""
+
+    store = open_auth_store()
+    store.reset()
+    logger.info(
+        'Sign-in reset: sign in as "admin" with the password "downtify", '
+        'then change it in Settings.'
+    )
+
+
 def main() -> None:
     args = _parse_args()
     _setup_logging(args.log_level)
+    if args.mode == 'auth-reset':
+        _auth_reset()
+        return None
 
     _fix_mime_types()
+    port, source = resolve_port(args.port, ServerIdentity(DATABASE_DIR).port)
+    _LISTEN.update(host=args.host, port=port, source=source)
+    write_runtime_port(port)
     app = build_app()
 
     loop = (
@@ -777,7 +982,7 @@ def main() -> None:
     config = Config(
         app=app,
         host=args.host,
-        port=args.port,
+        port=port,
         loop=loop,  # type: ignore[arg-type]
         log_level=args.log_level.lower(),
         log_config=None,
@@ -789,11 +994,18 @@ def main() -> None:
     )
     server = _Server(config)
 
+    def stop_for_restart() -> None:
+        # serve() returns after a graceful shutdown; __main__ then starts
+        # the process again on the new port.
+        server.should_exit = True
+
+    set_restart_handler(stop_for_restart)
+
     logger.info(
         'Starting Downtify {} on http://{}:{}',
         __version__,
         args.host,
-        args.port,
+        port,
     )
     logger.info('Application log level (Loguru): {}', args.log_level.upper())
     loop.run_until_complete(server.serve())
@@ -822,6 +1034,10 @@ if __name__ == '__main__':
         except Exception:
             logger.exception('Shutdown cleanup failed')
         api.release_thread_pools()
+        if exit_code == 0 and restart_wanted():
+            # A new port from Settings: the same process starts over.
+            logger.info('Restarting Downtify')
+            os.execv(sys.executable, [sys.executable, *sys.argv])
         # Skip threading._python_exit joins on in-flight yt-dlp / iTunes
         # / cover-fetch workers. Without this the process stays alive
         # (and can look like it is still serving) until a second Ctrl+C.

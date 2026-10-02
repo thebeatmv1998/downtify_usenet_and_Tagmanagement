@@ -28,12 +28,12 @@ RUN npm run build
 FROM python:3.14-alpine
 
 LABEL maintainer="Henrique Sebastião <contato@henriquesebastiao.com>"
-LABEL version="3.1.0"
+LABEL version="3.4.0"
 LABEL description="Self-hosted Spotify downloader"
 
 LABEL org.opencontainers.image.title="Downtify" \
     org.opencontainers.image.description="Download your Spotify playlists and songs along with album art and metadata in a self-hosted way via Docker." \
-    org.opencontainers.image.version="3.1.0" \
+    org.opencontainers.image.version="3.4.0" \
     org.opencontainers.image.authors="Henrique Sebastião <contato@henriquesebastiao.com>" \
     org.opencontainers.image.url="https://github.com/henriquesebastiao/downtify" \
     org.opencontainers.image.source="https://github.com/henriquesebastiao/downtify" \
@@ -46,7 +46,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHON_COLORS=0 \
     DOWNTIFY_LOG_LEVEL=info \
-    DOWNTIFY_PORT=8000 \
     DOWNTIFY_HEALTHCHECK=1 \
     UID=1000 \
     GID=1000 \
@@ -85,7 +84,8 @@ ENV PATH="/home/downtify/.local/bin:${PATH}"
 VOLUME /downloads
 VOLUME /data
 
-EXPOSE ${DOWNTIFY_PORT}
+# 8000 unless DOWNTIFY_PORT or Settings > Apps choose another.
+EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD ./healthcheck.sh

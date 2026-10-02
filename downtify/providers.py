@@ -130,6 +130,15 @@ def set_cover_resolution(pixels: int) -> None:
     _cover_resolution = pixels
 
 
+def cover_resolution() -> int:
+    """The currently configured cover-size target (see
+    set_cover_resolution). downtify.deezer reads this too, picking the
+    smallest of Deezer's four fixed image sizes that still meets it,
+    since a Deezer image can't be resized by editing its URL the way a
+    YouTube Music thumbnail can (see deezer._cover_from_images)."""
+    return _cover_resolution
+
+
 def _resize_thumbnail(url: str, size: int) -> str:
     """Replace the size suffix on a YT thumbnail with the given one."""
 
@@ -1371,6 +1380,14 @@ def _youtube_search(query: str, limit: int) -> list[dict[str, Any]]:
         info = ydl.extract_info(f'ytsearch{limit}:{query}', download=False)
     entries = (info or {}).get('entries') or []
     return [e for e in entries if isinstance(e, dict)]
+
+
+def youtube_search(query: str, limit: int = 10) -> list[dict[str, Any]]:
+    """Standard-YouTube search results as yt-dlp lists them (``id``,
+    ``title``, ``channel``, ``duration``...) - for picking a version by
+    hand (see :mod:`downtify.audio_replace`)."""
+
+    return _youtube_search(query, limit)
 
 
 def _youtube_entry_to_result(

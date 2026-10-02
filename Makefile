@@ -1,6 +1,6 @@
 #!make
 
-DOWNTIFY_VERSION := 3.1.0
+DOWNTIFY_VERSION := 3.4.0
 TARGET := henriquesebastiao/downtify
 
 all: build up
@@ -60,6 +60,11 @@ doc-build:
 rm:
 	sudo rm -rf docker/downloads/*
 	sudo rm -rf docker/data/*
+
+update:
+	uvx uv-bump
+	npm --prefix frontend update -S
+	uv export --no-hashes --no-dev -o requirements.txt
 
 %:
 	@:

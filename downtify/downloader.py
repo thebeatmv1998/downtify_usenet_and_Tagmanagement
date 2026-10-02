@@ -5,7 +5,6 @@ from __future__ import annotations
 import base64
 import os
 import re
-import re as _re
 import shutil
 import threading
 from concurrent.futures import Future, ThreadPoolExecutor
@@ -28,7 +27,6 @@ from mutagen.id3 import (
     TPOS,
     TRCK,
     TXXX,
-    USLT,
 )
 from mutagen.mp3 import MP3
 from mutagen.mp4 import MP4, MP4Cover, MP4FreeForm
@@ -1235,20 +1233,17 @@ class Downloader:
         _report(progress_cb, 100.0, 'Done', provider)
         return stored
 
-    def _fetch_and_tag(  # noqa: PLR0914
-        self,
-        song: dict[str, Any],
-        video_id: str,
-        progress_cb: Optional[ProgressCallback],
-        subdir: Optional[str],
-        provider: Optional[str] = None,
-    ) -> str:
-        target_dir, rel_prefix, basename = self._target_location(song, subdir)
-        out_template = str(target_dir / f'{basename}.%(ext)s')
+    @staticmethod
+    def _progress_hook(
+        progress_cb: Optional[ProgressCallback], provider: Optional[str]
+    ) -> Callable[[dict[str, Any]], None]:
+        """A yt-dlp progress hook forwarding to *progress_cb*.
 
-        # yt-dlp calls the hook for every downloaded chunk, and each report
-        # becomes a WebSocket broadcast scheduled on the event loop — only
-        # forward it when the whole-number percentage actually changes.
+        yt-dlp calls the hook for every downloaded chunk, and each report
+        becomes a WebSocket broadcast scheduled on the event loop — only
+        forward it when the whole-number percentage actually changes.
+        """
+
         last_reported_pct = -1
 
         def hook(data: dict[str, Any]) -> None:
@@ -1273,6 +1268,14 @@ class Downloader:
                     progress_cb(96.0, 'Converting', provider)
             except Exception:
                 logger.opt(exception=True).debug('progress hook error')
+
+        return hook
+
+    def _ydl_options(
+        self, out_template: str, hook: Callable[[dict[str, Any]], None]
+    ) -> tuple[dict[str, Any], bool]:
+        """``(yt-dlp options, whether cookies are used)`` for one audio
+        download to *out_template*."""
 
         ydl_opts = {
             'format': 'bestaudio/best',
@@ -1349,41 +1352,78 @@ class Downloader:
                 (parts[0],) if len(parts) == 1 else (parts[0], parts[1])
             )
 
+        return ydl_opts, bool(cookies_file or cookies_browser)
+
+    def fetch_audio(
+        self,
+        video_id: str,
+        target_dir: Path,
+        basename: str,
+        *,
+        song: dict[str, Any],
+        progress_cb: Optional[ProgressCallback] = None,
+        provider: Optional[str] = None,
+        audio_format: Optional[str] = None,
+    ) -> Path:
+        """Download YouTube video *video_id*'s audio as
+        ``<target_dir>/<basename>.<audio_format>`` (default: the chosen
+        format) and return the file - untagged. *song* only words the
+        error when it fails."""
+
+        fmt = audio_format or self.audio_format
+        out_template = str(target_dir / f'{basename}.%(ext)s')
+        hook = self._progress_hook(progress_cb, provider)
+        ydl_opts, has_cookies = self._ydl_options(out_template, hook)
         url = f'https://music.youtube.com/watch?v={video_id}'
-
-        # Genre, cover art and lyrics are looked up while yt-dlp downloads,
-        # instead of one after another once it's done.
-        lookups = _MetadataLookups(self, song)
         try:
-            try:
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    # Registered directly: `ydl_opts['postprocessors']`
-                    # only accepts yt-dlp's built-in postprocessors by name.
-                    ydl.add_post_processor(
-                        _ExtractAudioPP(
-                            ydl, self.audio_format, self.audio_bitrate
-                        ),
-                        when='post_process',
-                    )
-                    ydl.download([url])
-            except Exception as exc:
-                raise _translate_download_error(
-                    exc,
-                    song,
-                    has_cookies=bool(cookies_file or cookies_browser),
-                ) from exc
-            found = lookups.collect()
-        finally:
-            # A failed download shouldn't wait on lookups nobody will use.
-            lookups.cancel()
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                # Registered directly: `ydl_opts['postprocessors']` only
+                # accepts yt-dlp's built-in postprocessors by name.
+                ydl.add_post_processor(
+                    _ExtractAudioPP(ydl, fmt, self.audio_bitrate),
+                    when='post_process',
+                )
+                ydl.download([url])
+        except Exception as exc:
+            raise _translate_download_error(
+                exc, song, has_cookies=has_cookies
+            ) from exc
 
-        final_path = target_dir / f'{basename}.{self.audio_format}'
+        final_path = target_dir / f'{basename}.{fmt}'
         if not final_path.exists():
             # yt-dlp sometimes uses the upstream extension for opus/m4a
             for candidate in target_dir.glob(f'{basename}.*'):
                 if candidate.is_file():
                     final_path = candidate
                     break
+        return final_path
+
+    def _fetch_and_tag(
+        self,
+        song: dict[str, Any],
+        video_id: str,
+        progress_cb: Optional[ProgressCallback],
+        subdir: Optional[str],
+        provider: Optional[str] = None,
+    ) -> str:
+        target_dir, rel_prefix, basename = self._target_location(song, subdir)
+
+        # Genre, cover art and lyrics are looked up while yt-dlp downloads,
+        # instead of one after another once it's done.
+        lookups = _MetadataLookups(self, song)
+        try:
+            final_path = self.fetch_audio(
+                video_id,
+                target_dir,
+                basename,
+                song=song,
+                progress_cb=progress_cb,
+                provider=provider,
+            )
+            found = lookups.collect()
+        finally:
+            # A failed download shouldn't wait on lookups nobody will use.
+            lookups.cancel()
 
         self._tag_file(final_path, target_dir, song, found)
         _report(progress_cb, 100.0, 'Done', provider)
@@ -1565,11 +1605,15 @@ def _recording_date_for_tags(song: dict[str, Any]) -> str:
 
 
 def _album_artist_for_tags(artists: list[str]) -> Optional[str]:
+    """Album artist for a single download when the source has no album field.
+
+    One credited name is used as-is — including duo names with ``&``.
+    Several credited names (a collab list) still map to Various Artists.
+    """
+
     if not artists:
         return None
     if len(artists) > 1:
-        return 'Various Artists'
-    if re.search(r'\s*(?:,|，|&)\s*', artists[0]):
         return 'Various Artists'
     return artists[0]
 
@@ -1971,56 +2015,13 @@ def _apply_vorbis_comments(
         audio['metadata_block_picture'] = [encoded_data]
 
 
-def embed_lyrics(path: Path, lyrics: 'lyrics_mod.Lyrics') -> None:
+def embed_lyrics(
+    path: Path,
+    lyrics: 'lyrics_mod.Lyrics',
+    *,
+    sidecar: Optional[Path] = None,
+) -> None:
     """Embed plain lyrics into the audio tag and write a .lrc sidecar
-    next to it when synced lyrics are available."""
+    when synced lyrics are available."""
 
-    if not path.exists() or not lyrics.has_any():
-        return
-
-    if lyrics.synced:
-        sidecar = path.with_suffix('.lrc')
-        try:
-            sidecar.write_text(lyrics.synced, encoding='utf-8')
-        except OSError:
-            logger.opt(exception=True).warning(
-                'Could not write LRC sidecar {}', sidecar
-            )
-
-    text = lyrics.plain or _strip_lrc_timestamps(lyrics.synced or '')
-    if not text:
-        return
-
-    suffix = path.suffix.lower().lstrip('.')
-    if suffix == 'mp3':
-        audio = MP3(str(path), ID3=ID3)
-        if audio.tags is None:
-            audio.add_tags()
-        audio.tags.delall('USLT')
-        audio.tags.add(USLT(encoding=3, lang='eng', desc='', text=text))
-        # See the matching comment in _tag_mp3: v2.3 forces a UTF-8 ->
-        # UTF-16 transcode on save that corrupts long text frames.
-        audio.save(v2_version=4)
-    elif suffix in {'m4a', 'mp4', 'aac'}:
-        audio = MP4(str(path))
-        audio['\xa9lyr'] = text
-        audio.save()
-    elif suffix == 'flac':
-        audio = FLAC(str(path))
-        audio['lyrics'] = text
-        audio.save()
-    elif suffix in {'ogg', 'oga'}:
-        audio = OggVorbis(str(path))
-        audio['lyrics'] = text
-        audio.save()
-    elif suffix == 'opus':
-        audio = OggOpus(str(path))
-        audio['lyrics'] = text
-        audio.save()
-
-
-def _strip_lrc_timestamps(synced: str) -> str:
-    cleaned = _re.sub(r'\[\d{1,2}:\d{2}(?:\.\d{1,3})?\]', '', synced)
-    return '\n'.join(
-        line.strip() for line in cleaned.splitlines() if line.strip()
-    )
+    lyrics_mod.write_to_file(path, lyrics, sidecar=sidecar)

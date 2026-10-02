@@ -9,6 +9,7 @@ import json
 
 import pytest
 from fastapi import HTTPException
+from starlette.requests import Request
 
 from downtify import api
 from downtify.api import (
@@ -36,12 +37,17 @@ from downtify.api import (
 )
 from downtify.downloader import Downloader
 
+# The route functions take the request; these tests call them directly.
+_REQUEST = Request({'type': 'http', 'headers': []})
+
 
 def test_default_settings_has_required_keys():
     required = {
         'audio_providers',
         'lyrics_providers',
         'download_lyrics',
+        'lyrics_lrc_beside',
+        'lyrics_lrc_dir',
         'format',
         'bitrate',
         'output',
@@ -52,24 +58,81 @@ def test_default_settings_has_required_keys():
         'sync_navidrome',
         'navidrome',
         'cache_cover_art',
+        'external_library',
+        'external_sync_delay_seconds',
     }
     assert required <= set(DEFAULT_SETTINGS)
 
 
-def test_default_organize_by_artist_is_false():
-    assert DEFAULT_SETTINGS['organize_by_artist'] is False
+def test_new_installs_organize_by_artist_and_album():
+    assert DEFAULT_SETTINGS['organize_by_artist'] is True
+    assert DEFAULT_SETTINGS['organize_by_album'] is True
+
+
+def test_default_overwrite_existing_files_is_true():
+    assert DEFAULT_SETTINGS['overwrite_existing_files'] is True
 
 
 def test_default_generate_m3u_is_true():
     assert DEFAULT_SETTINGS['generate_m3u'] is True
 
 
-def test_default_download_cover_art_playlists_is_false():
-    assert DEFAULT_SETTINGS['download_cover_art_playlists'] is False
+def test_an_older_settings_file_keeps_the_previous_defaults(tmp_path):
+    path = tmp_path / 'settings.json'
+    path.write_text(json.dumps({'format': 'flac'}))
+    loaded = api._load_settings(path)
+    assert loaded['format'] == 'flac'
+    assert loaded['organize_by_artist'] is False
+    assert loaded['organize_by_album'] is False
+    assert loaded['download_cover_art_playlists'] is False
+    assert loaded['download_cover_art_artist'] is False
+    # A new install (no file yet) gets the new ones.
+    fresh = api._load_settings(tmp_path / 'missing.json')
+    assert fresh['organize_by_artist'] is True
+
+
+def test_load_settings_sanitizes_external_library_folders(tmp_path):
+    path = tmp_path / 'settings.json'
+    good = tmp_path / 'music'
+    good.mkdir()
+    path.write_text(
+        json.dumps({
+            'external_library': {
+                'folders': [str(good), 'relative', str(good)],
+            }
+        })
+    )
+    loaded = api._load_settings(path)
+    assert loaded['external_library']['folders'] == [str(good)]
+
+
+def test_load_settings_rejects_lyrics_dir_inside_extra_folder(tmp_path):
+    path = tmp_path / 'settings.json'
+    music = tmp_path / 'music'
+    music.mkdir()
+    path.write_text(
+        json.dumps({
+            'lyrics_lrc_beside': False,
+            'lyrics_lrc_dir': str(music / 'lyrics'),
+            'external_library': {'folders': [str(music)]},
+        })
+    )
+    loaded = api._load_settings(path)
+    assert loaded['lyrics_lrc_beside'] is False
+    assert loaded['lyrics_lrc_dir'] == '/data/lyrics'
+
+
+def test_new_installs_save_playlist_covers_and_artist_photos():
+    assert DEFAULT_SETTINGS['download_cover_art_playlists'] is True
+    assert DEFAULT_SETTINGS['download_cover_art_artist'] is True
+    # Banners stay opt-in.
+    assert DEFAULT_SETTINGS['download_cover_art_artist_banner'] is False
 
 
 def test_default_download_lyrics_is_true():
     assert DEFAULT_SETTINGS['download_lyrics'] is True
+    assert DEFAULT_SETTINGS['lyrics_lrc_beside'] is True
+    assert DEFAULT_SETTINGS['lyrics_lrc_dir'] == '/data/lyrics'
 
 
 def test_default_format_is_mp3():
@@ -94,7 +157,7 @@ def test_search_albums_endpoint_calls_provider_when_enabled(monkeypatch):
         'search_albums',
         lambda query, limit: [{'name': 'Driftlight'}],
     )
-    assert search_albums_endpoint(query='Driftlight') == [
+    assert search_albums_endpoint(_REQUEST, query='Driftlight') == [
         {'name': 'Driftlight'}
     ]
 
@@ -119,7 +182,7 @@ def test_search_albums_endpoint_honors_custom_limit(monkeypatch):
         return []
 
     monkeypatch.setattr(api.providers, 'search_albums', _fake)
-    search_albums_endpoint(query='Driftlight', limit=50)
+    search_albums_endpoint(_REQUEST, query='Driftlight', limit=50)
     assert captured['limit'] == 50
 
 
@@ -130,7 +193,7 @@ def test_search_albums_endpoint_short_circuits_when_disabled(monkeypatch):
         raise AssertionError('should not search when disabled')
 
     monkeypatch.setattr(api.providers, 'search_albums', _boom)
-    assert search_albums_endpoint(query='Driftlight') == []
+    assert search_albums_endpoint(_REQUEST, query='Driftlight') == []
 
 
 # ── search_artists_endpoint ────────────────────────────────────────────────────
@@ -245,7 +308,8 @@ def test_load_settings_empty_object_returns_defaults(tmp_path):
     path = tmp_path / 'settings.json'
     path.write_text('{}', encoding='utf-8')
     result = _load_settings(path)
-    assert result == DEFAULT_SETTINGS
+    # A file saved before some defaults changed keeps the old ones.
+    assert result == {**DEFAULT_SETTINGS, **api._PREVIOUS_DEFAULTS}
 
 
 # ── _effective_lyrics_providers ───────────────────────────────────────────────

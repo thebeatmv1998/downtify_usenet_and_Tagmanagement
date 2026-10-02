@@ -10,6 +10,8 @@ Downtify covers everything you need to build and maintain a local music library 
 
 | Feature | What it does |
 |---------|-------------|
+| [Charts](charts.md) | Browse Deezer's global chart and download whatever is trending |
+| [Finder](finder.md) | Search Deezer, then browse an artist, their albums and any album's tracks in columns |
 | [Download Settings](download-settings.md) | Choose format (MP3/FLAC/M4A/OGG/OPUS), bitrate, parallel downloads and delay between downloads |
 | [Playlist Monitor](playlist-monitor.md) | Watch Spotify or YouTube Music playlists and artists, and auto-download new tracks and releases |
 | [Top Songs](top-songs.md) | Paste an artist link and download their most popular songs, optionally as a playlist |
@@ -17,15 +19,20 @@ Downtify covers everything you need to build and maintain a local music library 
 | [Built-in Player](player.md) | Play your library in the browser: queue management, synced lyrics, sleep timer, keyboard and media keys |
 | [Liked songs](liked-songs.md) | Heart a song to like it; a playlist of everything you have liked appears on its own |
 | [Podcasts](podcasts.md) | Subscribe to a show by RSS feed, Spotify link or name; new episodes download and tag on their own |
+| [Users & Sign-in](users.md) | Username and password sign-in (`admin` / `downtify` on a new server), admin and normal user accounts, per-user preferences, and an activity log of sign-ins and what everyone plays |
+| [Replace Audio](replace-audio.md) | Wrong song or version? Pick the right one on YouTube Music or YouTube; the file keeps its name, tags and playlists |
+| [Server Settings](server.md) | The port Downtify listens on, changed from Settings (admins), with a restart right away if you like |
+| [Mobile Apps](mobile-apps.md) | Pair phone apps by QR code and stream the library to them (original or transcoded) |
 | [Discover](discover.md) | Artists, albums and playlists you don't have yet, suggested from your library, likes and listening; hide the ones you don't want |
 | [slskd & Navidrome](slskd-navidrome.md) | Download from Soulseek through slskd, mirror playlists into Navidrome, and track playlist downloads |
-| [Library catalog & path sync](library-catalog.md) | How Downtify tracks library files and playlists, and fixing paths after moving files |
+| [Library catalog & path sync](library-catalog.md) | How Downtify tracks library files and playlists, playlists you create in the Library, and fixing paths after moving files |
+| [Existing music folders](external-library.md) | Point Downtify at folders of audio you already have; Sync reads tags, matches artists and skips songs already in the library |
 | [Upgrade library](library-upgrade.md) | Scan music you already downloaded and repair small covers, missing lyrics and incomplete tags |
 | [M3U Export](m3u-export.md) | Auto-generated playlist files for Jellyfin, Navidrome, Plex and any media app |
 | [Playlist cover art](playlist-cover-art.md) | Save the playlist's own cover image alongside its M3U file |
 | [Artist photo, banner & bio](artist-images.md) | Pick a real photo and banner for an artist from YouTube Music, Deezer, Spotify or your own upload, and fetch their bio, origin and links from Apple Music and Deezer, automatically or on demand |
 | [File Organization](file-organization.md) | Flat layout or per-artist subfolders |
-| [Lyrics](lyrics.md) | Automatically download and embed lyrics (plain and time-synced) |
+| [Lyrics](lyrics.md) | Automatically download and embed lyrics (plain and time-synced); `.lrc` next to the file or in a folder you choose |
 | [YouTube Cookies](youtube-cookies.md) | Upload a `cookies.txt` from the web UI to download explicit/age-restricted tracks |
 | [Internationalization](internationalization.md) | English plus seven more languages out of the box |
 | [Update Notifications](updates.md) | Hourly check against GitHub Releases; a notice appears in the sidebar when a newer version is out |
@@ -36,11 +43,10 @@ Downtify accepts several input types in the search bar:
 
 | Input | Example |
 |-------|---------|
-| Spotify track URL | `https://open.spotify.com/track/…` |
-| Spotify album URL | `https://open.spotify.com/album/…` |
-| Spotify playlist URL | `https://open.spotify.com/playlist/…` |
+| Spotify track, album, playlist or artist URL | `https://open.spotify.com/track/…` |
 | YouTube / YouTube Music URL | `https://www.youtube.com/watch?v=…` |
-| YouTube Music playlist URL | `https://music.youtube.com/playlist?list=…` |
+| YouTube Music playlist or artist URL | `https://music.youtube.com/playlist?list=…` |
+| Deezer track, album, playlist or artist URL | `https://www.deezer.com/track/…` |
 | Free-text search | `The Night Owls Do I Still Recall` |
 
 Free-text searches are sent directly to YouTube Music — no Spotify link required.
