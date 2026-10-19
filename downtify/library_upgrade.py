@@ -55,6 +55,7 @@ from mutagen import File as MutagenFile
 from . import album_covers, cover_sources, itunes, library_catalog, spotify
 from . import lyrics as lyrics_mod
 from .downloader import embed_lyrics, embed_metadata
+from .library_cache_keys import file_content_key
 from .library_catalog import (
     UPGRADE_STAGING_MARKER,
     LibraryContext,
@@ -498,6 +499,7 @@ class UpgradeDeps:
     spotify_id_for: Optional[Callable[[str], str]] = None
     lyrics_cache: Any = None
     publish: Optional[Callable[[dict[str, Any]], None]] = None
+    rekey_owners: Optional[Callable[[str, str, str], None]] = None
 
 
 def resolve_track(stored_path: str, ctx: LibraryContext) -> Optional[Path]:
@@ -846,6 +848,10 @@ def _apply_track(
             artwork_source=artwork.source,
         )
 
+    try:
+        old_key = file_content_key(full) or ''
+    except Exception:
+        old_key = ''
     if _AUDIO_CATEGORIES.intersection(changed) or new_lyrics is not None:
         stage_now('writing')
         error = _write_upgrade(
@@ -857,6 +863,16 @@ def _apply_track(
         )
         if error:
             return UpgradeOutcome(JOB_FAILED, error)
+    if old_key and deps.rekey_owners is not None:
+        try:
+            new_key = file_content_key(full) or ''
+            if new_key:
+                deps.rekey_owners(old_key, new_key, stored_path)
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Library upgrade: could not rekey owners for {}',
+                stored_path,
+            )
 
     cover_detail = ''
     cover: Optional[_AlbumCover] = None

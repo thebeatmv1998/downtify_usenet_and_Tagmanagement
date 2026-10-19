@@ -29,7 +29,7 @@
           class="relative flex h-full flex-col px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))] lg:px-10 lg:pt-6 lg:pb-8"
         >
           <!-- Header -->
-          <header class="flex h-12 shrink-0 items-center gap-3">
+          <header class="relative z-10 flex h-12 shrink-0 items-center gap-3">
             <button
               ref="closeButton"
               type="button"
@@ -90,29 +90,29 @@
 
           <!-- Body -->
           <div
-            class="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] gap-6 py-4 lg:grid-cols-[minmax(0,min(460px,38vw))_minmax(0,1fr)] lg:items-center lg:gap-14 lg:py-6 xl:grid-cols-[minmax(0,min(460px,32vw))_minmax(0,1fr)_340px]"
+            class="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] gap-6 overflow-hidden py-4 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-stretch lg:gap-10 lg:py-4 xl:grid-cols-[auto_minmax(0,1fr)_minmax(220px,340px)] xl:gap-12"
           >
             <!-- Artwork + title (hidden on phones while a panel is open) -->
             <div
-              class="flex min-h-0 flex-col justify-center gap-6"
+              class="now-playing-stage flex h-full min-h-0 w-full min-w-0 max-w-full flex-col justify-center gap-4 overflow-hidden lg:gap-5"
               :class="mobilePanel ? 'max-lg:hidden' : ''"
             >
-              <div class="mx-auto w-full max-w-[min(100%,52vh)] lg:max-w-none">
+              <div class="now-playing-cover mx-auto">
                 <CoverArt
                   :src="track.hasCover ? track.cover : ''"
                   :name="track.album || track.title"
                   rounded="rounded-[20px]"
                   :letter-size="140"
                   :icon-size="72"
-                  class="aspect-square w-full shadow-[0_40px_100px_rgba(0,0,0,0.55)] transition-transform duration-500 ease-out-soft"
+                  class="aspect-square w-full min-h-0 min-w-0 transition-transform duration-500 ease-out-soft"
                   :class="player.isPlaying.value ? 'scale-100' : 'scale-[0.94]'"
                 />
               </div>
-              <div class="flex items-end justify-between gap-4">
-                <div class="min-w-0">
-                  <h2
-                    class="text-display truncate text-2xl font-bold lg:text-[32px]"
-                  >
+              <div
+                class="flex w-full min-w-0 shrink-0 items-end justify-between gap-4"
+              >
+                <div class="min-w-0 flex-1">
+                  <h2 class="now-playing-title text-display truncate font-bold">
                     {{ track.title }}
                   </h2>
                   <RouterLink
@@ -128,7 +128,7 @@
                 </div>
                 <div class="flex shrink-0 items-center gap-1">
                   <LikeButton
-                    v-if="!track?.isPodcast"
+                    v-if="!track?.isPodcast && !track?.stream"
                     :file="track.file"
                     size="lg"
                   />
@@ -174,14 +174,14 @@
             <!-- Up next always visible on wide screens -->
             <aside
               v-if="panel !== 'queue'"
-              class="hidden h-full max-h-[620px] min-h-0 rounded-panel border border-white/10 bg-white/6 p-3 backdrop-blur-xl xl:block"
+              class="hidden h-full min-h-0 max-h-full rounded-panel border border-white/10 bg-white/6 p-3 backdrop-blur-xl xl:block"
             >
               <UpNextPanel />
             </aside>
           </div>
 
           <!-- Transport -->
-          <footer class="shrink-0">
+          <footer class="relative z-10 shrink-0">
             <div class="flex items-center gap-3">
               <span class="tabular w-12 text-xs text-white/65">{{
                 formatDuration(scrub ?? player.currentTime.value)
@@ -226,8 +226,18 @@
                 >
                   <AppIcon name="skip-back" :size="22" />
                 </button>
+                <!-- Left of shuffle: tracks like this one
+                     (podcasts have none). -->
                 <button
-                  v-else
+                  v-if="similarArtist && similarTitle"
+                  type="button"
+                  class="flex size-11 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10"
+                  :aria-label="t('similar.findSimilar')"
+                  @click="goSimilar"
+                >
+                  <AppIcon name="wand" :size="22" />
+                </button>
+                <button
                   type="button"
                   class="flex size-11 items-center justify-center rounded-full transition-colors hover:bg-white/10"
                   :class="
@@ -249,7 +259,7 @@
                 </button>
                 <button
                   type="button"
-                  class="flex size-[72px] items-center justify-center rounded-full bg-white text-[#0b0c0e] shadow-[0_12px_30px_rgba(0,0,0,0.35)] transition-transform hover:scale-105 active:scale-95"
+                  class="now-playing-play flex items-center justify-center rounded-full bg-white text-[#0b0c0e] shadow-[0_12px_30px_rgba(0,0,0,0.35)] transition-transform hover:scale-105 active:scale-95"
                   :aria-label="
                     player.isPlaying.value
                       ? t('player.pause')
@@ -300,6 +310,31 @@
                     :size="22"
                   />
                 </button>
+                <!-- Right of repeat: a stream queues its download (once -
+                     while queued it spins instead), a downloaded track
+                     shows a static check that does nothing. -->
+                <button
+                  v-if="showPlayerDownload"
+                  type="button"
+                  class="flex size-11 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10 disabled:opacity-50"
+                  :aria-label="t('actions.downloadItem', { name: track.title })"
+                  :disabled="downloadBusy"
+                  @click="downloadCurrent"
+                >
+                  <AppIcon
+                    :name="downloadBusy ? 'refresh' : 'download'"
+                    :size="22"
+                    :class="downloadBusy ? 'animate-spin' : ''"
+                  />
+                </button>
+                <span
+                  v-else-if="showDownloadedCheck"
+                  class="flex size-11 items-center justify-center rounded-full text-accent"
+                  :title="t('search.inLibrary')"
+                  aria-hidden="true"
+                >
+                  <AppIcon name="check" :size="22" />
+                </span>
               </div>
 
               <div class="hidden flex-1 items-center justify-end gap-2 lg:flex">
@@ -429,6 +464,9 @@ import UpNextPanel from '../player/UpNextPanel.vue'
 import TrackDetails from '../player/TrackDetails.vue'
 import EqualizerPanel from '../player/EqualizerPanel.vue'
 import { usePlayer } from '/src/model/player'
+import { useDownloadManager, useProgressTracker } from '/src/model/download'
+import { useLibrary } from '/src/model/library'
+import { useUi } from '/src/model/ui'
 import { usePlayerPrefs } from '/src/model/playerPrefs'
 import { useNowPlaying } from '/src/model/ui'
 import { formatBytes, formatDuration, hueFor } from '/src/lib/format'
@@ -438,6 +476,10 @@ import { saveName } from '/src/lib/paths'
 import { useI18n } from '/src/i18n'
 
 const player = usePlayer()
+const library = useLibrary()
+const dm = useDownloadManager()
+const tracker = useProgressTracker()
+const ui = useUi()
 const { showLyrics } = usePlayerPrefs()
 const nowPlaying = useNowPlaying()
 const route = useRoute()
@@ -449,6 +491,26 @@ const scrub = ref(null)
 const closeButton = ref(null)
 
 const track = computed(() => player.currentTrack.value)
+
+// Tracks like this one (podcasts have none): left of shuffle.
+const similarArtist = computed(() => {
+  if (track.value?.isPodcast) return ''
+  return (track.value?.artists || [])[0] || track.value?.artist || ''
+})
+const similarTitle = computed(
+  () => track.value?.name || track.value?.title || ''
+)
+
+function goSimilar() {
+  const artist = (
+    (track.value?.artists || [])[0] ||
+    track.value?.artist ||
+    ''
+  ).trim()
+  const title = (track.value?.name || track.value?.title || '').trim()
+  if (!artist || !title) return
+  router.push({ name: 'Similar', query: { artist, track: title } })
+}
 const palette = useCoverPalette(track)
 const tint = computed(
   () =>
@@ -467,6 +529,7 @@ const panels = computed(() =>
   availablePanels({
     lyrics: showLyrics.value,
     isPodcast: track.value?.isPodcast,
+    isStream: track.value?.stream,
   }).map((id) => ({
     id,
     icon: PANEL_TABS[id].icon,
@@ -487,6 +550,7 @@ const panel = computed(
     defaultPanel({
       lyrics: showLyrics.value,
       isPodcast: track.value?.isPodcast,
+      isStream: track.value?.stream,
     })
 )
 const mobilePanel = computed(() => isMobile.value && !!requested.value)
@@ -585,6 +649,7 @@ const trackMenu = computed(() => {
     {
       label: t('library.saveToDevice'),
       icon: 'download',
+      hidden: !!tr.stream,
       action: () => saveFile(tr),
     },
     { divider: true },
@@ -609,6 +674,68 @@ function saveFile(tr) {
   document.body.appendChild(a)
   a.click()
   a.remove()
+}
+
+// A stream that landed in the library while playing (downloaded from
+// anywhere) offers deletion instead of another download.
+const streamDownloaded = computed(
+  () =>
+    !!track.value?.stream &&
+    library.hasSong(track.value.artist, track.value.title)
+)
+
+const showPlayerDownload = computed(
+  () => !!track.value?.stream && !streamDownloaded.value
+)
+// A downloaded track shows a static check where the download button
+// was; deleting happens from the library rows.
+const showDownloadedCheck = computed(
+  () =>
+    !!track.value &&
+    !track.value.isPodcast &&
+    (!track.value.stream || streamDownloaded.value)
+)
+
+// The playing stream as a downloadable song: the watch URL is the
+// download key (so it can't be queued twice) and the known video id
+// pins the exact version, like a resolved search row.
+const pendingSong = computed(() => {
+  const tr = track.value
+  if (!tr?.stream || !tr.video_id) return null
+  return {
+    name: tr.title,
+    artists: tr.artist ? [tr.artist] : [],
+    artist: tr.artist || '',
+    album_name: tr.album || '',
+    cover_url: tr.cover && String(tr.cover).startsWith('http') ? tr.cover : '',
+    duration: tr.duration || 0,
+    url: `https://music.youtube.com/watch?v=${tr.video_id}`,
+    youtube_id: tr.video_id,
+  }
+})
+
+// The queued/finished job behind the button, if any - while one exists
+// the button spins instead of queueing a duplicate.
+const downloadJob = computed(() => {
+  tracker.queueVersion.value
+  return pendingSong.value ? tracker.getBySong(pendingSong.value) : null
+})
+const downloadBusy = computed(() => {
+  const state = downloadJob.value?.state
+  return state === 'queued' || state === 'active'
+})
+
+/** Queue the playing stream as a download (it keeps streaming). */
+function downloadCurrent() {
+  const song = pendingSong.value
+  if (!song || downloadBusy.value) return
+  if (downloadJob.value?.state === 'failed') dm.retry(song)
+  else {
+    dm.queue(song)
+    ui.toast(t('toast.queuedTracks', { count: 1, name: song.name }), {
+      kind: 'success',
+    })
+  }
 }
 
 function commitSeek(value) {

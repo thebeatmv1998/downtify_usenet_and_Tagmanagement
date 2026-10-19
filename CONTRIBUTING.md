@@ -2,7 +2,7 @@
 
 Thanks for your interest in improving Downtify! This document describes how to set up the project locally, the coding and formatting standards every contribution must follow, and the workflow for submitting changes.
 
-By submitting a pull request you agree that your contribution is licensed under the project's [GPL-3.0](./LICENSE) license.
+By submitting a pull request you agree that your contribution is licensed under the project's [AGPL-3.0](./LICENSE) license.
 
 ---
 
@@ -77,7 +77,7 @@ You need the following installed locally:
 
 | Tool                | Minimum version | Purpose                                       |
 | ------------------- | --------------- | --------------------------------------------- |
-| Python              | 3.10 (3.13 rec) | Backend runtime (Docker pins 3.13)            |
+| Python              | 3.10 (3.15 rec) | Backend runtime (Docker pins 3.15)            |
 | [`uv`][uv]          | recent          | Python project + dependency manager           |
 | Node.js             | 20.x +          | Frontend build (Vue 3 + Vite)                 |
 | npm                 | 10.x +          | Frontend package manager                      |
