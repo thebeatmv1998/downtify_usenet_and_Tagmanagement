@@ -7,7 +7,17 @@ WORKDIR /build
 
 COPY requirements.txt .
 
-RUN pip install --no-cache-dir --root-user-action ignore -r requirements.txt && \
+# Retry transient DNS/network failures while resolving packages. If the
+# build host cannot reach files.pythonhosted.org (Pi-hole, broken container
+# DNS, IPv6-only resolution), point this at a reachable PyPI mirror:
+#   docker build --build-arg PIP_INDEX_URL=https://<mirror>/simple .
+ARG PIP_INDEX_URL=https://pypi.org/simple
+ENV PIP_INDEX_URL=${PIP_INDEX_URL} \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+RUN pip install --no-cache-dir --root-user-action ignore \
+        --retries 10 --timeout 60 \
+        -r requirements.txt && \
     pip uninstall --root-user-action ignore -y pip
 
 # Build the Vue frontend so the image is self-contained and never ships a
