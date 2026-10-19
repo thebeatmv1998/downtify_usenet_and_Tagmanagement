@@ -160,6 +160,22 @@
               icon="clock"
             />
           </label>
+          <label class="flex flex-wrap items-center justify-between gap-3">
+            <span class="min-w-0 flex-1">
+              <span class="block text-sm font-semibold text-fg">
+                {{ t('upgrade.metadataMode') }}
+              </span>
+              <span class="mt-0.5 block text-[13px] text-muted">
+                {{ metadataModeHint }}
+              </span>
+            </span>
+            <UiSelect
+              v-model="metadataMode"
+              :options="metadataModeOptions"
+              :label="t('upgrade.metadataMode')"
+              icon="tag"
+            />
+          </label>
         </div>
       </UiPanel>
 
@@ -230,6 +246,107 @@
       </UiButton>
     </UiEmpty>
 
+    <!-- Merge split albums -->
+    <UiPanel :title="t('upgrade.mergeTitle')">
+      <p class="text-[13px] text-pretty text-muted">
+        {{ t('upgrade.mergeHint') }}
+      </p>
+      <div class="mt-3 flex flex-wrap items-center gap-3">
+        <UiButton
+          variant="secondary"
+          icon="refresh"
+          :loading="mergeLoading"
+          @click="findSplitAlbums"
+        >
+          {{ t('upgrade.mergeFind') }}
+        </UiButton>
+        <span v-if="mergeLoading" class="text-[13px] text-muted">
+          {{ t('upgrade.mergeSearching') }}
+        </span>
+        <span v-else-if="mergeCandidates.length" class="text-[13px] text-muted">
+          {{ t('upgrade.mergeFound', { count: mergeCandidates.length }) }}
+        </span>
+        <span v-else-if="mergeSearched" class="text-[13px] text-muted">
+          {{ t('upgrade.mergeNone') }}
+        </span>
+      </div>
+      <p
+        v-if="mergeSearched && mergeLookedUp > 0"
+        class="mt-1.5 text-[13px] text-muted"
+      >
+        {{
+          t('upgrade.mergeStats', {
+            resolved: mergeResolved,
+            looked_up: mergeLookedUp,
+          })
+        }}
+      </p>
+      <p
+        v-if="mergeSearched && mergeLookedUp > 0 && mergeResolved === 0"
+        class="mt-1.5 text-[13px] text-warn"
+      >
+        {{ t('upgrade.mergeLimited') }}
+      </p>
+      <ul v-if="mergeCandidates.length" class="mt-4 flex flex-col gap-3">
+        <li
+          v-for="(plan, index) in mergeCandidates"
+          :key="`${plan.album_artist}-${plan.album}-${index}`"
+          class="flex items-start gap-3 rounded-control border border-line-2 bg-surface-2 p-3.5"
+        >
+          <UiSwitch
+            :model-value="mergeSelected.includes(index)"
+            :label="plan.album"
+            :description="plan.album_artist"
+            class="flex-1"
+            @update:model-value="(on) => toggleMerge(index, on)"
+          />
+          <UiBadge tone="accent">
+            {{ t('upgrade.tracksAffected', { count: plan.track_count }) }}
+          </UiBadge>
+        </li>
+      </ul>
+      <div
+        v-if="mergeCandidates.length"
+        class="mt-4 flex flex-wrap items-center gap-3"
+      >
+        <UiButton
+          variant="primary"
+          icon="wand"
+          :disabled="!mergeSelected.length || mergeBusy"
+          :loading="mergeBusy"
+          @click="applyMerge"
+        >
+          {{ t('upgrade.mergeApply', { count: mergeSelected.length }) }}
+        </UiButton>
+        <span v-if="mergeNote" class="text-[13px] text-muted">
+          {{ mergeNote }}
+        </span>
+      </div>
+      <p v-else-if="mergeNote" class="mt-3 text-[13px] text-muted">
+        {{ mergeNote }}
+      </p>
+    </UiPanel>
+
+    <!-- Rebuild playlist M3Us from the library -->
+    <UiPanel :title="t('upgrade.playlistsTitle')">
+      <p class="text-[13px] text-pretty text-muted">
+        {{ t('upgrade.playlistsHint') }}
+      </p>
+      <div class="mt-3 flex flex-wrap items-center gap-3">
+        <UiButton
+          variant="secondary"
+          icon="refresh"
+          :loading="playlistBusy"
+          @click="rebuildPlaylists"
+        >
+          {{ t('upgrade.playlistsRebuild') }}
+        </UiButton>
+        <span v-if="playlistNote" class="text-[13px] text-muted">
+          {{ playlistNote }}
+        </span>
+      </div>
+    </UiPanel>
+
     <!-- Per-track rows -->
     <UiPanel v-if="jobs.length" :title="t('upgrade.tracksTitle')" padded>
       <ul class="flex flex-col divide-y divide-line-2">
@@ -272,6 +389,7 @@ import UiSwitch from '/src/components/ui/UiSwitch.vue'
 import PageHeader from '/src/components/library/PageHeader.vue'
 import { formatBytes } from '/src/lib/format'
 import { ARTWORK_SIZES } from '/src/lib/upgrade'
+import API from '/src/model/api'
 import { useUpgrade } from '/src/model/upgrade'
 import { useI18n } from '/src/i18n'
 
@@ -297,6 +415,7 @@ const {
   pause,
   resume,
   cancel,
+  refreshJobs,
   toggle,
   isScanning,
   isRunning,
@@ -310,12 +429,14 @@ const {
 const artworkMin = ref(600)
 const artworkSource = ref('highest')
 const recheckDays = ref(30)
+const metadataMode = ref('fill')
 
 const runScan = () =>
   startScan({
     artwork_min_px: artworkMin.value,
     artwork_source: artworkSource.value,
     recheck_days: recheckDays.value,
+    metadata_mode: metadataMode.value,
   })
 
 // "Nothing to upgrade" when everything was simply checked recently is a
@@ -338,6 +459,7 @@ watch(
     if (typeof options.recheck_days === 'number') {
       recheckDays.value = options.recheck_days
     }
+    if (options.metadata_mode) metadataMode.value = options.metadata_mode
   },
   { immediate: true }
 )
@@ -385,6 +507,95 @@ const recheckOptions = computed(() => [
     label: t('upgrade.recheckDays', { count: days }),
   })),
 ])
+
+const metadataModeOptions = computed(() => [
+  { value: 'fill', label: t('upgrade.metadataModeFill') },
+  { value: 'verify', label: t('upgrade.metadataModeVerify') },
+])
+
+const metadataModeHint = computed(() =>
+  metadataMode.value === 'verify'
+    ? t('upgrade.metadataModeVerifyHint')
+    : t('upgrade.metadataModeFillHint')
+)
+
+// ── Merge split albums (album-level, outside the per-track queue) ────
+const mergeLoading = ref(false)
+const mergeSearched = ref(false)
+const mergeCandidates = ref([])
+const mergeSelected = ref([])
+const mergeBusy = ref(false)
+const mergeNote = ref('')
+const mergeLookedUp = ref(0)
+const mergeResolved = ref(0)
+
+const describeError = (err) =>
+  err?.response?.data?.detail || err?.message || 'failed'
+
+async function findSplitAlbums() {
+  mergeLoading.value = true
+  mergeNote.value = ''
+  try {
+    const res = await API.findSplitAlbums()
+    mergeCandidates.value = res.data?.candidates || []
+    mergeSelected.value = mergeCandidates.value.map((_, index) => index)
+    mergeLookedUp.value = res.data?.looked_up || 0
+    mergeResolved.value = res.data?.resolved || 0
+    mergeSearched.value = true
+  } catch (err) {
+    mergeNote.value = describeError(err)
+  } finally {
+    mergeLoading.value = false
+  }
+}
+
+function toggleMerge(index, on) {
+  const next = new Set(mergeSelected.value)
+  if (on) next.add(index)
+  else next.delete(index)
+  mergeSelected.value = [...next].sort((a, b) => a - b)
+}
+
+async function applyMerge() {
+  const plans = mergeSelected.value
+    .map((index) => mergeCandidates.value[index])
+    .filter(Boolean)
+  if (!plans.length) return
+  mergeBusy.value = true
+  mergeNote.value = ''
+  try {
+    const res = await API.mergeAlbums(plans)
+    mergeNote.value = t('upgrade.mergeDone', { moved: res.data?.moved || 0 })
+    mergeCandidates.value = []
+    mergeSelected.value = []
+    await load()
+    await refreshJobs()
+  } catch (err) {
+    mergeNote.value = describeError(err)
+  } finally {
+    mergeBusy.value = false
+  }
+}
+
+// ── Rebuild playlist M3Us from the library ───────────────────────────
+const playlistBusy = ref(false)
+const playlistNote = ref('')
+
+async function rebuildPlaylists() {
+  playlistBusy.value = true
+  playlistNote.value = ''
+  try {
+    const res = await API.rebuildLibraryPlaylists()
+    playlistNote.value = t('upgrade.playlistsDone', {
+      rebuilt: res.data?.rebuilt || 0,
+      linked: res.data?.tracks_linked || 0,
+    })
+  } catch (err) {
+    playlistNote.value = describeError(err)
+  } finally {
+    playlistBusy.value = false
+  }
+}
 
 const JOB_TONES = {
   done: 'accent',

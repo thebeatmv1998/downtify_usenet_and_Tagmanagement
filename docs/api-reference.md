@@ -700,7 +700,8 @@ Return the current settings.
   "library_upgrade": {
     "artwork_min_px": 600,
     "artwork_source": "highest",
-    "recheck_days": 30
+    "recheck_days": 30,
+    "metadata_mode": "fill"
   },
   "external_library": {
     "folders": []
@@ -751,7 +752,8 @@ Return the current settings.
 | `navidrome` | object | Navidrome connection. Saving with `enabled: true` but no `url`, `username` or `password` returns `400`. |
 | `sync_navidrome` | boolean | Create/update a Navidrome playlist after playlist downloads, Playlist Monitor sweeps and library changes. |
 | `cache_cover_art` | boolean | Keep extracted cover images under `/data/cover_cache` to speed up `/cover`. Covers fetched for [read-only extra folders](features/external-library.md) are always stored there, even when this is `false`. |
-| `library_upgrade` | object | Defaults a library upgrade scan starts from: `artwork_min_px` (clamped to `100–3000`), `artwork_source` (`highest`, `spotify`, `itunes`, `youtube-music`) and `recheck_days` (`0–3650`, `0` meaning always re-check). A scan request may override them. See [Upgrade library](features/library-upgrade.md#options). |
+| `library_upgrade` | object | Defaults a library upgrade scan starts from: `artwork_min_px` (clamped to `100–3000`), `artwork_source` (`highest`, `spotify`, `itunes`, `youtube-music`), `recheck_days` (`0–3650`, `0` meaning always re-check) and `metadata_mode` (`fill` or `verify`). A scan request may override them. See [Upgrade library](features/library-upgrade.md#options). |
+| `discogs_token` | string | Personal access token for the [tag editor](features/tag-editor.md)'s Discogs search. MusicBrainz needs none. |
 | `external_library` | object | Extra folders of already-tagged audio. `folders` is a list of absolute paths (as seen inside the container, max 20). Relative paths are dropped. See [Existing music folders](features/external-library.md). |
 
 ---
@@ -1418,7 +1420,8 @@ Look at every library track and queue the ones that are behind. Writes nothing t
 {
   "artwork_min_px": 600,
   "artwork_source": "highest",
-  "recheck_days": 30
+  "recheck_days": 30,
+  "metadata_mode": "fill"
 }
 ```
 
@@ -1449,6 +1452,110 @@ Stop after the track being worked on. The queue is kept, and `POST /api/library/
 ### `POST /api/library/upgrade/cancel`
 
 Drop the rest of the queue. Tracks already upgraded stay upgraded.
+
+---
+
+### `POST /api/library/albums/merge/preview`
+
+Album merge candidates: albums the tag sources say belong together but the library currently files as separate singles. Writes nothing.
+
+**Response:**
+
+```json
+{
+  "candidates": [
+    {
+      "album": "Glory Days",
+      "album_artist": "Little Mix",
+      "year": "2016",
+      "track_count": 2,
+      "tracks": [
+        {
+          "file": "Little Mix/Shout Out to My Ex.mp3",
+          "title": "Shout Out to My Ex",
+          "current_album": "Shout Out to My Ex",
+          "track_number": 1,
+          "release_date": "2016-11-18",
+          "genre": "Pop"
+        }
+      ]
+    }
+  ]
+}
+```
+
+---
+
+### `POST /api/library/albums/merge`
+
+Retag the confirmed albums and move their tracks into one `Artist/Album/` folder, then refresh the M3Us and Navidrome playlists that pointed at the old paths. This is the one upgrade that **moves the audio files**.
+
+**Body:**
+
+```json
+{ "plans": [ /* the candidates from .../preview */ ] }
+```
+
+**Response:** `{ "merged", "moved", "failed": [...], "playlists": [...], "playlists_refreshed": [...] }`.
+
+---
+
+### `POST /api/library/playlists/rebuild`
+
+Rewrite every known playlist's `.m3u` from what is already on disk, including songs the library already had (downloaded for another playlist or as an album/single), not just the last batch. See [Rebuild playlist files](features/library-upgrade.md#rebuild-playlist-files).
+
+**Response:** `{ "playlists", "rebuilt", "tracks_linked", "details": [...] }`.
+
+---
+
+## Tag editor
+
+See [Tag editor](features/tag-editor.md). All four endpoints need an admin.
+
+### `GET /api/library/tags`
+
+Every editable tag of one library track. `file` is a library path.
+
+**Response:** `{ "file", "tags": { "title", "artist", "album", "album_artist", "track_number", "track_total", "disc_number", "disc_total", "date", "year", "genre", "comment", "composer", "has_cover", "cover_mime", "duration", "codec" } }`.
+
+### `POST /api/library/tags`
+
+Write tags in place.
+
+**Body:**
+
+```json
+{
+  "file": "Artist/Album/Track.mp3",
+  "fields": { "title": "Track", "artist": "Artist", "album": "Album" },
+  "cover": "data:image/jpeg;base64,…",
+  "remove_cover": false
+}
+```
+
+`fields` is a partial object: **only the keys present are written**, an empty string removes that field, and the rest are left untouched. `cover` (a data URL or bare base64 image, ≤ 12 MB) replaces the embedded cover; `remove_cover` deletes it. Response is the same shape as `GET`, with the tags as read back. `400` for an unsupported format, `404` for a missing file, `413` for an oversized cover.
+
+### `GET /api/library/tags/search`
+
+Look a track up on `source=musicbrainz` (keyless) or `source=discogs` (needs `discogs_token`). Send a free-text `q`, and/or `title` + `artist` (MusicBrainz builds a `recording:` query from them). `limit` is 1–25.
+
+**Response:** `{ "source", "results": [ { "source", "title", "artist", "album", "album_artist", "year", "date", "genre", "release_type", "release_id", "mbid"? , "format"?, "country"? } ] }`.
+
+### `GET /api/library/tags/release`
+
+The album metadata and ordered tracklist of a candidate, for filling the form. `source` and `id` (the candidate's `release_id`).
+
+**Response:** `{ "source", "album", "album_artist", "date", "year", "genre", "release_type", "track_total", "tracks": [ { "disc", "position", "title", "duration" } ] }`.
+
+---
+
+## Duplicates
+
+### `GET /api/library/duplicates`
+
+Duplicate titles and albums in the library listing, for review. See [Duplicate finder](features/duplicates.md). Deleting uses `DELETE /delete/batch`. Admin only.
+
+**Response:** `{ "tracks": [ { "title", "artist", "count", "size", "files": [...] } ], "albums": [ { "album", "album_artist", "track_count", "folders", "reasons", "duplicate_titles", "size", "files": [...] } ], "track_count", "album_count", "duplicate_files", "reclaimable_bytes" }`.
 
 ---
 

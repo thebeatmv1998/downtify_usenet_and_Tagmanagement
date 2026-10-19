@@ -186,3 +186,33 @@ def test_a_file_without_artwork_takes_whatever_is_found(
     best = cover_sources.best_cover(SONG, current=None)
     assert best is not None
     assert best.width == 544
+
+
+# ── Never coverless ────────────────────────────────────────────────
+def test_the_bundled_default_cover_is_a_real_image() -> None:
+    cover = cover_sources.default_cover()
+
+    assert cover is not None
+    assert cover.source == cover_sources.SOURCE_DEFAULT
+    assert cover.width > 0
+    assert cover.data.startswith(b'\x89PNG')
+
+
+def test_first_cover_stops_at_the_first_source_that_has_one(
+    monkeypatch: Any,
+) -> None:
+    asked = _stub_sources(monkeypatch, {'itunes': 1400, 'youtube-music': 544})
+
+    cover = cover_sources.first_cover(SONG)
+
+    assert cover is not None
+    assert cover.source == 'itunes'
+    assert asked == [('spotify',), ('itunes',)]
+
+
+def test_first_cover_is_none_when_no_source_has_anything(
+    monkeypatch: Any,
+) -> None:
+    _stub_sources(monkeypatch, {})
+
+    assert cover_sources.first_cover(SONG) is None

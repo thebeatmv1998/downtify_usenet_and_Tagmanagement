@@ -933,6 +933,108 @@ def track_from_id(track_id: str) -> dict[str, Any]:
     return song
 
 
+def _best_track_row(
+    artist: str, title: str, duration: Optional[float] = None
+) -> Optional[dict[str, Any]]:
+    """The Deezer search row for *artist* + *title*, or ``None``.
+
+    Matching is the same strictness as :func:`find_track_preview`: the
+    row's artist and title must line up (ignoring ``(Live)``/``- Radio
+    Edit`` style suffixes), and among matches the duration closest to the
+    file's wins, so a live cut never beats the studio one.
+    """
+
+    wanted_artist = file_name_key(artist)
+    wanted_title = title_key(title)
+    if not wanted_artist or not wanted_title:
+        return None
+    try:
+        resp = httpx.get(
+            _TRACK_SEARCH_URL,
+            params={'q': f'{artist} {title}', 'limit': 25},
+            timeout=_TIMEOUT,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception:
+        logger.opt(exception=True).debug('Deezer track search failed')
+        return None
+    if not isinstance(data, dict) or data.get('error'):
+        return None
+
+    matches: list[dict[str, Any]] = []
+    for row in data.get('data') or []:
+        if not isinstance(row, dict):
+            continue
+        row_artist = str((row.get('artist') or {}).get('name') or '')
+        if file_name_key(row_artist) != wanted_artist:
+            continue
+        titles = {
+            title_key(row.get('title')),
+            title_key(row.get('title_short')),
+        }
+        if wanted_title not in titles:
+            continue
+        matches.append(row)
+    if not matches:
+        return None
+    if duration:
+        matches.sort(
+            key=lambda row: abs(
+                float(row.get('duration') or 0) - float(duration)
+            )
+        )
+    return matches[0]
+
+
+def lookup_track_metadata(song: dict[str, Any]) -> Optional[dict[str, Any]]:
+    """Album, album artist, year and track number for *song*, or ``None``.
+
+    A keyless fallback for tracks whose Spotify id isn't known and whose
+    iTunes lookup was refused (iTunes rate-limits hard): Deezer's public
+    track search matches on artist and title, and the track's own
+    resource adds the album and its position on it. ``None`` means "no
+    safe match", so the caller leaves the file's tags alone.
+    """
+
+    artists = song.get('artists') or []
+    artist = artists[0] if artists else (song.get('artist') or '')
+    title = song.get('name', '') or song.get('title', '')
+    if not artist or not title:
+        return None
+
+    row = _best_track_row(artist, title, song.get('duration'))
+    if row is None or not row.get('id'):
+        return None
+    try:
+        full = track_from_id(str(row['id']))
+    except ValueError:
+        return None
+
+    album = row.get('album') if isinstance(row.get('album'), dict) else {}
+    album_name = str(
+        full.get('album_name') or album.get('title') or ''
+    ).strip()
+    if not album_name:
+        return None
+    lead = (full.get('artists') or [artist])[0]
+    found = {
+        'album_name': album_name,
+        'album_artist': str(lead or artist),
+        'year': str(full.get('year') or ''),
+        'release_date': str(full.get('release_date') or ''),
+        'track_number': int(full.get('track_number') or 0),
+        'genre': '',
+    }
+    logger.info(
+        'Deezer metadata resolved: {!r} by {!r} → album {!r}',
+        title,
+        artist,
+        album_name,
+    )
+    return found
+
+
 def _paginate_tracks(first_page: dict[str, Any]) -> list[dict[str, Any]]:
     """Every row of a Deezer tracklist, following ``next`` - a full URL
     to the following page, present whenever there is one - until Deezer

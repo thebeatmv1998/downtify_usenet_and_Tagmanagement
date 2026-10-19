@@ -6,7 +6,7 @@ lyrics, tags missing an album or a year. Re-downloading everything to fix
 that wastes the files that are already fine, so this module looks at what
 is on disk and repairs only what is actually behind.
 
-Three categories are handled, all of them writes to tags:
+Four categories are handled:
 
 ``artwork``
     Replace a cover smaller than the target with the largest one Spotify,
@@ -15,8 +15,19 @@ Three categories are handled, all of them writes to tags:
     Fill in lyrics for tracks that have none, through the ordered
     provider list (see :mod:`downtify.lyrics`).
 ``metadata``
-    Re-read the track from Spotify and write back album, album artist,
-    release date and track number.
+    Re-read the track from Spotify — or, for files without a known
+    Spotify track, from iTunes — and write back album, album artist,
+    release date and track number. One of two modes applies (see
+    :data:`METADATA_MODES`): ``fill`` only completes tags that are
+    empty or hold a placeholder like "Unknown album"; ``verify``
+    additionally compares every track against the remote source and
+    corrects values that disagree.
+``album_cover``
+    Write a ``cover.jpg``/``cover.png`` sidecar into an album folder
+    that has audio but no image of its own, so folder-based players
+    (Navidrome, Jellyfin) show the album art even when the tracks'
+    covers are embedded only. This one writes a file next to the audio,
+    never into it (see :mod:`downtify.album_covers`).
 
 Audio itself is never replaced: swapping the file a user already has is
 a different problem (match confidence, review of uncertain matches,
@@ -41,7 +52,7 @@ from typing import Any, Callable, Optional
 from loguru import logger
 from mutagen import File as MutagenFile
 
-from . import cover_sources, spotify
+from . import album_covers, cover_sources, itunes, library_catalog, spotify
 from . import lyrics as lyrics_mod
 from .downloader import embed_lyrics, embed_metadata
 from .library_catalog import (
@@ -74,9 +85,15 @@ STAGING_TEMPLATE = '{stem}' + UPGRADE_STAGING_MARKER + '{suffix}'
 CATEGORY_ARTWORK = 'artwork'
 CATEGORY_LYRICS = 'lyrics'
 CATEGORY_METADATA = 'metadata'
+CATEGORY_ALBUM_COVER = 'album_cover'
 
 #: Every category a scan reports on, in the order the UI shows them.
-CATEGORIES = (CATEGORY_ARTWORK, CATEGORY_LYRICS, CATEGORY_METADATA)
+CATEGORIES = (
+    CATEGORY_ARTWORK,
+    CATEGORY_LYRICS,
+    CATEGORY_METADATA,
+    CATEGORY_ALBUM_COVER,
+)
 
 #: How far a rewritten file's duration may drift from the original
 #: before it is rejected. Tag writes don't touch audio, so this only
@@ -85,6 +102,15 @@ _DURATION_TOLERANCE_SECONDS = 2.0
 
 DEFAULT_ARTWORK_MIN_PX = 600
 DEFAULT_RECHECK_DAYS = 30
+
+METADATA_MODE_FILL = 'fill'
+METADATA_MODE_VERIFY = 'verify'
+
+#: How the metadata category treats existing tags: ``fill`` completes
+#: only what is missing or a placeholder, ``verify`` also corrects
+#: values that disagree with the remote source.
+METADATA_MODES = (METADATA_MODE_FILL, METADATA_MODE_VERIFY)
+DEFAULT_METADATA_MODE = METADATA_MODE_FILL
 
 #: Upper bound on how often progress is pushed to connected clients: a
 #: run is tens of thousands of tracks long and every message costs a
@@ -100,6 +126,7 @@ class UpgradeOptions:
     artwork_min_px: int = DEFAULT_ARTWORK_MIN_PX
     artwork_source: str = cover_sources.PREFERENCE_HIGHEST
     recheck_days: int = DEFAULT_RECHECK_DAYS
+    metadata_mode: str = DEFAULT_METADATA_MODE
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -107,6 +134,7 @@ class UpgradeOptions:
             'artwork_min_px': self.artwork_min_px,
             'artwork_source': self.artwork_source,
             'recheck_days': self.recheck_days,
+            'metadata_mode': self.metadata_mode,
         }
 
 
@@ -133,6 +161,9 @@ def options_from(payload: dict[str, Any]) -> UpgradeOptions:
     source = str(payload.get('artwork_source') or '')
     if source not in cover_sources.ARTWORK_SOURCES:
         source = cover_sources.PREFERENCE_HIGHEST
+    mode = str(payload.get('metadata_mode') or '')
+    if mode not in METADATA_MODES:
+        mode = DEFAULT_METADATA_MODE
     return UpgradeOptions(
         categories=normalize_categories(payload.get('categories')),
         artwork_min_px=_int(
@@ -140,19 +171,29 @@ def options_from(payload: dict[str, Any]) -> UpgradeOptions:
         ),
         artwork_source=source,
         recheck_days=_int('recheck_days', DEFAULT_RECHECK_DAYS, 0, 3650),
+        metadata_mode=mode,
     )
 
 
 # ── Detection ─────────────────────────────────────────────────────────
+def _is_blank_or_placeholder(value: Any) -> bool:
+    return library_catalog.is_blank_or_placeholder(value)
+
+
 def _metadata_gaps(entry: dict[str, Any]) -> list[str]:
-    """Tag fields a downloaded track should have but doesn't."""
+    """Tag fields a downloaded track should have but doesn't.
+
+    A field that holds a placeholder ("Unknown album", "unknown", ...)
+    counts as missing: it carries no more information than an empty
+    tag, and a metadata upgrade should try to replace it.
+    """
 
     gaps: list[str] = []
-    if not str(entry.get('album') or '').strip():
+    if _is_blank_or_placeholder(entry.get('album')):
         gaps.append('album')
-    if not str(entry.get('album_artist') or '').strip():
+    if _is_blank_or_placeholder(entry.get('album_artist')):
         gaps.append('album_artist')
-    if not str(entry.get('year') or '').strip():
+    if _is_blank_or_placeholder(entry.get('year')):
         gaps.append('year')
     if not int(entry.get('track_number') or 0):
         gaps.append('track_number')
@@ -187,7 +228,12 @@ def track_findings(
     *,
     artwork_min_px: int,
 ) -> list[str]:
-    """Which categories this track is behind on."""
+    """Which categories this track is behind on.
+
+    The folder-level ``album_cover`` category is not decided here: it is
+    about the album folder, not one track, and is computed once per
+    folder by the scan (see :func:`album_cover_gap`).
+    """
 
     found: list[str] = []
     if int(entry.get('cover_px') or 0) < artwork_min_px:
@@ -200,20 +246,58 @@ def track_findings(
     return found
 
 
+def _same_path(left: Path, right: Optional[Path]) -> bool:
+    if right is None:
+        return False
+    try:
+        return left.resolve() == right.resolve()
+    except OSError:
+        return left == right
+
+
+def album_folder(full: Path, ctx: LibraryContext) -> Optional[Path]:
+    """The album folder *full* belongs to, or ``None`` when it has none.
+
+    A path in a library root (``/downloads``, the slskd folder or an
+    extra folder) belongs to no album of its own — a flat library has no
+    per-album folders — so nothing is written there.
+    """
+
+    folder = full.parent
+    roots = [ctx.download_dir, ctx.slskd_dir, *ctx.extra_dirs]
+    for root in roots:
+        if _same_path(folder, root):
+            return None
+    return folder
+
+
+def album_cover_gap(full: Path, ctx: LibraryContext) -> bool:
+    """True when the track's album folder has audio but no cover image."""
+
+    folder = album_folder(full, ctx)
+    if folder is None:
+        return False
+    return not album_covers.has_cover(folder)
+
+
+def _album_cover_pending(
+    full: Path, ctx: LibraryContext, seen: set[str]
+) -> bool:
+    """True the first time a coverless album folder is seen in a scan."""
+
+    folder = album_folder(full, ctx)
+    if folder is None:
+        return False
+    key = str(folder)
+    if key in seen or album_covers.has_cover(folder):
+        return False
+    seen.add(key)
+    return True
+
+
 # ── The song a track describes ────────────────────────────────────────
 def _song_from_tags(entry: dict[str, Any]) -> dict[str, Any]:
-    artist = str(entry.get('artist') or '')
-    artists = [part.strip() for part in artist.split(';') if part.strip()]
-    return {
-        'name': str(entry.get('title') or ''),
-        'artists': artists or ([artist] if artist else []),
-        'artist': artist,
-        'album_name': str(entry.get('album') or ''),
-        'album_artist': str(entry.get('album_artist') or ''),
-        'year': str(entry.get('year') or ''),
-        'track_number': int(entry.get('track_number') or 0),
-        'duration': float(entry.get('duration') or 0.0),
-    }
+    return library_catalog.song_from_entry(entry)
 
 
 def _merge_remote(
@@ -229,6 +313,33 @@ def _merge_remote(
     if not merged.get('name'):
         merged['name'] = local.get('name', '')
     return merged
+
+
+def _resolve_remote_metadata(
+    song: dict[str, Any], spotify_id: str
+) -> Optional[dict[str, Any]]:
+    """What a remote source says about the track, or ``None``.
+
+    A known Spotify track is re-read from Spotify; anything else falls
+    back to an iTunes search, which needs no ID but matches on artist
+    and title alone (and cross-checks the duration itself).
+    """
+
+    try:
+        if spotify_id:
+            # The album lookup costs two more requests; only a file with
+            # no album tag of its own needs it (single-track downloads
+            # before the fix that made them fetch it).
+            return spotify.track_from_id(
+                spotify_id, with_album=not song.get('album_name')
+            )
+        return itunes.lookup_track_metadata(song)
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Library upgrade: metadata lookup failed for {!r}',
+            song.get('name'),
+        )
+        return None
 
 
 def song_for_track(
@@ -247,21 +358,46 @@ def song_for_track(
     song = _song_from_tags(entry)
     if spotify_id:
         song['song_id'] = spotify_id
-    if not (refresh_metadata and spotify_id):
+    if not refresh_metadata:
         return song
-    try:
-        # The album lookup costs two more requests; only a file with no
-        # album tag of its own needs it (single-track downloads before the
-        # fix that made them fetch it).
-        remote = spotify.track_from_id(
-            spotify_id, with_album=not song.get('album_name')
-        )
-    except Exception:
-        logger.opt(exception=True).debug(
-            'Library upgrade: Spotify lookup failed for {}', spotify_id
-        )
-        return song
+    remote = _resolve_remote_metadata(song, spotify_id)
     return _merge_remote(song, remote or {})
+
+
+#: Tag fields ``verify`` mode compares with the remote source, as
+#: ``(library entry key, remote song key)`` pairs.
+_VERIFY_FIELDS = (
+    ('album', 'album_name'),
+    ('album_artist', 'album_artist'),
+    ('year', 'year'),
+    ('track_number', 'track_number'),
+)
+
+
+def _metadata_corrections(
+    entry: dict[str, Any], remote: Optional[dict[str, Any]]
+) -> list[str]:
+    """Tag fields whose value disagrees with the remote, as old → new.
+
+    An empty remote value never counts as a correction: the remote not
+    knowing a field is no reason to touch what the file has.
+    """
+
+    if not remote:
+        return []
+    fixed: list[str] = []
+    for local_key, remote_key in _VERIFY_FIELDS:
+        new = remote.get(remote_key)
+        if not new:
+            continue
+        old = entry.get(local_key)
+        if local_key == 'track_number':
+            same = int(old or 0) == int(new)
+        else:
+            same = str(old or '').strip() == str(new).strip()
+        if not same:
+            fixed.append(f'{local_key} "{old or ""}" → "{new}"')
+    return fixed
 
 
 # ── Safe file replacement ─────────────────────────────────────────────
@@ -409,8 +545,77 @@ def _pick_artwork(
         preference=options.artwork_source,
     )
     if better is None:
+        if have == 0:
+            # No source knows a cover: embed the bundled placeholder
+            # rather than leaving the track coverless — some players
+            # (Navidrome clients) break on files without any art.
+            fallback = cover_sources.default_cover()
+            if fallback is not None:
+                return _Artwork(
+                    data=fallback.data,
+                    px=fallback.width,
+                    source=fallback.source,
+                )
         return _Artwork(px=have)
     return _Artwork(data=better.data, px=better.width, source=better.source)
+
+
+@dataclass
+class _AlbumCover:
+    """The cover written into an album folder, and where it came from."""
+
+    path: Path
+    px: int = 0
+    source: str = ''
+
+
+def _folder_cover_bytes(
+    full: Path, song: dict[str, Any], options: UpgradeOptions
+) -> Optional[cover_sources.CoverCandidate]:
+    """Cover to drop into the folder: an embedded one first, then remote.
+
+    The whole point is that the tracks already carry covers, so an
+    embedded image (of this track, or of a folder sibling) is preferred
+    over another network lookup; the sources are only asked when nothing
+    is embedded, and the bundled placeholder is the last resort so a
+    folder never stays bare.
+    """
+
+    embedded = cover_sources.current_cover(full)
+    if embedded is not None:
+        return embedded
+    folder = full.parent
+    for sibling in album_covers.iter_audio_files(folder):
+        if sibling == full:
+            continue
+        candidate = cover_sources.current_cover(sibling)
+        if candidate is not None:
+            return candidate
+    remote = cover_sources.best_cover(
+        song, current=None, preference=options.artwork_source
+    )
+    if remote is not None:
+        return remote
+    return cover_sources.default_cover()
+
+
+def _ensure_album_cover(
+    full: Path, song: dict[str, Any], *, options: UpgradeOptions
+) -> Optional[_AlbumCover]:
+    """Write the folder's cover file when it has none; ``None`` otherwise."""
+
+    folder = full.parent
+    if album_covers.has_cover(folder):
+        return None
+    candidate = _folder_cover_bytes(full, song, options)
+    if candidate is None:
+        return None
+    target = album_covers.write_cover(folder, candidate.data)
+    if target is None:
+        return None
+    return _AlbumCover(
+        path=target, px=candidate.width, source=candidate.source
+    )
 
 
 def _pick_lyrics(
@@ -488,14 +693,84 @@ def _write_upgrade(
     return None
 
 
-def _outcome_detail(changed: list[str], artwork: _Artwork) -> str:
+def _outcome_detail(
+    changed: list[str],
+    artwork: _Artwork,
+    metadata_detail: str = '',
+    album_cover_detail: str = '',
+) -> str:
     parts: list[str] = []
     for name in changed:
         if name == CATEGORY_ARTWORK and artwork.px:
             parts.append(f'artwork {artwork.px}px ({artwork.source})')
+        elif name == CATEGORY_METADATA and metadata_detail:
+            parts.append(metadata_detail)
+        elif name == CATEGORY_ALBUM_COVER and album_cover_detail:
+            parts.append(album_cover_detail)
         else:
             parts.append(name)
     return ', '.join(parts)
+
+
+#: Categories whose work rewrites the audio file. ``album_cover`` and
+#: ``lyrics`` don't: the first writes a sidecar image, the second an
+#: ``.lrc``/embedded lyric, and neither needs the tags rewritten.
+_AUDIO_CATEGORIES = frozenset({CATEGORY_ARTWORK, CATEGORY_METADATA})
+
+
+def _match_song(
+    entry: dict[str, Any], spotify_id: str, options: UpgradeOptions
+) -> tuple[dict[str, Any], Optional[dict[str, Any]], bool]:
+    """The song to write, its remote metadata, and whether the album fell
+    back to the title (no source knew one)."""
+
+    song = _song_from_tags(entry)
+    if spotify_id:
+        song['song_id'] = spotify_id
+    remote: Optional[dict[str, Any]] = None
+    if CATEGORY_METADATA in options.categories:
+        remote = _resolve_remote_metadata(song, spotify_id)
+        if remote:
+            song = _merge_remote(song, remote)
+
+    # No source knew an album: a single's album is its own title, so the
+    # tag is never left empty (or a placeholder) after an upgrade.
+    fell_back = False
+    if CATEGORY_METADATA in options.categories and _is_blank_or_placeholder(
+        song.get('album_name')
+    ):
+        title = str(song.get('name') or '').strip()
+        if title:
+            song['album_name'] = title
+            fell_back = True
+    return song, remote, fell_back
+
+
+def _metadata_change(
+    entry: dict[str, Any],
+    remote: Optional[dict[str, Any]],
+    song: dict[str, Any],
+    album_fell_back: bool,
+    options: UpgradeOptions,
+) -> tuple[bool, str]:
+    """Whether the metadata category changes anything, and how to say it."""
+
+    if CATEGORY_METADATA not in options.categories:
+        return False, ''
+    from_title = (
+        f'metadata: album "" → "{song.get("album_name")}" (from title)'
+    )
+    if options.metadata_mode == METADATA_MODE_VERIFY and remote:
+        corrections = _metadata_corrections(entry, remote)
+        if corrections:
+            return True, 'metadata: ' + ', '.join(corrections)
+    elif _metadata_gaps(entry) and (remote or album_fell_back):
+        return True, from_title if (album_fell_back and not remote) else ''
+    # In verify mode a remote hit that says nothing about the album still
+    # leaves the title fallback to write.
+    if album_fell_back:
+        return True, from_title
+    return False, ''
 
 
 def upgrade_track(
@@ -516,34 +791,54 @@ def upgrade_track(
     if found is None:
         return UpgradeOutcome(JOB_SKIPPED, 'File is no longer in the library')
     full, entry = found
+    return _apply_track(
+        full,
+        entry,
+        stored_path,
+        ctx,
+        deps=deps,
+        options=options,
+        stage_now=stage_now,
+    )
 
+
+def _apply_track(
+    full: Path,
+    entry: dict[str, Any],
+    stored_path: str,
+    ctx: LibraryContext,
+    *,
+    deps: UpgradeDeps,
+    options: UpgradeOptions,
+    stage_now: Callable[[str], None],
+) -> UpgradeOutcome:
     spotify_id = (
         deps.spotify_id_for(stored_path) or ''
         if deps.spotify_id_for is not None
         else ''
     )
     stage_now('matching')
-    song = song_for_track(
-        entry,
-        spotify_id=spotify_id,
-        refresh_metadata=CATEGORY_METADATA in options.categories,
-    )
+    song, remote, album_fell_back = _match_song(entry, spotify_id, options)
 
     stage_now('artwork')
     artwork = _pick_artwork(song, full, entry, options=options)
     stage_now('lyrics')
     new_lyrics = _pick_lyrics(song, full, deps=deps, options=options)
 
+    want_album_cover = (
+        CATEGORY_ALBUM_COVER in options.categories
+        and album_cover_gap(full, ctx)
+    )
+
     changed: list[str] = []
     if artwork.data is not None:
         changed.append(CATEGORY_ARTWORK)
-    if (
-        CATEGORY_METADATA in options.categories
-        and spotify_id
-        and _metadata_gaps(entry)
-    ):
+    metadata_changed, metadata_detail = _metadata_change(
+        entry, remote, song, album_fell_back, options
+    )
+    if metadata_changed:
         changed.append(CATEGORY_METADATA)
-    if not changed and new_lyrics is None:
+    if not changed and new_lyrics is None and not want_album_cover:
         return UpgradeOutcome(
             JOB_SKIPPED,
             'Already up to date',
@@ -551,16 +846,26 @@ def upgrade_track(
             artwork_source=artwork.source,
         )
 
-    stage_now('writing')
-    error = _write_upgrade(
-        full,
-        song,
-        artwork=artwork,
-        new_lyrics=new_lyrics,
-        write_tags=bool(changed),
-    )
-    if error:
-        return UpgradeOutcome(JOB_FAILED, error)
+    if _AUDIO_CATEGORIES.intersection(changed) or new_lyrics is not None:
+        stage_now('writing')
+        error = _write_upgrade(
+            full,
+            song,
+            artwork=artwork,
+            new_lyrics=new_lyrics,
+            write_tags=bool(_AUDIO_CATEGORIES.intersection(changed)),
+        )
+        if error:
+            return UpgradeOutcome(JOB_FAILED, error)
+
+    cover_detail = ''
+    cover: Optional[_AlbumCover] = None
+    if want_album_cover:
+        stage_now('album_cover')
+        cover = _ensure_album_cover(full, song, options=options)
+        if cover is not None:
+            changed.append(CATEGORY_ALBUM_COVER)
+            cover_detail = f'album cover {cover.px}px ({cover.source})'
 
     if new_lyrics is not None:
         changed.append(CATEGORY_LYRICS)
@@ -572,10 +877,10 @@ def upgrade_track(
 
     return UpgradeOutcome(
         JOB_DONE,
-        _outcome_detail(changed, artwork),
+        _outcome_detail(changed, artwork, metadata_detail, cover_detail),
         changed=changed,
-        artwork_px=artwork.px,
-        artwork_source=artwork.source,
+        artwork_px=max(artwork.px, cover.px if cover else 0),
+        artwork_source=artwork.source or (cover.source if cover else ''),
     )
 
 
@@ -669,6 +974,9 @@ class LibraryUpgradeRunner:
             checked: list[tuple[str, list[str]]] = []
             total_bytes = 0
             skipped = 0
+            # Folder covers are per album, not per track: the first track
+            # of a folder queues the work, the rest of the folder doesn't.
+            cover_folders: set[str] = set()
             for index, entry in enumerate(entries, start=1):
                 if self._stop.is_set():
                     self.db.set_state(run_id, STATE_CANCELLED)
@@ -694,10 +1002,27 @@ class LibraryUpgradeRunner:
                         entry, full, artwork_min_px=options.artwork_min_px
                     )
                 )
+                if CATEGORY_ALBUM_COVER in due and _album_cover_pending(
+                    full, ctx, cover_folders
+                ):
+                    behind.add(CATEGORY_ALBUM_COVER)
                 found = [name for name in CATEGORIES if name in due & behind]
                 # Looking and finding nothing counts as a check, so the
                 # next scan doesn't read this file again for those.
                 clean = sorted(due - behind)
+                if (
+                    options.metadata_mode == METADATA_MODE_VERIFY
+                    and CATEGORY_METADATA in due
+                    and CATEGORY_METADATA not in found
+                ):
+                    # A wrong tag looks exactly like a right one on disk;
+                    # only the remote comparison in the run can tell them
+                    # apart. The run records the check afterwards, so it
+                    # is not booked 'clean' here.
+                    found.append(CATEGORY_METADATA)
+                    clean = [
+                        name for name in clean if name != CATEGORY_METADATA
+                    ]
                 if clean:
                     checked.append((stored, clean))
                 if found:
@@ -786,6 +1111,10 @@ class LibraryUpgradeRunner:
                 recheck_days=int(
                     run['options'].get('recheck_days') or DEFAULT_RECHECK_DAYS
                 ),
+                metadata_mode=str(
+                    run['options'].get('metadata_mode')
+                    or DEFAULT_METADATA_MODE
+                ),
             )
             self._begin(run_id, options)
         return self.status()
@@ -844,6 +1173,7 @@ class LibraryUpgradeRunner:
                     artwork_min_px=options.artwork_min_px,
                     artwork_source=options.artwork_source,
                     recheck_days=options.recheck_days,
+                    metadata_mode=options.metadata_mode,
                 ),
                 on_stage=on_stage,
             )
@@ -917,6 +1247,9 @@ class LibraryUpgradeRunner:
             ),
             recheck_days=int(
                 run['options'].get('recheck_days') or DEFAULT_RECHECK_DAYS
+            ),
+            metadata_mode=str(
+                run['options'].get('metadata_mode') or DEFAULT_METADATA_MODE
             ),
         )
         logger.info(

@@ -41,6 +41,8 @@ export const NAV = [
         page: 'features/external-library.md',
       },
       { title: 'Upgrade Library', page: 'features/library-upgrade.md' },
+      { title: 'Tag Editor', page: 'features/tag-editor.md' },
+      { title: 'Duplicate Finder', page: 'features/duplicates.md' },
       { title: 'Replace Audio', page: 'features/replace-audio.md' },
       { title: 'M3U Export', page: 'features/m3u-export.md' },
       { title: 'Playlist Cover Art', page: 'features/playlist-cover-art.md' },

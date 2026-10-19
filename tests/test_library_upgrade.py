@@ -13,12 +13,15 @@ from downtify import cover_sources, library_upgrade
 from downtify.library_catalog import LibraryContext
 from downtify.library_metadata_cache import LibraryMetadataCache
 from downtify.library_upgrade import (
+    CATEGORY_ALBUM_COVER,
     CATEGORY_ARTWORK,
     CATEGORY_LYRICS,
     CATEGORY_METADATA,
+    METADATA_MODE_VERIFY,
     LibraryUpgradeRunner,
     UpgradeDeps,
     UpgradeOptions,
+    album_cover_gap,
     song_for_track,
     staging_path,
     track_findings,
@@ -170,6 +173,40 @@ def test_missing_tag_fields_are_a_metadata_finding(tmp_path: Path) -> None:
     assert CATEGORY_METADATA in found
 
 
+def test_placeholder_tags_are_a_metadata_finding(tmp_path: Path) -> None:
+    # "Unknown album" carries no more information than an empty tag.
+    ctx = _context(tmp_path)
+    _write_track(
+        ctx.download_dir / 'a.mp3', cover_px=1200, album='Unknown album'
+    )
+    _write_track(
+        ctx.download_dir / 'b.mp3', cover_px=1200, album_artist='unknown'
+    )
+    _write_track(ctx.download_dir / 'c.mp3', cover_px=1200, year='Unbekannt')
+
+    for name in ('a.mp3', 'b.mp3', 'c.mp3'):
+        found = track_findings(
+            _entry(ctx, name), ctx.download_dir / name, artwork_min_px=600
+        )
+        assert CATEGORY_METADATA in found, name
+
+
+def test_various_artists_is_a_legitimate_album_artist(tmp_path: Path) -> None:
+    ctx = _context(tmp_path)
+    _write_track(
+        ctx.download_dir / 'a.mp3',
+        cover_px=1200,
+        album_artist='Various Artists',
+    )
+    (ctx.download_dir / 'a.lrc').write_text('[00:01.00] line', 'utf-8')
+
+    found = track_findings(
+        _entry(ctx, 'a.mp3'), ctx.download_dir / 'a.mp3', artwork_min_px=600
+    )
+
+    assert found == []
+
+
 def test_an_lrc_sidecar_counts_as_having_lyrics(tmp_path: Path) -> None:
     ctx = _context(tmp_path)
     _write_track(ctx.download_dir / 'a.mp3', cover_px=1200)
@@ -281,6 +318,24 @@ def test_artwork_upgrade_replaces_the_cover_and_keeps_the_timestamp(
     assert ID3(str(track)).getall('APIC')[0].data == _png(1200)
     assert not staging_path(track).exists()
     assert track.stat().st_mtime_ns == before
+
+
+def test_a_coverless_track_gets_the_placeholder_when_no_source_knows_one(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    ctx = _context(tmp_path)
+    track = _write_track(ctx.download_dir / 'a.mp3', cover_px=0)
+    _stub_cover(monkeypatch, None)
+
+    outcome = upgrade_track(
+        'a.mp3',
+        deps=_deps(ctx),
+        options=UpgradeOptions(categories=(CATEGORY_ARTWORK,)),
+    )
+
+    assert outcome.status == JOB_DONE
+    assert outcome.artwork_source == cover_sources.SOURCE_DEFAULT
+    assert ID3(str(track)).getall('APIC')
 
 
 def test_artwork_upgrade_is_skipped_when_no_source_has_anything_bigger(
@@ -399,11 +454,14 @@ def test_metadata_upgrade_fills_the_gaps_from_spotify(
     assert tags.getall('APIC')[0].data == _png(1200)
 
 
-def test_metadata_upgrade_needs_a_known_spotify_track(
-    tmp_path: Path,
+def test_an_empty_album_falls_back_to_the_title_when_nothing_is_found(
+    tmp_path: Path, monkeypatch: Any
 ) -> None:
     ctx = _context(tmp_path)
-    _write_track(ctx.download_dir / 'a.mp3', cover_px=1200, album='')
+    track = _write_track(ctx.download_dir / 'a.mp3', cover_px=1200, album='')
+    monkeypatch.setattr(
+        library_upgrade.itunes, 'lookup_track_metadata', lambda _song: None
+    )
 
     outcome = upgrade_track(
         'a.mp3',
@@ -411,7 +469,156 @@ def test_metadata_upgrade_needs_a_known_spotify_track(
         options=UpgradeOptions(categories=(CATEGORY_METADATA,)),
     )
 
+    assert outcome.status == JOB_DONE
+    assert 'from title' in outcome.detail
+    tags = ID3(str(track))
+    assert str(tags['TALB']) == 'Track'
+
+
+def test_the_title_also_fills_a_placeholder_album_in_verify_mode(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    ctx = _context(tmp_path)
+    track = _write_track(
+        ctx.download_dir / 'a.mp3', cover_px=1200, album='Unknown album'
+    )
+    monkeypatch.setattr(
+        library_upgrade.spotify,
+        'track_from_id',
+        lambda _id, **_kw: {'album_artist': 'Artist', 'year': '2020'},
+    )
+
+    outcome = upgrade_track(
+        'a.mp3',
+        deps=_deps(ctx, spotify_id='1' * 22),
+        options=UpgradeOptions(
+            categories=(CATEGORY_METADATA,), metadata_mode='verify'
+        ),
+    )
+
+    assert outcome.status == JOB_DONE
+    tags = ID3(str(track))
+    assert str(tags['TALB']) == 'Track'
+
+
+def test_metadata_upgrade_fills_gaps_from_itunes_without_a_spotify_id(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    ctx = _context(tmp_path)
+    track = _write_track(ctx.download_dir / 'a.mp3', cover_px=1200, album='')
+    monkeypatch.setattr(
+        library_upgrade.itunes,
+        'lookup_track_metadata',
+        lambda _song: {
+            'album_name': 'iTunes Album',
+            'album_artist': 'Artist',
+            'year': '2005',
+            'release_date': '2005-03-01',
+            'track_number': 2,
+            'genre': 'Rock',
+        },
+    )
+
+    outcome = upgrade_track(
+        'a.mp3',
+        deps=_deps(ctx),
+        options=UpgradeOptions(categories=(CATEGORY_METADATA,)),
+    )
+
+    assert outcome.status == JOB_DONE
+    tags = ID3(str(track))
+    assert str(tags['TALB']) == 'iTunes Album'
+
+
+def test_verify_mode_corrects_a_wrong_album(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    ctx = _context(tmp_path)
+    track = _write_track(
+        ctx.download_dir / 'a.mp3', cover_px=1200, album='Wrong Album'
+    )
+    monkeypatch.setattr(
+        library_upgrade.spotify,
+        'track_from_id',
+        lambda _id, **_kw: {
+            'album_name': 'Discovery',
+            'album_artist': 'Artist',
+            'year': '2020',
+            'track_number': 3,
+        },
+    )
+
+    outcome = upgrade_track(
+        'a.mp3',
+        deps=_deps(ctx, spotify_id='1' * 22),
+        options=UpgradeOptions(
+            categories=(CATEGORY_METADATA,),
+            metadata_mode=METADATA_MODE_VERIFY,
+        ),
+    )
+
+    assert outcome.status == JOB_DONE
+    assert outcome.changed == [CATEGORY_METADATA]
+    assert 'album "Wrong Album" → "Discovery"' in outcome.detail
+    assert str(ID3(str(track))['TALB']) == 'Discovery'
+
+
+def test_verify_mode_skips_a_track_that_already_matches(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    ctx = _context(tmp_path)
+    track = _write_track(ctx.download_dir / 'a.mp3', cover_px=1200)
+    before = track.read_bytes()
+    monkeypatch.setattr(
+        library_upgrade.spotify,
+        'track_from_id',
+        lambda _id, **_kw: {
+            'album_name': 'Album',
+            'album_artist': 'Artist',
+            'year': '2020',
+            'track_number': 3,
+        },
+    )
+
+    outcome = upgrade_track(
+        'a.mp3',
+        deps=_deps(ctx, spotify_id='1' * 22),
+        options=UpgradeOptions(
+            categories=(CATEGORY_METADATA,),
+            metadata_mode=METADATA_MODE_VERIFY,
+        ),
+    )
+
     assert outcome.status == JOB_SKIPPED
+    assert outcome.detail == 'Already up to date'
+    assert track.read_bytes() == before
+
+
+def test_verify_mode_skips_a_track_the_remote_does_not_know(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    ctx = _context(tmp_path)
+    track = _write_track(
+        ctx.download_dir / 'a.mp3', cover_px=1200, album='Wrong Album'
+    )
+    before = track.read_bytes()
+    monkeypatch.setattr(
+        library_upgrade.spotify,
+        'track_from_id',
+        lambda _id, **_kw: None,
+    )
+
+    outcome = upgrade_track(
+        'a.mp3',
+        deps=_deps(ctx, spotify_id='1' * 22),
+        options=UpgradeOptions(
+            categories=(CATEGORY_METADATA,),
+            metadata_mode=METADATA_MODE_VERIFY,
+        ),
+    )
+
+    assert outcome.status == JOB_SKIPPED
+    assert track.read_bytes() == before
 
 
 def test_a_failed_write_leaves_the_original_untouched(
@@ -890,3 +1097,140 @@ def test_options_are_clamped() -> None:
     assert options.artwork_min_px == 3000
     assert options.artwork_source == cover_sources.PREFERENCE_HIGHEST
     assert options.recheck_days == 0
+
+
+def test_options_take_a_metadata_mode_from_a_whitelist() -> None:
+    assert library_upgrade.options_from({}).metadata_mode == 'fill'
+    assert (
+        library_upgrade.options_from({'metadata_mode': 'verify'}).metadata_mode
+        == 'verify'
+    )
+    assert (
+        library_upgrade.options_from({'metadata_mode': 'nope'}).metadata_mode
+        == 'fill'
+    )
+
+
+def test_a_verify_scan_queues_tracks_with_no_local_findings(
+    tmp_path: Path,
+) -> None:
+    # Wrong tags look exactly like right ones on disk, so in verify mode
+    # every track whose metadata check is due goes to the queue — even
+    # one nothing local is wrong with.
+    ctx = _context(tmp_path)
+    _write_track(ctx.download_dir / 'fine.mp3', cover_px=1200)
+    (ctx.download_dir / 'fine.lrc').write_text('[00:01.00] x', 'utf-8')
+    runner = _runner(tmp_path, ctx)
+
+    runner.start_scan(
+        UpgradeOptions(artwork_min_px=600, metadata_mode=METADATA_MODE_VERIFY)
+    )
+    _wait(runner)
+
+    status = runner.status()
+    assert status['state'] == STATE_READY
+    assert status['counts']['total'] == 1
+    summary = runner.scan_summary()
+    assert summary['categories'][CATEGORY_METADATA] == 1
+    # The metadata check is recorded by the run, not by the scan; the
+    # categories that were looked at and found clean are booked now.
+    checks = runner.db.checks_for(['fine.mp3'])['fine.mp3']
+    assert CATEGORY_METADATA not in checks
+    assert CATEGORY_ARTWORK in checks
+    assert CATEGORY_LYRICS in checks
+
+
+def test_a_fill_scan_still_only_queues_local_findings(tmp_path: Path) -> None:
+    ctx = _context(tmp_path)
+    _write_track(ctx.download_dir / 'fine.mp3', cover_px=1200)
+    (ctx.download_dir / 'fine.lrc').write_text('[00:01.00] x', 'utf-8')
+    runner = _runner(tmp_path, ctx)
+
+    runner.start_scan(UpgradeOptions(artwork_min_px=600))
+    _wait(runner)
+
+    assert runner.status()['counts']['total'] == 0
+    checks = runner.db.checks_for(['fine.mp3'])['fine.mp3']
+    assert CATEGORY_METADATA in checks
+
+
+def test_a_scan_queues_a_track_whose_tags_are_placeholders(
+    tmp_path: Path,
+) -> None:
+    ctx = _context(tmp_path)
+    _write_track(
+        ctx.download_dir / 'ph.mp3', cover_px=1200, album='Unknown album'
+    )
+    (ctx.download_dir / 'ph.lrc').write_text('[00:01.00] x', 'utf-8')
+    runner = _runner(tmp_path, ctx)
+
+    runner.start_scan(UpgradeOptions(artwork_min_px=600))
+    _wait(runner)
+
+    summary = runner.scan_summary()
+    assert summary['categories'][CATEGORY_METADATA] == 1
+
+
+# ── Album folder covers ────────────────────────────────────────────
+def test_a_folder_cover_is_written_from_the_embedded_artwork(
+    tmp_path: Path,
+) -> None:
+    ctx = _context(tmp_path)
+    album = ctx.download_dir / 'Artist' / 'Album'
+    track = _write_track(album / 'Track.mp3', cover_px=800)
+    before = track.read_bytes()
+
+    outcome = upgrade_track(
+        'Artist/Album/Track.mp3',
+        deps=_deps(ctx),
+        options=UpgradeOptions(categories=(CATEGORY_ALBUM_COVER,)),
+    )
+
+    assert outcome.status == JOB_DONE
+    assert CATEGORY_ALBUM_COVER in outcome.changed
+    # The test's payload is a PNG, so the sidecar keeps that extension.
+    assert (album / 'cover.png').is_file()
+    # A folder cover never rewrites the track's own audio or tags.
+    assert track.read_bytes() == before
+
+
+def test_a_folder_that_already_has_a_cover_is_left_alone(
+    tmp_path: Path,
+) -> None:
+    ctx = _context(tmp_path)
+    album = ctx.download_dir / 'Artist' / 'Album'
+    _write_track(album / 'Track.mp3', cover_px=800)
+    (album / 'folder.jpg').write_bytes(b'\xff\xd8\xff\xe0')
+
+    assert album_cover_gap(album / 'Track.mp3', ctx) is False
+    outcome = upgrade_track(
+        'Artist/Album/Track.mp3',
+        deps=_deps(ctx),
+        options=UpgradeOptions(categories=(CATEGORY_ALBUM_COVER,)),
+    )
+    assert outcome.status == JOB_SKIPPED
+
+
+def test_a_track_in_the_library_root_has_no_album_folder(
+    tmp_path: Path,
+) -> None:
+    ctx = _context(tmp_path)
+    _write_track(ctx.download_dir / 'flat.mp3', cover_px=800)
+
+    assert album_cover_gap(ctx.download_dir / 'flat.mp3', ctx) is False
+
+
+def test_the_scan_queues_one_cover_per_folder(tmp_path: Path) -> None:
+    ctx = _context(tmp_path)
+    album = ctx.download_dir / 'Artist' / 'Album'
+    for name in ('a.mp3', 'b.mp3', 'c.mp3'):
+        _write_track(album / name, cover_px=1200)
+        (album / name).with_suffix('.lrc').write_text('[00:01.00] x', 'utf-8')
+    runner = _runner(tmp_path, ctx)
+
+    runner.start_scan(UpgradeOptions(artwork_min_px=600))
+    _wait(runner)
+
+    summary = runner.scan_summary()
+    assert summary['categories'][CATEGORY_ALBUM_COVER] == 1
+    assert runner.status()['counts']['total'] == 1

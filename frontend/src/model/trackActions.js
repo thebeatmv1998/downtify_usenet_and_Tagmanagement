@@ -7,6 +7,7 @@ import { useHistory } from '/src/model/history'
 import { useUi } from '/src/model/ui'
 import { useAuth } from '/src/model/auth'
 import { useReplaceAudio } from '/src/model/replaceAudio'
+import { useTagEditor } from '/src/model/tagEditor'
 import { canReplace } from '/src/lib/replaceAudio'
 import { saveName } from '/src/lib/paths'
 import { useI18n } from '/src/i18n'
@@ -18,6 +19,7 @@ export function useTrackActions() {
   const ui = useUi()
   const auth = useAuth()
   const replaceAudio = useReplaceAudio()
+  const tagEditor = useTagEditor()
   const router = useRouter()
   const { t } = useI18n()
 
@@ -152,6 +154,13 @@ export function useTrackActions() {
         icon: 'retry',
         hidden: !auth.isAdmin.value || !canReplace(track),
         action: () => replaceAudio.open(track),
+      },
+      {
+        // Fix the file's own tags, by hand or from MusicBrainz/Discogs.
+        label: t('tags.edit'),
+        icon: 'tag',
+        hidden: !auth.isAdmin.value,
+        action: () => tagEditor.open(track),
       },
       { divider: true },
       {

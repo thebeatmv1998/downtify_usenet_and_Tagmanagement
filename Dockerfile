@@ -29,10 +29,14 @@ FROM python:3.14-alpine
 
 LABEL maintainer="Henrique Sebastião <contato@henriquesebastiao.com>"
 LABEL version="3.4.0"
-LABEL description="Self-hosted Spotify downloader"
+LABEL description="Self-hosted Spotify/YouTube Music downloader with Usenet (Newznab + SABnzbd) and Soulseek support"
 
-LABEL org.opencontainers.image.title="Downtify" \
-    org.opencontainers.image.description="Download your Spotify playlists and songs along with album art and metadata in a self-hosted way via Docker." \
+# Unraid/usenet fork of henriquesebastiao/downtify: adds the Usenet audio
+# source (Newznab indexers + SABnzbd), the YouTube bot-check helpers
+# (cookies-keeper, PO-Token provider), album folder cover repair, merge
+# split albums and playlist .m3u rebuild in Library Upgrade.
+LABEL org.opencontainers.image.title="Downtify (usenet)" \
+    org.opencontainers.image.description="Download your Spotify, YouTube Music and Deezer playlists and songs along with album art and metadata, with optional Usenet (Newznab + SABnzbd) and Soulseek audio sources." \
     org.opencontainers.image.version="3.4.0" \
     org.opencontainers.image.authors="Henrique Sebastião <contato@henriquesebastiao.com>" \
     org.opencontainers.image.url="https://github.com/henriquesebastiao/downtify" \

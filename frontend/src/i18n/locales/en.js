@@ -342,7 +342,7 @@ export default {
       'Look up tracks with no lyrics through your provider list, and embed what is found.',
     metadata: 'Refresh tags',
     metadataHint:
-      'Fill in album, album artist, release date and track number from Spotify. Only for tracks Downtify still knows the Spotify track of.',
+      'Fill in or correct album, album artist, release date and track number, from Spotify or Apple Music.',
     tracksAffected: { one: '{count} track', other: '{count} tracks' },
     options: 'Options',
     artworkMin: 'Upgrade artwork below',
@@ -358,6 +358,38 @@ export default {
       'A track that was just looked at is skipped on the next scan. A newer Downtify always checks everything again.',
     recheckDays: { one: '{count} day', other: '{count} days' },
     recheckNever: 'Always check every track',
+    metadataMode: 'Metadata mode',
+    metadataModeFill: 'Fill in missing tags',
+    metadataModeFillHint:
+      'Only empty or placeholder tags (like "Unknown album") are completed. Values already in the file are kept.',
+    metadataModeVerify: 'Verify and correct tags',
+    metadataModeVerifyHint:
+      'Every track is compared with Spotify or Apple Music and wrong values are corrected. Slower: one remote lookup per track.',
+    album_cover: 'Add album folder covers',
+    album_coverHint:
+      'Write a cover.jpg into an album folder that has audio but no cover image, using the artwork already embedded in its tracks.',
+    mergeTitle: 'Merge split albums',
+    mergeHint:
+      'An album saved as separate singles shows up as many one-track albums. Ask Spotify and Apple Music which album the tracks belong to, then merge the confirmed ones into a single folder.',
+    mergeFind: 'Find split albums',
+    mergeSearching: 'Looking for split albums\u2026',
+    mergeNone: 'No split albums found.',
+    mergeFound: {
+      one: '{count} album to merge',
+      other: '{count} albums to merge',
+    },
+    mergeApply: { one: 'Merge {count} album', other: 'Merge {count} albums' },
+    mergeApplying: 'Merging\u2026',
+    mergeDone: 'Merged {moved} track(s).',
+    mergeStats:
+      '{resolved} of {looked_up} tracks were matched to an album by a tag source.',
+    mergeLimited:
+      'Some tracks could not be checked because a tag source was unavailable (rate limit). Wait a few minutes and try again.',
+    playlistsTitle: 'Rebuild playlist files',
+    playlistsHint:
+      'Rewrite every playlist\u2019s .m3u from what is already on disk, so songs you downloaded earlier are listed too \u2014 not just the last batch.',
+    playlistsRebuild: 'Rebuild playlists',
+    playlistsDone: 'Rebuilt {rebuilt} playlists, {linked} track(s) linked.',
     start: 'Start upgrade',
     startCount: {
       one: 'Upgrade {count} track',
@@ -387,6 +419,59 @@ export default {
     stageLyrics: 'Looking for lyrics',
     stageWriting: 'Writing the file',
     loadFailed: "Couldn't load the library upgrade",
+  },
+  tags: {
+    edit: 'Edit tags?',
+    title: 'Edit tags',
+    description:
+      'Fix the tags of "{title}", by hand or from MusicBrainz / Discogs.',
+    loading: 'Loading tags?',
+    fieldTitle: 'Title',
+    fieldArtist: 'Artist',
+    fieldAlbum: 'Album',
+    fieldAlbumArtist: 'Album artist',
+    fieldTrack: 'Track',
+    fieldTotal: 'Tracks total',
+    fieldDisc: 'Disc',
+    fieldDiscTotal: 'Discs total',
+    fieldDate: 'Date (YYYY-MM-DD)',
+    fieldGenre: 'Genre',
+    fieldComment: 'Comment',
+    fieldComposer: 'Composer',
+    fieldSource: 'Source',
+    changeCover: 'Choose image',
+    removeCover: 'Remove cover',
+    searchTitle: 'Fill from a tag source',
+    sourceMusicbrainz: 'MusicBrainz',
+    sourceDiscogs: 'Discogs',
+    searchPlaceholder: 'Artist, album or track',
+    search: 'Search',
+    noResults: 'Nothing found.',
+    use: 'Use',
+    filled: 'Fields filled from the source.',
+    save: 'Save tags',
+    saved: 'Tags saved.',
+  },
+  duplicates: {
+    title: 'Duplicates',
+    subtitle: 'The same song or album saved more than once.',
+    titles: 'Duplicate titles',
+    albums: 'Duplicate albums',
+    noneTitle: 'No duplicates',
+    noneBody: 'Every title and album in the library is unique.',
+    checkAgain: 'Check again',
+    checking: 'Checking?',
+    copyCount: { one: '{count} copy', other: '{count} copies' },
+    trackCount: { one: '{count} track', other: '{count} tracks' },
+    selectExtras: 'Select all but one',
+    selected: '{count} selected',
+    reasonMultipleFolders: 'Saved in more than one folder',
+    reasonRepeatedSong: 'The same song appears more than once',
+    deleteTitle: 'Delete the selected copies?',
+    deleteBody:
+      'The files are removed from disk, along with their playlists and covers.',
+    deleteSelected: 'Delete selected',
+    deleted: 'Deleted {count} file(s).',
   },
   album: {
     kicker: 'Album',
@@ -782,15 +867,20 @@ export default {
     usenetTypeNewznab: 'Newznab indexer',
     usenetTypeProwlarr: 'Prowlarr (native API)',
     usenetFormats: 'Preferred formats',
-    usenetFormatsHint: 'Order matters: earlier formats score higher when matching releases.',
+    usenetFormatsHint:
+      'Order matters: earlier formats score higher when matching releases.',
     usenetMinBitrate: 'Minimum bitrate',
     usenetMaxBitrate: 'Maximum bitrate',
     usenetPreferAlbums: 'Prefer album releases',
     usenetCleanupNow: 'Clean up SABnzbd now',
-    usenetCleanupNowHint: 'Deletes every finished job and its files from SABnzbd — including album folders kept for reuse.',
-    usenetCleanupDone: 'Removed {count} finished job(s) and their files from SABnzbd.',
-    usenetCleanupFailed: 'SABnzbd cleanup failed — check the connection settings.',
-    usenetPreferAlbumsHint: "Usenet is album-oriented: search releases named 'Artist - Album' too, download the album and extract the wanted track. Album releases rank first.",
+    usenetCleanupNowHint:
+      'Deletes every finished job and its files from SABnzbd — including album folders kept for reuse.',
+    usenetCleanupDone:
+      'Removed {count} finished job(s) and their files from SABnzbd.',
+    usenetCleanupFailed:
+      'SABnzbd cleanup failed — check the connection settings.',
+    usenetPreferAlbumsHint:
+      "Usenet is album-oriented: search releases named 'Artist - Album' too, download the album and extract the wanted track. Album releases rank first.",
     slskdInPlace: 'Leave files in the slskd folder',
     slskdInPlaceHint:
       'Tag them where slskd saved them instead of copying into your downloads folder.',
@@ -863,6 +953,11 @@ export default {
       'Must sit outside downloads and extra music folders. The same relative tree as the audio is recreated here.',
     lyricsLrcFolderPlaceholder: '/data/lyrics',
     lyricsProviders: 'Providers',
+    tagEditorGroup: 'Tag editor',
+    discogsToken: 'Discogs token',
+    discogsTokenHint:
+      'Personal access token for the tag editor’s Discogs search. MusicBrainz needs none.',
+    discogsTokenPlaceholder: 'Discogs personal access token',
     lyricsProvidersHint:
       'Each track tries the enabled providers in this order until one has lyrics. What a provider didn’t have is remembered for a month, so it isn’t asked again for every download.',
     lyricsLrclibHint: 'Community database — plain and time-synced lyrics',
@@ -905,8 +1000,7 @@ export default {
         "Can't reach indexer {detail}. Check the address and that it's running.",
       indexer_timeout: "Indexer {detail} didn't answer in time.",
       indexer_bad_url: 'The indexer address is not valid ({detail}).',
-      indexer_tls:
-        "The indexer's HTTPS certificate isn't trusted ({detail}).",
+      indexer_tls: "The indexer's HTTPS certificate isn't trusted ({detail}).",
       connection_not_slskd:
         "Something answered at {url}, but it doesn't look like slskd. Check the address and port.",
       connection_not_navidrome:

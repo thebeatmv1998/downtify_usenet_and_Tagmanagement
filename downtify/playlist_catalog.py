@@ -250,6 +250,33 @@ class PlaylistCatalog:
             return None
         return str(row['spotify_id'])
 
+    def update_filename(
+        self, old_filename: str, new_filename: str
+    ) -> list[str]:
+        """Point rows for *old_filename* at *new_filename*; affected names.
+
+        Used when a track is moved or renamed on disk (e.g. an album
+        merge): the content key changes with the basename, so the move
+        can't be picked up by :meth:`update_filename_by_content_key`.
+        """
+
+        old = _norm_path(old_filename)
+        new = _norm_path(new_filename)
+        if not old or not new or old == new:
+            return []
+        with self._connect() as conn:
+            conn.execute(
+                """UPDATE playlist_tracks SET filename = ?
+                   WHERE filename = ?""",
+                (new, old),
+            )
+            rows = conn.execute(
+                """SELECT DISTINCT playlist_name FROM playlist_tracks
+                   WHERE filename = ?""",
+                (new,),
+            ).fetchall()
+        return [str(row['playlist_name']) for row in rows]
+
     def update_filename_by_content_key(
         self, content_key: str, filename: str
     ) -> list[str]:

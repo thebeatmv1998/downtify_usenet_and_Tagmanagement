@@ -35,6 +35,8 @@ SOURCE_FILE = 'file'
 SOURCE_SPOTIFY = 'spotify'
 SOURCE_ITUNES = 'itunes'
 SOURCE_YOUTUBE = 'youtube-music'
+#: The bundled placeholder, used so no track is ever left coverless.
+SOURCE_DEFAULT = 'default'
 
 #: Settings values for "where should artwork come from".
 PREFERENCE_HIGHEST = 'highest'
@@ -146,6 +148,48 @@ def current_cover(path: Path) -> Optional[CoverCandidate]:
     return CoverCandidate(
         source=SOURCE_FILE, data=data, width=image_short_side(data)
     )
+
+
+#: The bundled placeholder image, embedded when no source has a cover —
+#: players like Navidrome clients misbehave on tracks with no art at all.
+_DEFAULT_COVER_PATH = Path(__file__).with_name('default_cover.png')
+_default_cover_cache: Optional[CoverCandidate] = None
+
+
+def default_cover() -> Optional[CoverCandidate]:
+    """The bundled placeholder cover, cached after the first read."""
+
+    global _default_cover_cache
+    if _default_cover_cache is not None:
+        return _default_cover_cache
+    try:
+        data = _DEFAULT_COVER_PATH.read_bytes()
+    except OSError:
+        logger.warning('Default cover {} is missing', _DEFAULT_COVER_PATH)
+        return None
+    _default_cover_cache = CoverCandidate(
+        source=SOURCE_DEFAULT,
+        data=data,
+        width=image_short_side(data),
+    )
+    return _default_cover_cache
+
+
+def first_cover(
+    song: dict[str, Any], preference: str = PREFERENCE_HIGHEST
+) -> Optional[CoverCandidate]:
+    """The first cover any source has for *song*, in preference order.
+
+    Unlike :func:`best_cover` this never measures an existing file and
+    stops at the first hit — it answers "give me something to embed"
+    during a download, not "is something better out there".
+    """
+
+    for source in _preferred_order(preference):
+        candidates = collect_candidates(song, sources=(source,))
+        if candidates:
+            return candidates[0]
+    return None
 
 
 def collect_candidates(

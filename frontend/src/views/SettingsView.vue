@@ -755,6 +755,18 @@
                 />
               </SettingRow>
             </SettingGroup>
+            <SettingGroup :title="t('settings.tagEditorGroup')">
+              <SettingRow
+                :label="t('settings.discogsToken')"
+                :description="t('settings.discogsTokenHint')"
+                stacked
+              >
+                <UiInput
+                  v-model="s.discogs_token"
+                  :placeholder="t('settings.discogsTokenPlaceholder')"
+                />
+              </SettingRow>
+            </SettingGroup>
           </template>
 
           <!-- Navidrome -->

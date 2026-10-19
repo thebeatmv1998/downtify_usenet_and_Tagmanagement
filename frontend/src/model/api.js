@@ -680,6 +680,40 @@ function writePlaylistM3u(payload) {
   return API.post('/api/playlist/m3u', payload)
 }
 
+// ── Album merge + playlist rebuild (Library Upgrade extras) ──────────
+function findSplitAlbums() {
+  return API.post('/api/library/albums/merge/preview')
+}
+
+function mergeAlbums(plans) {
+  return API.post('/api/library/albums/merge', { plans })
+}
+
+function rebuildLibraryPlaylists() {
+  return API.post('/api/library/playlists/rebuild')
+}
+
+// ── Tag editor + duplicates ──────────────────────────────────────────
+function getTrackTags(file) {
+  return API.get('/api/library/tags', { params: { file } })
+}
+
+function writeTrackTags(payload) {
+  return API.post('/api/library/tags', payload)
+}
+
+function searchTags(params) {
+  return API.get('/api/library/tags/search', { params })
+}
+
+function getTagRelease(source, id) {
+  return API.get('/api/library/tags/release', { params: { source, id } })
+}
+
+function getDuplicates() {
+  return API.get('/api/library/duplicates')
+}
+
 // ── Queue ────────────────────────────────────────────────────────────
 function getQueue() {
   return API.get('/api/queue')
@@ -870,6 +904,14 @@ export default {
   resumeLibraryUpgrade,
   cancelLibraryUpgrade,
   writePlaylistM3u,
+  findSplitAlbums,
+  mergeAlbums,
+  rebuildLibraryPlaylists,
+  getTrackTags,
+  writeTrackTags,
+  searchTags,
+  getTagRelease,
+  getDuplicates,
   getQueue,
   removeQueueItem,
   clearQueue,

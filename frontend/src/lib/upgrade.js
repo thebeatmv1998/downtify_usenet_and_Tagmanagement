@@ -2,7 +2,7 @@
 // unit-testable and the view only has to render what these return.
 
 /** Categories the backend scans for, in the order they're shown. */
-export const CATEGORIES = ['artwork', 'lyrics', 'metadata']
+export const CATEGORIES = ['artwork', 'lyrics', 'metadata', 'album_cover']
 
 /** Where artwork may come from; `highest` compares every source. */
 export const ARTWORK_SOURCES = ['highest', 'spotify', 'itunes', 'youtube-music']

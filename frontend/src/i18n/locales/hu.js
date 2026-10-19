@@ -363,6 +363,38 @@ export default {
       'A nemrég ellenőrzött szám kimarad a következő átvizsgálásból. Egy újabb Downtify mindig mindent újra megnéz.',
     recheckDays: { one: '{count} napig', other: '{count} napig' },
     recheckNever: 'Mindig minden számot ellenőrizzen',
+    metadataMode: 'Metadata mode',
+    metadataModeFill: 'Fill in missing tags',
+    metadataModeFillHint:
+      'Only empty or placeholder tags (like "Unknown album") are completed. Values already in the file are kept.',
+    metadataModeVerify: 'Verify and correct tags',
+    metadataModeVerifyHint:
+      'Every track is compared with Spotify or Apple Music and wrong values are corrected. Slower: one remote lookup per track.',
+    album_cover: 'Add album folder covers',
+    album_coverHint:
+      'Write a cover.jpg into an album folder that has audio but no cover image, using the artwork already embedded in its tracks.',
+    mergeTitle: 'Merge split albums',
+    mergeHint:
+      'An album saved as separate singles shows up as many one-track albums. Ask Spotify and Apple Music which album the tracks belong to, then merge the confirmed ones into a single folder.',
+    mergeFind: 'Find split albums',
+    mergeSearching: 'Looking for split albums\u2026',
+    mergeNone: 'No split albums found.',
+    mergeFound: {
+      one: '{count} album to merge',
+      other: '{count} albums to merge',
+    },
+    mergeApply: { one: 'Merge {count} album', other: 'Merge {count} albums' },
+    mergeApplying: 'Merging\u2026',
+    mergeDone: 'Merged {moved} track(s).',
+    mergeStats:
+      '{resolved} of {looked_up} tracks were matched to an album by a tag source.',
+    mergeLimited:
+      'Some tracks could not be checked because a tag source was unavailable (rate limit). Wait a few minutes and try again.',
+    playlistsTitle: 'Rebuild playlist files',
+    playlistsHint:
+      'Rewrite every playlist\u2019s .m3u from what is already on disk, so songs you downloaded earlier are listed too \u2014 not just the last batch.',
+    playlistsRebuild: 'Rebuild playlists',
+    playlistsDone: 'Rebuilt {rebuilt} playlists, {linked} track(s) linked.',
     start: 'Indítás',
     startCount: {
       one: '{count} szám feljavítása',
@@ -393,6 +425,59 @@ export default {
     stageLyrics: 'Dalszöveg keresése',
     stageWriting: 'Fájl írása',
     loadFailed: 'A könyvtár feljavítása nem tölthető be',
+  },
+  tags: {
+    edit: 'Edit tags?',
+    title: 'Edit tags',
+    description:
+      'Fix the tags of "{title}", by hand or from MusicBrainz / Discogs.',
+    loading: 'Loading tags?',
+    fieldTitle: 'Title',
+    fieldArtist: 'Artist',
+    fieldAlbum: 'Album',
+    fieldAlbumArtist: 'Album artist',
+    fieldTrack: 'Track',
+    fieldTotal: 'Tracks total',
+    fieldDisc: 'Disc',
+    fieldDiscTotal: 'Discs total',
+    fieldDate: 'Date (YYYY-MM-DD)',
+    fieldGenre: 'Genre',
+    fieldComment: 'Comment',
+    fieldComposer: 'Composer',
+    fieldSource: 'Source',
+    changeCover: 'Choose image',
+    removeCover: 'Remove cover',
+    searchTitle: 'Fill from a tag source',
+    sourceMusicbrainz: 'MusicBrainz',
+    sourceDiscogs: 'Discogs',
+    searchPlaceholder: 'Artist, album or track',
+    search: 'Search',
+    noResults: 'Nothing found.',
+    use: 'Use',
+    filled: 'Fields filled from the source.',
+    save: 'Save tags',
+    saved: 'Tags saved.',
+  },
+  duplicates: {
+    title: 'Duplicates',
+    subtitle: 'The same song or album saved more than once.',
+    titles: 'Duplicate titles',
+    albums: 'Duplicate albums',
+    noneTitle: 'No duplicates',
+    noneBody: 'Every title and album in the library is unique.',
+    checkAgain: 'Check again',
+    checking: 'Checking?',
+    copyCount: { one: '{count} copy', other: '{count} copies' },
+    trackCount: { one: '{count} track', other: '{count} tracks' },
+    selectExtras: 'Select all but one',
+    selected: '{count} selected',
+    reasonMultipleFolders: 'Saved in more than one folder',
+    reasonRepeatedSong: 'The same song appears more than once',
+    deleteTitle: 'Delete the selected copies?',
+    deleteBody:
+      'The files are removed from disk, along with their playlists and covers.',
+    deleteSelected: 'Delete selected',
+    deleted: 'Deleted {count} file(s).',
   },
   album: {
     kicker: 'Album',
@@ -800,15 +885,20 @@ export default {
     usenetTypeNewznab: 'Newznab indexelő',
     usenetTypeProwlarr: 'Prowlarr (natív API)',
     usenetFormats: 'Előnyben részesített formátumok',
-    usenetFormatsHint: 'A sorrend számít: a korábbi formátumok magasabb pontszámot kapnak egyezéskor.',
+    usenetFormatsHint:
+      'A sorrend számít: a korábbi formátumok magasabb pontszámot kapnak egyezéskor.',
     usenetMinBitrate: 'Minimális bitsebesség',
     usenetMaxBitrate: 'Maximális bitsebesség',
     usenetPreferAlbums: 'Album kiadások előnyben részesítése',
     usenetCleanupNow: 'SABnzbd takarítása most',
-    usenetCleanupNowHint: 'Törli az összes befejezett feladatot és fájljait a SABnzbd-ből — beleértve az újrahasznosításhoz megőrzött albummappákat is.',
-    usenetCleanupDone: '{count} befejezett feladat és fájljai eltávolítva a SABnzbd-ből.',
-    usenetCleanupFailed: 'A SABnzbd takarítás sikertelen — ellenőrizze a kapcsolat beállításait.',
-    usenetPreferAlbumsHint: "A Usenet albumközpontú: keress 'Előadó - Album' kiadásokat is, töltsd le az albumot, és nyerd ki a kívánt számot. Az albumok előre kerülnek.",
+    usenetCleanupNowHint:
+      'Törli az összes befejezett feladatot és fájljait a SABnzbd-ből — beleértve az újrahasznosításhoz megőrzött albummappákat is.',
+    usenetCleanupDone:
+      '{count} befejezett feladat és fájljai eltávolítva a SABnzbd-ből.',
+    usenetCleanupFailed:
+      'A SABnzbd takarítás sikertelen — ellenőrizze a kapcsolat beállításait.',
+    usenetPreferAlbumsHint:
+      "A Usenet albumközpontú: keress 'Előadó - Album' kiadásokat is, töltsd le az albumot, és nyerd ki a kívánt számot. Az albumok előre kerülnek.",
     slskdInPlace: 'Fájlok hagyása az slskd mappában',
     slskdInPlaceHint:
       'Ott címkézi őket, ahová az slskd mentette, ahelyett hogy a letöltési mappába másolná.',
@@ -884,6 +974,11 @@ export default {
       'A letöltéseken és az extra zenemappákon kívül. Itt jön létre ugyanaz a relatív fa, mint a hangfájlnál.',
     lyricsLrcFolderPlaceholder: '/data/lyrics',
     lyricsProviders: 'Szolgáltatók',
+    tagEditorGroup: 'Tag editor',
+    discogsToken: 'Discogs token',
+    discogsTokenHint:
+      'Personal access token for the tag editor’s Discogs search. MusicBrainz needs none.',
+    discogsTokenPlaceholder: 'Discogs personal access token',
     lyricsProvidersHint:
       'Minden szám ebben a sorrendben próbálja az engedélyezett szolgáltatókat, amíg valamelyiknél nincs dalszöveg. Amit egy szolgáltató nem talált, azt egy hónapig megjegyzi, így nem kérdezi meg minden letöltésnél.',
     lyricsLrclibHint: 'Közösségi adatbázis — sima és időzített dalszöveg',
@@ -926,8 +1021,7 @@ export default {
         'A(z) {detail} indexer nem érhető el. Ellenőrizd a címet és hogy fut-e.',
       indexer_timeout: 'A(z) {detail} indexer nem válaszolt időben.',
       indexer_bad_url: 'Az indexer címe érvénytelen ({detail}).',
-      indexer_tls:
-        'Az indexer HTTPS-tanúsítványa nem megbízható ({detail}).',
+      indexer_tls: 'Az indexer HTTPS-tanúsítványa nem megbízható ({detail}).',
       connection_not_slskd:
         'A(z) {url} címen válaszolt valami, de nem úgy néz ki, mint a slskd. Ellenőrizd a címet és a portot.',
       connection_not_navidrome:

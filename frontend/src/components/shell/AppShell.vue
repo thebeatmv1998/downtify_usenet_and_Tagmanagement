@@ -28,6 +28,7 @@
     <AddTracksToPlaylistModal />
     <DefaultPasswordPrompt />
     <ReplaceAudioDialog v-if="auth.isAdmin.value" />
+    <TagEditorDialog v-if="auth.isAdmin.value" />
   </div>
 </template>
 
@@ -48,6 +49,7 @@ import AddTracksToPlaylistModal from '../library/AddTracksToPlaylistModal.vue'
 import SignIn from './SignIn.vue'
 import DefaultPasswordPrompt from './DefaultPasswordPrompt.vue'
 import ReplaceAudioDialog from '../library/ReplaceAudioDialog.vue'
+import TagEditorDialog from '../library/TagEditorDialog.vue'
 import API from '/src/model/api'
 import { useAccount } from '/src/model/account'
 import { useAuth } from '/src/model/auth'

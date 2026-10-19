@@ -43,6 +43,12 @@ const routes = [
     component: () => import('/src/views/UpgradeView.vue'),
   },
   {
+    // Review and delete duplicate titles / albums.
+    path: '/library/duplicates',
+    name: 'Duplicates',
+    component: () => import('/src/views/DuplicatesView.vue'),
+  },
+  {
     path: '/library/album',
     name: 'Album',
     component: () => import('/src/views/AlbumView.vue'),

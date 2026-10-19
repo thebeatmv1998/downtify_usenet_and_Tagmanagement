@@ -12,6 +12,14 @@
         <span class="max-sm:sr-only">{{ t('library.upgrade') }}</span>
       </UiButton>
       <UiButton
+        v-if="library.trackCount.value && auth.isAdmin.value"
+        variant="ghost"
+        icon="copy"
+        :to="{ name: 'Duplicates' }"
+      >
+        <span class="max-sm:sr-only">{{ t('duplicates.title') }}</span>
+      </UiButton>
+      <UiButton
         variant="ghost"
         icon="refresh"
         :loading="library.loading.value"

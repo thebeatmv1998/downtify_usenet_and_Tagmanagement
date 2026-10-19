@@ -20,6 +20,7 @@ from .downloader import (
     ProgressCallback,
     save_playlist_cover,
 )
+from .library_catalog import library_context_from_state
 from .library_metadata_cache import LibraryMetadataCache
 from .library_paths import locate_library_file, slskd_dir_from_downloader
 from .library_paths_cache import invalidate_library_paths_cache
@@ -32,6 +33,7 @@ from .navidrome import (
 from .navidrome_index import NavidromeIndex
 from .playlist_catalog import PlaylistCatalog
 from .playlist_spotify_cache import PlaylistSpotifyCache
+from .playlist_tracks import build_library_song_index, resolve_track_file
 from .podcasts import PodcastStore, sync_show
 from .track_index import TrackIndex, normalize_spotify_track_id
 
@@ -623,6 +625,35 @@ class PlaylistMonitorDB:
             )
         return self.playlists_for_track(tid)
 
+    def update_filename(
+        self, old_filename: str, new_filename: str
+    ) -> set[str]:
+        """Point every watch's record of a file at *new_filename*.
+
+        Unlike :meth:`update_filename_for_spotify` this matches on the
+        recorded path, so it also covers YouTube Music / Deezer watches
+        whose track id isn't a Spotify one. Returns the playlists that
+        had the file.
+        """
+
+        old = str(old_filename or '').strip().replace('\\', '/')
+        new = str(new_filename or '').strip().replace('\\', '/')
+        if not old or not new or old == new:
+            return set()
+        with self._connect() as conn:
+            conn.execute(
+                """UPDATE downloaded_tracks SET filename = ?
+                   WHERE filename = ?""",
+                (new, old),
+            )
+            rows = conn.execute(
+                """SELECT DISTINCT p.name FROM downloaded_tracks dt
+                   JOIN monitored_playlists p ON p.id = dt.playlist_id
+                   WHERE dt.filename = ?""",
+                (new,),
+            ).fetchall()
+        return {str(row['name']) for row in rows}
+
     def mark_track_downloaded(
         self,
         playlist_id: int,
@@ -783,6 +814,12 @@ async def check_playlist(
 
     pl_subdir = m3u.sanitize_playlist_name(playlist.name)
 
+    # Whole-library artist/title index, so the M3U also lists songs the
+    # library already had from another download (see `_regenerate_m3u`).
+    tag_index = await asyncio.to_thread(
+        _library_song_index, downloader, settings, library, tracks
+    )
+
     # Filenames already known from earlier sweeps, keyed by track id,
     # topped up as each new track lands. Lets the M3U be rewritten after
     # every single download without re-resolving the whole playlist
@@ -822,20 +859,18 @@ async def check_playlist(
     downloaded = 0
     for index, song in enumerate(new_tracks):
         track_id = song['song_id']
-        pl_name = playlist.name
 
         # YouTube Music rows already carry their own video's metadata.
         if from_spotify:
             await _fill_from_spotify_track(song)
 
-        def _make_cb(s: dict, name: str) -> ProgressCallback:
-            return _progress_cb(s, name, broadcast, loop)
-
         try:
             filename = await loop.run_in_executor(
                 DOWNLOAD_EXECUTOR,
                 lambda s=song: downloader.download(
-                    s, _make_cb(s, pl_name), subdir=pl_subdir
+                    s,
+                    _progress_cb(s, playlist.name, broadcast, loop),
+                    subdir=pl_subdir,
                 ),
             )
             await asyncio.to_thread(
@@ -861,7 +896,12 @@ async def check_playlist(
                 # downloads and a slow/hung track further down the list
                 # never holds up what's already on disk.
                 await asyncio.to_thread(
-                    _regenerate_m3u, playlist, tracks, downloader, resolved
+                    _regenerate_m3u,
+                    playlist,
+                    tracks,
+                    downloader,
+                    resolved,
+                    tag_index=tag_index,
                 )
             if delay_seconds > 0 and index != len(new_tracks) - 1:
                 await asyncio.sleep(delay_seconds)
@@ -887,6 +927,7 @@ async def check_playlist(
                 downloader,
                 None,
                 known_tracks,
+                tag_index=tag_index,
             )
         await asyncio.to_thread(
             _sync_library_playlist,
@@ -1270,12 +1311,46 @@ async def check_artist(
     return downloaded
 
 
+def _library_song_index(
+    downloader: Downloader,
+    settings: Optional[dict[str, Any]],
+    library: LibraryStores,
+    tracks: list[dict[str, Any]],
+) -> Optional[dict[str, str]]:
+    """``artist|title`` → library path, or ``None`` when not needed.
+
+    Built once per sweep (and only when an M3U will be written) so
+    :func:`_regenerate_m3u` can find songs the library already had.
+    """
+
+    if not tracks:
+        return None
+    if settings is not None and settings.get('generate_m3u', True) is False:
+        return None
+    try:
+        ctx = library_context_from_state(
+            Path(downloader.download_dir),
+            settings or {},
+            track_index=library.track_index,
+            metadata_cache=library.metadata_cache,
+            playlist_catalog=library.playlist_catalog,
+        )
+        return build_library_song_index(ctx)
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Playlist M3U: library song index build failed'
+        )
+        return None
+
+
 def _regenerate_m3u(
     playlist: MonitoredPlaylist,
     tracks: list[dict[str, Any]],
     downloader: Downloader,
     resolved: Optional[dict[str, str]] = None,
     known_tracks: Optional[dict[str, Optional[str]]] = None,
+    *,
+    tag_index: Optional[dict[str, str]] = None,
 ) -> Optional[Path]:
     """Rewrite the playlist's M3U, in playlist order. Returns its path,
     or ``None`` when nothing was written.
@@ -1286,13 +1361,13 @@ def _regenerate_m3u(
     valid, correctly-ordered M3U.
 
     With *resolved* (``{track_id: filename}``) filenames are taken from
-    that map alone — the cheap path used for the rewrite after each
-    individual download. Without it every track is resolved against the
-    filesystem instead, which is the authoritative view used for the
-    final rewrite at the end of a sweep: the watch's recorded filename
-    (``known_tracks``) when that file exists — it may be a track linked
-    from elsewhere in the library, e.g. an slskd download — else the
-    track's expected path in the playlist folder.
+    that map first — the cheap path used for the rewrite after each
+    individual download. Without it the watch's recorded filename
+    (``known_tracks``) is used. Either way, when no file is found the
+    track's expected path is tried, and finally a whole-library
+    artist/title match (*tag_index*, see :mod:`downtify.playlist_tracks*)
+    so a song the library already had — downloaded for another playlist,
+    an album or as a single — is not left out of the M3U.
     """
 
     pl_subdir = m3u.sanitize_playlist_name(playlist.name)
@@ -1300,17 +1375,24 @@ def _regenerate_m3u(
     slskd_dir = slskd_dir_from_downloader(downloader)
     entries: list[dict[str, Any]] = []
     for song in tracks:
+        tid = song.get('song_id') or ''
         if resolved is not None:
-            filename = resolved.get(song.get('song_id') or '')
+            filename = resolved.get(tid)
         else:
-            filename = (known_tracks or {}).get(song.get('song_id') or '')
-            if not (
-                filename
-                and locate_library_file(filename, download_dir, slskd_dir)
-            ):
-                filename = downloader.existing_filename_for(
-                    song, subdir=pl_subdir
-                )
+            filename = (known_tracks or {}).get(tid)
+        if not (
+            filename and locate_library_file(filename, download_dir, slskd_dir)
+        ):
+            filename = downloader.existing_filename_for(song, subdir=pl_subdir)
+        if not (
+            filename and locate_library_file(filename, download_dir, slskd_dir)
+        ):
+            filename = resolve_track_file(
+                song,
+                downloader=downloader,
+                subdir=pl_subdir,
+                tag_index=tag_index,
+            )
         if not filename:
             continue
         entries.append({

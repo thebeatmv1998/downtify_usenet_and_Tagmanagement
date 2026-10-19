@@ -21,7 +21,24 @@ from loguru import logger
 
 _ITUNES_SEARCH_URL = 'https://itunes.apple.com/search'
 _TIMEOUT = 10  # seconds
-_MIN_INTERVAL = 0.35  # seconds between API calls (rate-limit courtesy)
+#: Minimum spacing between API calls. iTunes' public search endpoint
+#: starts answering 403 after a short burst (roughly 20 requests a
+#: minute from one IP), so this is deliberately conservative: a paced
+#: lookup that succeeds beats a fast one that is refused.
+_MIN_INTERVAL = 1.1  # seconds between API calls (rate-limit courtesy)
+#: How long to pause iTunes after it refuses a request with 403/429/5xx.
+_COOLDOWN_SECONDS = 15.0
+#: After this many refusals in a row, treat iTunes as down for
+#: ``_DOWN_SECONDS`` and let the callers fall back to another source
+#: instead of paying a cooldown for every single track.
+_BLOCK_LIMIT = 3
+_DOWN_SECONDS = 300.0
+#: A browser-ish identity; iTunes' public endpoint is friendlier to a
+#: named client than to the default httpx user agent.
+_USER_AGENT = (
+    'Downtify/3.4 (self-hosted music library; '
+    '+https://github.com/henriquesebastiao/downtify)'
+)
 
 # ── In-memory cache ────────────────────────────────────────────────
 # key = "normalized_artist|normalized_album" → genre string.
@@ -34,8 +51,19 @@ _cache_lock = Lock()
 # track: every track of an album shares one artwork URL.
 _artwork_cache: dict[str, str] = {}
 
+#: Successful search responses, keyed by normalized query + limit. A
+#: merge scan asks the same "artist title" query for the primary and the
+#: album-disambiguation pass, and repeats across runs; without this they
+#: would be two network calls each time.
+_search_cache: dict[str, list[dict[str, Any]]] = {}
+
 # Timestamp of the last outgoing request – used for rate pacing.
 _last_request_time: float = 0.0
+#: While ``monotonic() < _cooldown_until`` the next request waits it out;
+#: while ``< _down_until`` iTunes is skipped entirely (see :data:`_BLOCK_LIMIT`).
+_cooldown_until: float = 0.0
+_down_until: float = 0.0
+_consecutive_blocks: int = 0
 _rate_lock = Lock()
 
 
@@ -68,33 +96,127 @@ def _names_match(a: str, b: str) -> bool:
     return na in nb or nb in na
 
 
+def _query_pair(artist: str, title: str, album: str) -> tuple[str, str]:
+    """The search query and, when useful, an album-disambiguated one.
+
+    For the "album tag is the song's own title" case the two would be the
+    same query — asking twice only burns the rate budget, so the second
+    is dropped.
+    """
+
+    primary = f'{artist} {title}'.strip()
+    if album and _normalise(album) != _normalise(title):
+        return primary, f'{artist} {title} {album}'.strip()
+    return primary, ''
+
+
 # ── iTunes API call ───────────────────────────────────────────────
+def is_available() -> bool:
+    """False while iTunes is in a block cooldown (see :data:`_BLOCK_LIMIT`)."""
+
+    return time.monotonic() >= _down_until
+
+
 def _rate_wait() -> None:
-    """Block until at least ``_MIN_INTERVAL`` seconds have elapsed
-    since the last request."""
+    """Block until the cooldown is over and the spacing has elapsed."""
+
     global _last_request_time
     with _rate_lock:
         now = time.monotonic()
-        wait = _MIN_INTERVAL - (now - _last_request_time)
+        wait = max(
+            _cooldown_until - now,
+            _MIN_INTERVAL - (now - _last_request_time),
+        )
         if wait > 0:
             time.sleep(wait)
         _last_request_time = time.monotonic()
 
 
-def _search_itunes(query: str, limit: int = 5) -> list[dict[str, Any]]:
-    """Call the iTunes Search API and return the ``results`` list."""
+def _note_blocked(status: int) -> None:
+    """Back off after a refusal and, after a few in a row, mark it down."""
+
+    global _cooldown_until, _down_until, _consecutive_blocks
+    with _rate_lock:
+        _consecutive_blocks += 1
+        _cooldown_until = max(
+            _cooldown_until, time.monotonic() + _COOLDOWN_SECONDS
+        )
+        if _consecutive_blocks >= _BLOCK_LIMIT:
+            _down_until = time.monotonic() + _DOWN_SECONDS
+    logger.warning(
+        'iTunes Search returned HTTP {} — backing off {}s (down for {}s '
+        'after {} refusals)',
+        status,
+        int(_COOLDOWN_SECONDS),
+        int(_DOWN_SECONDS),
+        _consecutive_blocks,
+    )
+
+
+def _note_success() -> None:
+    global _consecutive_blocks
+    _consecutive_blocks = 0
+
+
+def _get_json(url: str) -> Optional[dict[str, Any]]:
+    """GET *url*, pacing and backing off around iTunes' rate limit.
+
+    Returns ``None`` on any failure (network, refusal, unreadable body);
+    a genuine ``200`` with no results is a real answer, not a failure.
+    """
+
     _rate_wait()
-    params = f'term={quote_plus(query)}&entity=song&limit={limit}'
-    url = f'{_ITUNES_SEARCH_URL}?{params}'
-    logger.debug('iTunes genre lookup: {}', url)
     try:
-        resp = httpx.get(url, timeout=_TIMEOUT)
+        resp = httpx.get(
+            url,
+            timeout=_TIMEOUT,
+            headers={
+                'User-Agent': _USER_AGENT,
+                'Accept': 'application/json',
+            },
+        )
+    except Exception:
+        logger.opt(exception=True).debug('iTunes request failed: {}', url)
+        return None
+    if resp.status_code in {403, 429} or resp.status_code >= 500:
+        _note_blocked(resp.status_code)
+        return None
+    try:
         resp.raise_for_status()
         data = resp.json()
     except Exception:
-        logger.opt(exception=True).debug('iTunes Search API failed')
+        logger.opt(exception=True).debug('iTunes response unreadable')
+        return None
+    _note_success()
+    return data if isinstance(data, dict) else None
+
+
+def _search_itunes(query: str, limit: int = 5) -> list[dict[str, Any]]:
+    """Call the iTunes Search API and return the ``results`` list.
+
+    Successful responses (including an empty result set) are cached, so
+    the same query is never fetched twice in a run. A refusal is not
+    cached — the next call may find iTunes back.
+    """
+
+    cache_key = f'{query.strip().casefold()}|{limit}'
+    with _cache_lock:
+        cached = _search_cache.get(cache_key)
+    if cached is not None:
+        return cached
+    if not is_available():
+        return []
+
+    params = f'term={quote_plus(query)}&entity=song&limit={limit}'
+    url = f'{_ITUNES_SEARCH_URL}?{params}'
+    data = _get_json(url)
+    if data is None:
         return []
     results = data.get('results') or []
+    with _cache_lock:
+        if len(_search_cache) > 4096:
+            _search_cache.clear()
+        _search_cache[cache_key] = results
     logger.debug(
         'iTunes Search returned {} result(s) for q={!r}',
         len(results),
@@ -157,13 +279,12 @@ def fetch_genre(song: dict[str, Any]) -> str:
             return cached
 
     # ── Search iTunes ─────────────────────────────────────────────
-    query = f'{artist} {title}'.strip()
+    query, query_alt = _query_pair(artist, title, album)
     results = _search_itunes(query, limit=5)
     match = _pick_best(results, artist, title)
 
-    if match is None and album:
-        # Retry with album name in query for disambiguation.
-        query_alt = f'{artist} {title} {album}'.strip()
+    if match is None and query_alt:
+        # Retry with the album name for disambiguation.
         results_alt = _search_itunes(query_alt, limit=5)
         match = _pick_best(results_alt, artist, title)
 
@@ -189,6 +310,72 @@ def fetch_genre(song: dict[str, Any]) -> str:
             _genre_cache.setdefault(cache_key, '')
 
     return genre
+
+
+# ── Track metadata ────────────────────────────────────────────────────
+#: How far the duration an iTunes match reports may drift from the
+#: file's own before the match is distrusted. Same-named live versions,
+#: remixes and remasters must not rewrite a studio track's tags.
+_METADATA_DURATION_TOLERANCE_SECONDS = 10.0
+
+
+def _duration_matches(match: dict[str, Any], song: dict[str, Any]) -> bool:
+    millis = match.get('trackTimeMillis')
+    duration = float(song.get('duration') or 0.0)
+    if not millis or duration <= 0:
+        return True
+    remote = float(millis) / 1000.0
+    return abs(remote - duration) <= _METADATA_DURATION_TOLERANCE_SECONDS
+
+
+def lookup_track_metadata(song: dict[str, Any]) -> Optional[dict[str, Any]]:
+    """Album, year, track number and genre for *song*, or ``None``.
+
+    Same search and best-match selection as :func:`fetch_genre`, for
+    tracks whose Spotify ID is not known and which therefore can't be
+    re-read from Spotify. A match whose duration disagrees with the
+    file's by more than ten seconds is rejected; ``None`` means "no
+    safe match", and the caller leaves the file's tags alone.
+    """
+
+    artists = song.get('artists') or []
+    artist = artists[0] if artists else (song.get('artist') or '')
+    title = song.get('name', '') or song.get('title', '')
+    album = song.get('album_name', '') or song.get('album', '')
+
+    if not title:
+        return None
+
+    query, query_alt = _query_pair(artist, title, album)
+    match = _pick_best(_search_itunes(query, limit=5), artist, title)
+    if match is None and query_alt:
+        # Retry with the album name in the query for disambiguation.
+        match = _pick_best(_search_itunes(query_alt, limit=5), artist, title)
+
+    if match is None or not _duration_matches(match, song):
+        logger.debug(
+            'iTunes metadata: no safe match for {!r} by {!r}', title, artist
+        )
+        return None
+
+    release = str(match.get('releaseDate') or '')
+    found = {
+        'album_name': str(match.get('collectionName') or ''),
+        'album_artist': str(
+            match.get('collectionArtistName') or match.get('artistName') or ''
+        ),
+        'year': release[:4],
+        'release_date': release[:10],
+        'track_number': int(match.get('trackNumber') or 0),
+        'genre': str(match.get('primaryGenreName') or '').strip(),
+    }
+    logger.info(
+        'iTunes metadata resolved: {!r} by {!r} → album {!r}',
+        title,
+        artist,
+        found['album_name'],
+    )
+    return found
 
 
 # ── Cover art ─────────────────────────────────────────────────────
@@ -220,17 +407,13 @@ def search_podcasts(query: str, limit: int = 10) -> list[dict[str, Any]]:
 
     if not query.strip():
         return []
-    _rate_wait()
     params = f'term={quote_plus(query)}&entity=podcast&limit={max(1, limit)}'
     url = f'{_ITUNES_SEARCH_URL}?{params}'
-    try:
-        resp = httpx.get(url, timeout=_TIMEOUT)
-        resp.raise_for_status()
-        results = resp.json().get('results') or []
-    except Exception:
-        logger.opt(exception=True).debug('iTunes podcast search failed')
+    data = _get_json(url)
+    if data is None:
         return []
-    return [r for r in results if r.get('feedUrl')]
+    results = data.get('results') or []
+    return [r for r in results if isinstance(r, dict) and r.get('feedUrl')]
 
 
 def resolve_podcast_feed(show_name: str) -> Optional[dict[str, Any]]:
@@ -280,14 +463,10 @@ def fetch_artwork_url(song: dict[str, Any], size: int = 1200) -> str:
         if cached is not None:
             return artwork_url_at(cached, size) if cached else ''
 
-    query = f'{artist} {title}'.strip()
+    query, query_alt = _query_pair(artist, title, album)
     match = _pick_best(_search_itunes(query, limit=5), artist, title)
-    if match is None and album:
-        match = _pick_best(
-            _search_itunes(f'{artist} {title} {album}'.strip(), limit=5),
-            artist,
-            title,
-        )
+    if match is None and query_alt:
+        match = _pick_best(_search_itunes(query_alt, limit=5), artist, title)
 
     base = str((match or {}).get('artworkUrl100') or '').strip()
     if cache_key:

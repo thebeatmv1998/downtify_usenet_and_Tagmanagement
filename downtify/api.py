@@ -175,9 +175,25 @@ working without changes:
 * ``GET  /api/library/upgrade`` and ``GET /api/library/upgrade/jobs``
   (an upgrade run's state, queue counts and per-track rows)
 * ``POST /api/library/upgrade/scan`` (look for tracks with low-resolution
-  artwork, no lyrics or incomplete tags; writes nothing),
-  ``POST /api/library/upgrade/start`` (body ``{categories}``) and
-  ``POST /api/library/upgrade/{pause,resume,cancel}``
+  artwork, no lyrics, incomplete tags or an album folder with no cover
+  image; writes nothing), ``POST /api/library/upgrade/start`` (body
+  ``{categories}``) and ``POST /api/library/upgrade/{pause,resume,cancel}``
+* ``POST /api/library/albums/merge/preview`` (albums the tag sources say
+  belong together, writes nothing) and ``POST /api/library/albums/merge``
+  (body ``{plans}``: retag and move the confirmed albums into one folder
+  each, then refresh the playlists that pointed at them)
+* ``POST /api/library/playlists/rebuild`` (rewrite every known playlist's
+  M3U from what is already on disk, including songs it did not download
+  in the last batch)
+* ``GET  /api/library/tags`` (every editable tag of one track) and
+  ``POST /api/library/tags`` (body ``{file, fields, cover?, remove_cover?}``:
+  write them, with an optional new cover, in place)
+* ``GET  /api/library/tags/search`` (MusicBrainz or Discogs release
+  candidates for a track) and ``GET /api/library/tags/release`` (a chosen
+  release's album metadata and ordered tracklist) - see
+  ``downtify/musicbrainz.py`` / ``downtify/discogs.py``
+* ``GET  /api/library/duplicates`` (duplicate titles and albums in the
+  library, for review and deletion via ``DELETE /delete/batch``)
 * ``GET  /api/playlists/batches`` and
   ``GET|DELETE /api/playlists/batches/{spotify_playlist_id}`` (Spotify
   playlist downloads and their completeness against Spotify)
@@ -298,18 +314,24 @@ from fastapi.responses import FileResponse
 from loguru import logger
 
 from . import (
+    album_merge,
     artist_photo_proxy,
     artist_profile,
     audio_replace,
     cover_sources,
     deezer,
+    discogs,
+    duplicates,
     integration_check,
     library_import,
+    library_playlists,
     library_upgrade,
     lyrics,
     m3u,
+    musicbrainz,
     providers,
     spotify,
+    tag_editor,
 )
 from .activity import ActivityLog, NowPlaying, describe_user_agent
 from .auth import (
@@ -356,6 +378,7 @@ from .library_catalog import (
     library_artist_index,
     library_context_from_state,
     library_home_summary,
+    list_library_entries,
     lookup_library_songs,
     merge_library_listing_file,
     resolve_library_file,
@@ -417,6 +440,7 @@ from .playlist_spotify_cache import (
     fetch_playlist_tracks,
     is_spotify_playlist_id,
 )
+from .playlist_tracks import build_library_song_index, resolve_track_file
 from .podcasts import (
     PODCASTS_DIRNAME,
     EpisodeInfo,
@@ -439,6 +463,8 @@ from .transcode import Transcoder
 from .update_check import UpdateChecker
 from .usenet_provider import (
     SabnzbdClient as UsenetSabnzbdClient,
+)
+from .usenet_provider import (
     reset_usenet_parallelism,
 )
 
@@ -562,7 +588,11 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         'artwork_min_px': library_upgrade.DEFAULT_ARTWORK_MIN_PX,
         'artwork_source': cover_sources.PREFERENCE_HIGHEST,
         'recheck_days': library_upgrade.DEFAULT_RECHECK_DAYS,
+        'metadata_mode': library_upgrade.DEFAULT_METADATA_MODE,
     },
+    # Personal access token for the tag editor's Discogs search. MusicBrainz
+    # needs none; Discogs' database search does.
+    'discogs_token': '',
 }
 
 # Settings stored as nested objects: saved values are merged over the
@@ -3040,26 +3070,68 @@ async def download_endpoint(
 
 
 def _m3u_entries_for(
-    songs: list[dict[str, Any]], resolved: dict[int, Optional[str]]
+    songs: list[dict[str, Any]],
+    resolved: dict[int, Optional[str]],
+    *,
+    all_tracks: Optional[list[dict[str, Any]]] = None,
+    tag_index: Optional[dict[str, str]] = None,
+    playlist_subdir: Optional[str] = None,
 ) -> list[dict[str, Any]]:
-    """Build M3U entries for the songs downloaded so far.
+    """Build M3U entries for a playlist, in playlist order.
 
-    Iterates ``songs`` in playlist order (not completion order, which
-    varies with concurrency) and keeps only those with a filename in
-    ``resolved``, so a partially-finished batch still produces a
-    correctly-ordered file.
+    ``resolved`` maps a batch index to the filename just downloaded, so a
+    partially-finished batch still produces a correctly-ordered file.
+    When ``all_tracks`` (the playlist's full track list, as the source
+    reports it) is given, tracks the library already had are resolved and
+    included too — otherwise a playlist's M3U would list only what this
+    batch happened to download.
     """
-    entries: list[dict[str, Any]] = []
-    for index, song in enumerate(songs):
-        filename = resolved.get(index)
-        if not filename:
-            continue
-        entries.append({
+
+    def _entry(song: dict[str, Any], filename: str) -> dict[str, Any]:
+        return {
             'filename': filename,
             'title': song.get('name') or '',
             'artist': ', '.join(song.get('artists') or []),
             'duration': song.get('duration') or 0,
-        })
+        }
+
+    if not all_tracks:
+        # No playlist track list to resolve against: list what the batch
+        # downloaded, in playlist order.
+        return [
+            _entry(song, resolved[index])
+            for index, song in enumerate(songs)
+            if resolved.get(index)
+        ]
+
+    # ``all_tracks`` is the playlist's own full, ordered track list; the
+    # batch's downloads are matched onto it by track id, and everything
+    # else is resolved against the library so a track downloaded earlier
+    # (for another playlist, as an album, as a single) is not lost.
+    downloaded = {
+        str(songs[index].get('song_id')): filename
+        for index, filename in resolved.items()
+        if filename and songs[index].get('song_id')
+    }
+    entries: list[dict[str, Any]] = []
+    for song in all_tracks:
+        filename = downloaded.get(str(song.get('song_id') or ''))
+        if not filename:
+            try:
+                filename = resolve_track_file(
+                    song,
+                    downloader=state.downloader,
+                    track_index=state.track_index,
+                    subdir=playlist_subdir,
+                    tag_index=tag_index,
+                )
+            except Exception:
+                logger.opt(exception=True).debug(
+                    'Batch M3U: could not resolve {!r}', song.get('name')
+                )
+                filename = None
+        if filename:
+            entries.append(_entry(song, filename))
     return entries
 
 
@@ -3068,8 +3140,17 @@ async def _write_batch_m3u(
     resolved: dict[int, Optional[str]],
     playlist_name: str,
     playlist_subdir: str,
+    *,
+    all_tracks: Optional[list[dict[str, Any]]] = None,
+    tag_index: Optional[dict[str, str]] = None,
 ) -> Optional[Path]:
-    entries = _m3u_entries_for(songs, resolved)
+    entries = _m3u_entries_for(
+        songs,
+        resolved,
+        all_tracks=all_tracks,
+        tag_index=tag_index,
+        playlist_subdir=playlist_subdir,
+    )
     if not entries:
         return None
     # When organize-by-artist/album is on, songs land in those folders
@@ -3235,12 +3316,17 @@ async def _process_batch(
     playlist_subdir: Optional[str] = None
     spotify_playlist_id: Optional[str] = None
     spotify_track_count = 0
+    # The playlist's own full track list, as the source reports it. The
+    # M3U is built from this (not just the batch), so songs the library
+    # already had are listed too.
+    all_tracks: list[dict[str, Any]] = []
     target = _playlist_target_for_batch(playlist_url) if playlist_url else None
     if target is not None:
         try:
             playlist_name, tracks = await asyncio.to_thread(
                 _fetch_playlist_for_batch, *target
             )
+            all_tracks = tracks
             playlist_subdir = m3u.sanitize_playlist_name(playlist_name)
             if target[0] == SOURCE_SPOTIFY:
                 spotify_playlist_id = target[1]
@@ -3277,6 +3363,19 @@ async def _process_batch(
     )
 
     wants_m3u = bool(generate_m3u and playlist_subdir and playlist_name)
+    # Whole-library artist/title index (built once), so the M3U can list
+    # songs the library already has from an earlier download. Only needed
+    # for a real playlist with tracks the source reported.
+    tag_index: Optional[dict[str, str]] = None
+    if wants_m3u and all_tracks:
+        try:
+            tag_index = await asyncio.to_thread(
+                build_library_song_index, library_context()
+            )
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Batch M3U: library song index build failed'
+            )
     if wants_m3u:
         # Before the first track, so the folder already looks like the
         # playlist while it fills up (and a media server scanning
@@ -3312,7 +3411,12 @@ async def _process_batch(
         # the same file.
         async with m3u_lock:
             await _write_batch_m3u(
-                songs, resolved, playlist_name, playlist_subdir
+                songs,
+                resolved,
+                playlist_name,
+                playlist_subdir,
+                all_tracks=all_tracks,
+                tag_index=tag_index,
             )
 
     await asyncio.gather(
@@ -3324,7 +3428,14 @@ async def _process_batch(
     )
 
     if wants_m3u:
-        await _write_batch_m3u(songs, resolved, playlist_name, playlist_subdir)
+        await _write_batch_m3u(
+            songs,
+            resolved,
+            playlist_name,
+            playlist_subdir,
+            all_tracks=all_tracks,
+            tag_index=tag_index,
+        )
 
     await _finish_playlist_batch(
         songs,
@@ -3572,12 +3683,15 @@ def _known_spotify_playlist_sources() -> dict[str, dict[str, Any]]:
             sid = str(batch['spotify_playlist_id'] or '').strip()
             if not sid:
                 continue
-            _add(sid, {
-                'playlist_name': batch['playlist_name'],
-                'playlist_url': batch['playlist_url'],
-                'expected_hint': int(batch.get('expected_count') or 0),
-                'batch': batch,
-            })
+            _add(
+                sid,
+                {
+                    'playlist_name': batch['playlist_name'],
+                    'playlist_url': batch['playlist_url'],
+                    'expected_hint': int(batch.get('expected_count') or 0),
+                    'batch': batch,
+                },
+            )
     if state.playlist_catalog is not None:
         for row in state.playlist_catalog.list_playlists_with_spotify_id():
             sid = str(row['spotify_id'] or '').strip()
@@ -4803,6 +4917,292 @@ async def library_upgrade_cancel() -> dict[str, Any]:
     return _require_upgrade_runner().cancel()
 
 
+def _spotify_id_lookup() -> Optional[Any]:
+    if state.track_index is None:
+        return None
+    index = state.track_index
+
+    def _lookup(stored: str) -> str:
+        return index.spotify_id_for_filename(stored) or ''
+
+    return _lookup
+
+
+@router.post('/api/library/albums/merge/preview')
+async def library_albums_merge_preview() -> dict[str, Any]:
+    """Albums the tag sources say belong together (writes nothing).
+
+    A response the user confirms by posting back to
+    ``/api/library/albums/merge``.
+    """
+
+    ctx = library_context()
+    stats = {'looked_up': 0, 'resolved': 0}
+
+    def _counting_resolver(
+        song: dict[str, Any], spotify_id: str
+    ) -> Optional[dict[str, Any]]:
+        stats['looked_up'] += 1
+        found = album_merge.default_resolver(song, spotify_id)
+        if found and found.get('album_name'):
+            stats['resolved'] += 1
+        return found
+
+    def _detect() -> list[album_merge.MergePlan]:
+        return album_merge.detect_split_albums(
+            ctx,
+            spotify_id_for=_spotify_id_lookup(),
+            resolver=_counting_resolver,
+        )
+
+    plans = await asyncio.to_thread(_detect)
+    return {
+        'candidates': [plan.to_dict() for plan in plans],
+        'looked_up': stats['looked_up'],
+        'resolved': stats['resolved'],
+    }
+
+
+@router.post('/api/library/albums/merge')
+async def library_albums_merge(
+    payload: dict[str, Any] = Body(default={}),
+) -> dict[str, Any]:
+    """Retag and move the confirmed albums into one folder each."""
+
+    if state.downloader is None:
+        raise HTTPException(status_code=500, detail='Downloader not ready')
+    plans = (payload or {}).get('plans') or (payload or {}).get('groups') or []
+    if not isinstance(plans, list):
+        raise HTTPException(status_code=400, detail='plans must be a list')
+
+    ctx = library_context()
+    result = await asyncio.to_thread(
+        album_merge.apply_merge,
+        plans,
+        ctx=ctx,
+        downloader=state.downloader,
+        settings=state.settings,
+        monitor_db=state.monitor_db,
+    )
+
+    affected = set(result.get('playlists') or [])
+    if affected and state.playlist_catalog is not None:
+        await asyncio.to_thread(
+            refresh_playlists_after_moves,
+            affected,
+            settings=state.settings,
+            downloader=state.downloader,
+            playlist_catalog=state.playlist_catalog,
+            track_index=state.track_index,
+            monitor_db=state.monitor_db,
+            navidrome_index=state.navidrome_index,
+            playlist_spotify_cache=state.playlist_spotify_cache,
+            cover_cache=state.cover_cache,
+            metadata_cache=state.metadata_cache,
+        )
+        result['playlists_refreshed'] = sorted(affected)
+    return result
+
+
+@router.post('/api/library/playlists/rebuild')
+async def library_playlists_rebuild() -> dict[str, Any]:
+    """Rewrite every known playlist's M3U from what is already on disk."""
+
+    if state.downloader is None:
+        raise HTTPException(status_code=500, detail='Downloader not ready')
+    ctx = library_context()
+    return await asyncio.to_thread(
+        library_playlists.rebuild_playlist_m3us,
+        ctx=ctx,
+        settings=state.settings,
+        downloader=state.downloader,
+        monitor_db=state.monitor_db,
+        playlist_catalog=state.playlist_catalog,
+        track_index=state.track_index,
+    )
+
+
+# ── Tag editor ────────────────────────────────────────────────────────
+#: Largest uploaded cover the tag editor accepts (bytes).
+_MAX_COVER_BYTES = 12 * 1024 * 1024
+
+
+def _decode_cover_image(value: str) -> bytes:
+    """Decode a data URL or bare base64 image, with a size cap."""
+
+    text = str(value or '').strip()
+    if not text:
+        return b''
+    if text.startswith('data:'):
+        _, _, text = text.partition(',')
+    try:
+        data = base64.b64decode(text, validate=False)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=400, detail='Cover is not valid base64'
+        ) from exc
+    if len(data) > _MAX_COVER_BYTES:
+        raise HTTPException(status_code=413, detail='Cover image is too big')
+    return data
+
+
+def _musicbrainz_query(title: str, artist: str, fallback: str) -> str:
+    """A MusicBrainz Lucene query from the editor's title/artist boxes."""
+
+    parts: list[str] = []
+    clean_title = title.replace('"', ' ').strip()
+    clean_artist = artist.replace('"', ' ').strip()
+    if clean_title:
+        parts.append(f'recording:"{clean_title}"')
+    if clean_artist:
+        parts.append(f'artist:"{clean_artist}"')
+    if parts:
+        return ' AND '.join(parts)
+    return fallback
+
+
+@router.get('/api/library/tags')
+async def library_tags(file: str = Query(..., min_length=1)) -> dict[str, Any]:
+    """Every editable tag of one library track."""
+
+    full = resolve_library_file(file, library_context())
+    if full is None:
+        raise HTTPException(status_code=404, detail='File not found')
+    return {
+        'file': file,
+        'tags': await asyncio.to_thread(tag_editor.read_tags, full),
+    }
+
+
+@router.post('/api/library/tags')
+async def library_tags_write(
+    payload: dict[str, Any] = Body(default={}),
+) -> dict[str, Any]:
+    """Write edited tags (and optionally a new cover) into a library track."""
+
+    file = str((payload or {}).get('file') or '').strip()
+    if not file:
+        raise HTTPException(status_code=400, detail='file is required')
+    fields = (payload or {}).get('fields')
+    if not isinstance(fields, dict):
+        raise HTTPException(status_code=400, detail='fields must be an object')
+    remove_cover = bool((payload or {}).get('remove_cover'))
+    cover = _decode_cover_image((payload or {}).get('cover') or '')
+
+    ctx = library_context()
+    full = resolve_library_file(file, ctx)
+    if full is None:
+        raise HTTPException(status_code=404, detail='File not found')
+
+    def _write() -> None:
+        tag_editor.write_tags(
+            full, fields, cover=cover or None, remove_cover=remove_cover
+        )
+        if ctx.metadata_cache is not None:
+            try:
+                ctx.metadata_cache.refresh(file, full)
+            except Exception:
+                logger.debug('Tag editor: metadata cache refresh failed')
+        if state.cover_cache is not None and state.downloader is not None:
+            try:
+                state.cover_cache.refresh_stored_path(
+                    file,
+                    download_dir=Path(state.downloader.download_dir),
+                    slskd_dir=slskd_dir_from_downloader(state.downloader),
+                )
+            except Exception:
+                logger.debug('Tag editor: cover cache refresh failed')
+
+    try:
+        await asyncio.to_thread(_write)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.opt(exception=True).warning('Tag editor: write failed')
+        raise HTTPException(
+            status_code=500, detail=f'Could not write tags: {exc}'
+        ) from exc
+    invalidate_library_paths_cache()
+    return {
+        'ok': True,
+        'file': file,
+        'tags': await asyncio.to_thread(tag_editor.read_tags, full),
+    }
+
+
+@router.get('/api/library/tags/search')
+async def library_tags_search(
+    source: str = Query('musicbrainz'),
+    q: str = Query(''),
+    title: str = Query(''),
+    artist: str = Query(''),
+    limit: int = Query(10, ge=1, le=25),
+) -> dict[str, Any]:
+    """Look a release up on MusicBrainz or Discogs to fill a track's tags."""
+
+    query = str(q or '').strip()
+    src = str(source or '').strip().lower()
+    if src == 'musicbrainz':
+        search_query = _musicbrainz_query(title, artist, query)
+        if not search_query:
+            raise HTTPException(status_code=400, detail='search is empty')
+        results = await asyncio.to_thread(
+            musicbrainz.search_recordings, search_query, limit=limit
+        )
+    elif src == 'discogs':
+        search_query = (
+            query or ' '.join(part for part in (artist, title) if part).strip()
+        )
+        if not search_query:
+            raise HTTPException(status_code=400, detail='search is empty')
+        try:
+            results = await asyncio.to_thread(
+                discogs.search_releases,
+                search_query,
+                token=str(state.settings.get('discogs_token') or ''),
+                limit=limit,
+            )
+        except discogs.DiscogsTokenMissing as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+    else:
+        raise HTTPException(status_code=400, detail='Unknown source')
+    return {'source': src, 'results': results}
+
+
+@router.get('/api/library/tags/release')
+async def library_tags_release(
+    source: str = Query(...),
+    id: str = Query(..., min_length=1),
+) -> dict[str, Any]:
+    """A release's album metadata and ordered tracklist, for the editor."""
+
+    src = str(source or '').strip().lower()
+    if src == 'musicbrainz':
+        data = await asyncio.to_thread(musicbrainz.release_tracklist, id)
+    elif src == 'discogs':
+        try:
+            data = await asyncio.to_thread(
+                discogs.release,
+                id,
+                token=str(state.settings.get('discogs_token') or ''),
+            )
+        except discogs.DiscogsTokenMissing as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+    else:
+        raise HTTPException(status_code=400, detail='Unknown source')
+    if data is None:
+        raise HTTPException(status_code=404, detail='Release not found')
+    return data
+
+
+@router.get('/api/library/duplicates')
+async def library_duplicates() -> dict[str, Any]:
+    """Duplicate titles and albums already in the library listing."""
+
+    entries = await asyncio.to_thread(list_library_entries, library_context())
+    return await asyncio.to_thread(duplicates.find_duplicates, entries)
+
+
 async def _schedule_playlist_refresh_after_delete(
     playlist_names: set[str],
 ) -> None:
@@ -5569,9 +5969,7 @@ def cleanup_usenet_endpoint() -> dict[str, Any]:
     cfg = _effective_usenet_settings(state.settings)
     client = UsenetSabnzbdClient(cfg)
     if not client.configured():
-        raise HTTPException(
-            status_code=400, detail='usenet_not_configured'
-        )
+        raise HTTPException(status_code=400, detail='usenet_not_configured')
     return {'deleted': client.delete_all_history()}
 
 

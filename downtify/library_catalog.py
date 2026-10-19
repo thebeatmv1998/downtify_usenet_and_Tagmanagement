@@ -502,6 +502,23 @@ def list_entries_for_stored_paths(
     return [library_entry_for_file(stored, full) for stored, full in pairs]
 
 
+def song_from_entry(entry: dict[str, Any]) -> dict[str, Any]:
+    """The song dict a library row describes, from its embedded tags."""
+
+    artist = str(entry.get('artist') or '')
+    artists = [part.strip() for part in artist.split(';') if part.strip()]
+    return {
+        'name': str(entry.get('title') or ''),
+        'artists': artists or ([artist] if artist else []),
+        'artist': artist,
+        'album_name': str(entry.get('album') or ''),
+        'album_artist': str(entry.get('album_artist') or ''),
+        'year': str(entry.get('year') or ''),
+        'track_number': int(entry.get('track_number') or 0),
+        'duration': float(entry.get('duration') or 0.0),
+    }
+
+
 def fold_text(text: str) -> str:
     """Case- and accent-fold, matching the Library page's filter."""
 
@@ -525,6 +542,25 @@ def song_key(artist: str, title: str) -> str:
 
     first = _ARTIST_SPLIT.split(str(artist or ''), maxsplit=1)[0].strip()
     return f'{clean(first)}|{clean(title)}'
+
+
+#: Tag values that stand for "nothing known" rather than real metadata,
+#: compared trimmed and case-folded. "Various artists" is deliberately
+#: absent: it is a legitimate album artist, not a placeholder.
+_METADATA_PLACEHOLDERS = frozenset({
+    'unknown',
+    'unknown album',
+    'unknown artist',
+    'unbekannt',
+    'various',
+})
+
+
+def is_blank_or_placeholder(value: Any) -> bool:
+    """True for an empty tag or one holding a placeholder like "unknown"."""
+
+    text = str(value or '').strip()
+    return not text or text.casefold() in _METADATA_PLACEHOLDERS
 
 
 _VARIOUS_ARTISTS = frozenset({'various artists', 'various'})

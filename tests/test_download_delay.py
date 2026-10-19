@@ -373,7 +373,12 @@ def test_check_playlist_rewrites_m3u_after_every_download(
     events = []
 
     def fake_regenerate_m3u(
-        playlist, all_tracks, downloader, resolved=None, known_tracks=None
+        playlist,
+        all_tracks,
+        downloader,
+        resolved=None,
+        known_tracks=None,
+        **_kwargs,
     ):
         events.append('m3u')
 
@@ -403,7 +408,12 @@ def test_check_playlist_skips_m3u_entirely_when_disabled(monkeypatch):
     events = []
 
     def fake_regenerate_m3u(
-        playlist, all_tracks, downloader, resolved=None, known_tracks=None
+        playlist,
+        all_tracks,
+        downloader,
+        resolved=None,
+        known_tracks=None,
+        **_kwargs,
     ):
         events.append('m3u')
 
@@ -423,7 +433,12 @@ def test_check_playlist_no_m3u_when_every_download_fails(monkeypatch):
     events = []
 
     def fake_regenerate_m3u(
-        playlist, all_tracks, downloader, resolved=None, known_tracks=None
+        playlist,
+        all_tracks,
+        downloader,
+        resolved=None,
+        known_tracks=None,
+        **_kwargs,
     ):
         events.append('m3u')
 
@@ -447,7 +462,12 @@ def test_check_playlist_writes_m3u_twice_for_a_single_track(monkeypatch):
     events = []
 
     def fake_regenerate_m3u(
-        playlist, all_tracks, downloader, resolved=None, known_tracks=None
+        playlist,
+        all_tracks,
+        downloader,
+        resolved=None,
+        known_tracks=None,
+        **_kwargs,
     ):
         events.append('m3u')
 
@@ -467,7 +487,12 @@ def test_check_playlist_treats_missing_settings_as_m3u_enabled(monkeypatch):
     events = []
 
     def fake_regenerate_m3u(
-        playlist, all_tracks, downloader, resolved=None, known_tracks=None
+        playlist,
+        all_tracks,
+        downloader,
+        resolved=None,
+        known_tracks=None,
+        **_kwargs,
     ):
         events.append('m3u')
 

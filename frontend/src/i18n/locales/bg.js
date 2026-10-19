@@ -358,6 +358,38 @@ export default {
       'Наскоро проверено парче се пропуска при следващото сканиране. По-нов Downtify винаги проверява всичко отначало.',
     recheckDays: { one: '{count} ден', other: '{count} дни' },
     recheckNever: 'Винаги проверявай всички парчета',
+    metadataMode: 'Metadata mode',
+    metadataModeFill: 'Fill in missing tags',
+    metadataModeFillHint:
+      'Only empty or placeholder tags (like "Unknown album") are completed. Values already in the file are kept.',
+    metadataModeVerify: 'Verify and correct tags',
+    metadataModeVerifyHint:
+      'Every track is compared with Spotify or Apple Music and wrong values are corrected. Slower: one remote lookup per track.',
+    album_cover: 'Add album folder covers',
+    album_coverHint:
+      'Write a cover.jpg into an album folder that has audio but no cover image, using the artwork already embedded in its tracks.',
+    mergeTitle: 'Merge split albums',
+    mergeHint:
+      'An album saved as separate singles shows up as many one-track albums. Ask Spotify and Apple Music which album the tracks belong to, then merge the confirmed ones into a single folder.',
+    mergeFind: 'Find split albums',
+    mergeSearching: 'Looking for split albums\u2026',
+    mergeNone: 'No split albums found.',
+    mergeFound: {
+      one: '{count} album to merge',
+      other: '{count} albums to merge',
+    },
+    mergeApply: { one: 'Merge {count} album', other: 'Merge {count} albums' },
+    mergeApplying: 'Merging\u2026',
+    mergeDone: 'Merged {moved} track(s).',
+    mergeStats:
+      '{resolved} of {looked_up} tracks were matched to an album by a tag source.',
+    mergeLimited:
+      'Some tracks could not be checked because a tag source was unavailable (rate limit). Wait a few minutes and try again.',
+    playlistsTitle: 'Rebuild playlist files',
+    playlistsHint:
+      'Rewrite every playlist\u2019s .m3u from what is already on disk, so songs you downloaded earlier are listed too \u2014 not just the last batch.',
+    playlistsRebuild: 'Rebuild playlists',
+    playlistsDone: 'Rebuilt {rebuilt} playlists, {linked} track(s) linked.',
     start: 'Започни',
     startCount: {
       one: 'Подобри {count} парче',
@@ -388,6 +420,59 @@ export default {
     stageLyrics: 'Търсене на текст',
     stageWriting: 'Записване на файла',
     loadFailed: 'Подобряването на библиотеката не можа да се зареди',
+  },
+  tags: {
+    edit: 'Edit tags?',
+    title: 'Edit tags',
+    description:
+      'Fix the tags of "{title}", by hand or from MusicBrainz / Discogs.',
+    loading: 'Loading tags?',
+    fieldTitle: 'Title',
+    fieldArtist: 'Artist',
+    fieldAlbum: 'Album',
+    fieldAlbumArtist: 'Album artist',
+    fieldTrack: 'Track',
+    fieldTotal: 'Tracks total',
+    fieldDisc: 'Disc',
+    fieldDiscTotal: 'Discs total',
+    fieldDate: 'Date (YYYY-MM-DD)',
+    fieldGenre: 'Genre',
+    fieldComment: 'Comment',
+    fieldComposer: 'Composer',
+    fieldSource: 'Source',
+    changeCover: 'Choose image',
+    removeCover: 'Remove cover',
+    searchTitle: 'Fill from a tag source',
+    sourceMusicbrainz: 'MusicBrainz',
+    sourceDiscogs: 'Discogs',
+    searchPlaceholder: 'Artist, album or track',
+    search: 'Search',
+    noResults: 'Nothing found.',
+    use: 'Use',
+    filled: 'Fields filled from the source.',
+    save: 'Save tags',
+    saved: 'Tags saved.',
+  },
+  duplicates: {
+    title: 'Duplicates',
+    subtitle: 'The same song or album saved more than once.',
+    titles: 'Duplicate titles',
+    albums: 'Duplicate albums',
+    noneTitle: 'No duplicates',
+    noneBody: 'Every title and album in the library is unique.',
+    checkAgain: 'Check again',
+    checking: 'Checking?',
+    copyCount: { one: '{count} copy', other: '{count} copies' },
+    trackCount: { one: '{count} track', other: '{count} tracks' },
+    selectExtras: 'Select all but one',
+    selected: '{count} selected',
+    reasonMultipleFolders: 'Saved in more than one folder',
+    reasonRepeatedSong: 'The same song appears more than once',
+    deleteTitle: 'Delete the selected copies?',
+    deleteBody:
+      'The files are removed from disk, along with their playlists and covers.',
+    deleteSelected: 'Delete selected',
+    deleted: 'Deleted {count} file(s).',
   },
   album: {
     kicker: 'Албум',
@@ -765,14 +850,12 @@ export default {
     usenetHint:
       'Изтегляне от Usenet: търсене в Newznab индекси, изтегляне чрез SABnzbd. Каквото не намери, преминава към следващия източник.',
     usenetEnabled: 'Използвай Usenet',
-    usenetEnabledHint:
-      'Изисква SABnzbd и поне един Newznab индекс с API ключ.',
+    usenetEnabledHint: 'Изисква SABnzbd и поне един Newznab индекс с API ключ.',
     usenetSabUrl: 'Адрес на SABnzbd',
     usenetSabKey: 'API ключ на SABnzbd',
     usenetCategory: 'Категория в SABnzbd',
     usenetCompleteDir: 'Папка за завършени изтегляния',
-    usenetCompleteDirHint:
-      'Пътят в контейнера на Downtify, не на хоста.',
+    usenetCompleteDirHint: 'Пътят в контейнера на Downtify, не на хоста.',
     usenetCleanup: 'Почистване на SABnzbd след това',
     usenetCleanupHint:
       'Премахва записа от историята и копието на SABnzbd, след като файлът е във вашите изтегляния.',
@@ -792,15 +875,20 @@ export default {
     usenetTypeNewznab: 'Newznab индексатор',
     usenetTypeProwlarr: 'Prowlarr (нативен API)',
     usenetFormats: 'Предпочитани формати',
-    usenetFormatsHint: 'Редът има значение: по-ранните формати получават по-висока оценка при съвпадение.',
+    usenetFormatsHint:
+      'Редът има значение: по-ранните формати получават по-висока оценка при съвпадение.',
     usenetMinBitrate: 'Минимален битрейт',
     usenetMaxBitrate: 'Максимален битрейт',
     usenetPreferAlbums: 'Предпочитай албумни издания',
     usenetCleanupNow: 'Почисти SABnzbd сега',
-    usenetCleanupNowHint: 'Изтрива всички завършени задачи и файловете им от SABnzbd — включително папките с албуми, запазени за повторна употреба.',
-    usenetCleanupDone: 'Премахнати {count} завършени задачи и техните файлове от SABnzbd.',
-    usenetCleanupFailed: 'Почистването на SABnzbd не успя — проверете настройките за връзка.',
-    usenetPreferAlbumsHint: "Usenet е ориентиран към албуми: търси и издания с име 'Изпълнител - Албум', изтегли албума и извлечи желания трак. Албумните издания се класират първи.",
+    usenetCleanupNowHint:
+      'Изтрива всички завършени задачи и файловете им от SABnzbd — включително папките с албуми, запазени за повторна употреба.',
+    usenetCleanupDone:
+      'Премахнати {count} завършени задачи и техните файлове от SABnzbd.',
+    usenetCleanupFailed:
+      'Почистването на SABnzbd не успя — проверете настройките за връзка.',
+    usenetPreferAlbumsHint:
+      "Usenet е ориентиран към албуми: търси и издания с име 'Изпълнител - Албум', изтегли албума и извлечи желания трак. Албумните издания се класират първи.",
     slskdInPlace: 'Остави файловете в папката на slskd',
     slskdInPlaceHint:
       'Тагва ги там, където slskd ги е запазил, вместо да ги копира в папката за изтегляния.',
@@ -875,6 +963,11 @@ export default {
       'Извън downloads и допълнителните музикални папки. Същото относително дърво като аудиото се пресъздава тук.',
     lyricsLrcFolderPlaceholder: '/data/lyrics',
     lyricsProviders: 'Доставчици',
+    tagEditorGroup: 'Tag editor',
+    discogsToken: 'Discogs token',
+    discogsTokenHint:
+      'Personal access token for the tag editor’s Discogs search. MusicBrainz needs none.',
+    discogsTokenPlaceholder: 'Discogs personal access token',
     lyricsProvidersHint:
       'Всяка песен пробва активните доставчици в този ред, докато някой има текст. Това, което даден доставчик не е имал, се помни един месец, за да не бъде питан отново при всяко изтегляне.',
     lyricsLrclibHint: 'Общностна база — обикновени и синхронизирани текстове',
@@ -911,16 +1004,14 @@ export default {
       connection_not_sabnzbd:
         'Нещо отговори на {url}, но не прилича на SABnzbd. Проверете адреса и порта.',
       indexer_ok: 'Индексът {detail} отговори.',
-      indexer_missing:
-        'Попълнете адреса и API ключа на индекса ({detail}).',
+      indexer_missing: 'Попълнете адреса и API ключа на индекса ({detail}).',
       indexer_bad_key: 'Индексът {detail} отхвърли API ключа.',
       indexer_http_error: 'Индексът {detail} отговори с грешка.',
       indexer_unreachable:
         'Индексът {detail} е недостъпен. Проверете адреса и че работи.',
       indexer_timeout: 'Индексът {detail} не отговори навреме.',
       indexer_bad_url: 'Адресът на индекса е невалиден ({detail}).',
-      indexer_tls:
-        'HTTPS сертификатът на индекса не е доверен ({detail}).',
+      indexer_tls: 'HTTPS сертификатът на индекса не е доверен ({detail}).',
       connection_not_slskd:
         'Нещо отговори на {url}, но не прилича на slskd. Проверете адреса и порта.',
       connection_not_navidrome:

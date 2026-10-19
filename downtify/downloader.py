@@ -34,6 +34,7 @@ from mutagen.oggopus import OggOpus
 from mutagen.oggvorbis import OggVorbis
 from yt_dlp.postprocessor.ffmpeg import FFmpegExtractAudioPP
 
+from . import cover_sources
 from . import lyrics as lyrics_mod
 from . import spotify as spotify_mod
 from .cookies import CookiesStore, check_cookies_file
@@ -1444,6 +1445,25 @@ class _LookupResults:
         self.lyrics = lyrics
 
 
+def _cover_for_song(song: dict[str, Any]) -> Optional[bytes]:
+    """Cover bytes for *song* — never empty when it can be helped.
+
+    The track's own ``cover_url`` is tried first; when it is missing or
+    unreachable (slskd/usenet downloads carry no cover URL at all), the
+    remote cover sources are asked in order, and as a last resort the
+    bundled placeholder is embedded so no file is left coverless.
+    """
+
+    data = _download_cover(song.get('cover_url', ''))
+    if data is not None:
+        return data
+    candidate = cover_sources.first_cover(song)
+    if candidate is not None:
+        return candidate.data
+    fallback = cover_sources.default_cover()
+    return fallback.data if fallback is not None else None
+
+
 class _MetadataLookups:
     """Genre, cover-art and lyrics lookups for one song, run in parallel.
 
@@ -1463,7 +1483,7 @@ class _MetadataLookups:
             else self._pool.submit(_fetch_itunes_genre, song)
         )
         self._cover = (
-            self._pool.submit(_download_cover, song.get('cover_url', ''))
+            self._pool.submit(_cover_for_song, song)
             if downloader.download_cover_art
             else None
         )
@@ -1646,14 +1666,16 @@ def embed_metadata(
     # when the source doesn't know an album artist (single-track/playlist
     # downloads).
     album_artist = song.get('album_artist') or _album_artist_for_tags(artists)
-    album = song.get('album_name', '') or ''
+    # A single's album is its own title: never leave the album tag empty
+    # when the source didn't name one.
+    album = song.get('album_name', '') or title
     recording_date = _recording_date_for_tags(song)
     genre = (song.get('genre') or '').strip()
     release_type = _release_type_for_tags(song)
     if not download_cover:
         cover_bytes = None
     elif cover_bytes is None:
-        cover_bytes = _download_cover(song.get('cover_url', ''))
+        cover_bytes = _cover_for_song(song)
     track_number, album_track_total = _album_track_index_for_tags(song)
     if track_number is None:
         logger.info(
