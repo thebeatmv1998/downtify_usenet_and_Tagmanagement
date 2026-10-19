@@ -239,6 +239,7 @@ import PlaylistStatus from '/src/components/library/PlaylistStatus.vue'
 import SelectionBar from '/src/components/library/SelectionBar.vue'
 import TrackList from '/src/components/library/TrackList.vue'
 import API from '/src/model/api'
+import { useAuth } from '/src/model/auth'
 import { useLibrary } from '/src/model/library'
 import { usePlayer } from '/src/model/player'
 import { useTrackActions } from '/src/model/trackActions'
@@ -260,6 +261,7 @@ const route = useRoute()
 const router = useRouter()
 const library = useLibrary()
 const player = usePlayer()
+const auth = useAuth()
 const actions = useTrackActions()
 const playlistActions = usePlaylistActions()
 const ui = useUi()
