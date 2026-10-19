@@ -316,3 +316,10 @@ data/settings.json
 .claude/
 data/
 design/
+
+# Vendored Python wheels for offline image builds (shipped in the release
+# archive, not committed - see wheels/.gitkeep). The earlier `wheels/`
+# rule ignores the directory, so re-include it first.
+!wheels/
+wheels/*
+!wheels/.gitkeep

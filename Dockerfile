@@ -6,6 +6,10 @@ FROM python:3.15-alpine AS builder
 WORKDIR /build
 
 COPY requirements.txt .
+# Vendored wheels (the release archive ships them) let this step build with
+# no network at all - useful when files.pythonhosted.org cannot be resolved.
+# A plain git checkout has only .gitkeep here and falls back to PyPI.
+COPY wheels/ ./wheels/
 
 # Retry transient DNS/network failures while resolving packages. If the
 # build host cannot reach files.pythonhosted.org (Pi-hole, broken container
@@ -15,9 +19,15 @@ ARG PIP_INDEX_URL=https://pypi.org/simple
 ENV PIP_INDEX_URL=${PIP_INDEX_URL} \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-RUN pip install --no-cache-dir --root-user-action ignore \
-        --retries 10 --timeout 60 \
-        -r requirements.txt && \
+RUN if [ "$(uname -m)" = "x86_64" ] && ls ./wheels/*.whl >/dev/null 2>&1; then \
+        echo "Installing Python dependencies from vendored wheels"; \
+        pip install --no-cache-dir --root-user-action ignore \
+            --no-index --find-links=./wheels -r requirements.txt; \
+    else \
+        echo "No matching wheelhouse; installing from ${PIP_INDEX_URL}"; \
+        pip install --no-cache-dir --root-user-action ignore \
+            --retries 10 --timeout 60 -r requirements.txt; \
+    fi && \
     pip uninstall --root-user-action ignore -y pip
 
 # Build the Vue frontend so the image is self-contained and never ships a
