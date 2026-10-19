@@ -323,3 +323,8 @@ design/
 !wheels/
 wheels/*
 !wheels/.gitkeep
+
+# Build / change-report artifacts (release files, not source).
+downtify-usenet.tar.gz
+downtify-*.patch
+downtify-*.bundle
