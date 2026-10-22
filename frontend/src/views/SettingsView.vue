@@ -236,8 +236,9 @@
                 :description="t('settings.usenetEnabledHint')"
               >
                 <UiSwitch
-                  v-model="s.usenet.enabled"
+                  :model-value="s.usenet.enabled"
                   :aria-label="t('settings.usenetEnabled')"
+                  @update:model-value="setUsenetEnabled"
                 />
               </SettingRow>
               <template v-if="s.usenet.enabled">
@@ -1114,6 +1115,16 @@ const update = useUpdateCheck().status
 
 const hasTrack = computed(() => !!player.currentTrack.value)
 const s = sm.settings
+
+// Turning the Usenet integration on must also put it in the source order;
+// otherwise it is configured (the connection test passes) but never tried.
+function setUsenetEnabled(on) {
+  s.value.usenet.enabled = on
+  const providers = s.value.audio_providers || []
+  if (on && !providers.includes('usenet')) {
+    s.value.audio_providers = ['usenet', ...providers]
+  }
+}
 const version = localStorage.getItem('version')
 
 // Normal users see General, Apps and About; the rest is the server's,

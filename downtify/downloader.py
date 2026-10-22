@@ -710,6 +710,53 @@ class Downloader:
             ),
         }
 
+    def _local_sources_before_youtube(self) -> list[str]:
+        """Enabled slskd/usenet sources that precede the first YouTube one."""
+
+        out: list[str] = []
+        for provider in self.audio_providers:
+            if provider in {'youtube-music', 'youtube'}:
+                break
+            if provider in {'slskd', 'usenet'}:
+                out.append(provider)
+        return out
+
+    def _try_local_source(
+        self,
+        provider: str,
+        song: dict[str, Any],
+        progress_cb: Optional[ProgressCallback],
+    ) -> Optional[Path]:
+        """Search one lossless source; ``None`` when disabled or empty."""
+
+        if provider == 'slskd':
+            if not self.slskd_settings.get('enabled'):
+                logger.info(
+                    'Audio provider slskd: disabled in settings; skipping'
+                )
+                return None
+            local = download_from_slskd(
+                song, self.slskd_settings, progress_cb=progress_cb
+            )
+        elif provider == 'usenet':
+            if not self.usenet_settings.get('enabled'):
+                logger.info(
+                    'Audio provider usenet: disabled in settings; skipping'
+                )
+                return None
+            local = download_from_usenet(
+                song, self.usenet_settings, progress_cb=progress_cb
+            )
+        else:
+            return None
+        if local is not None:
+            return local
+        logger.info(
+            'Audio provider {}: no match for {!r}', provider, song.get('name')
+        )
+        _report(progress_cb, 0.0, 'Trying next source', provider)
+        return None
+
     def _resolve_source(
         self,
         song: dict[str, Any],
@@ -725,33 +772,18 @@ class Downloader:
         provider came up empty.
         """
 
+        logger.debug(
+            'Audio providers: {} (usenet enabled={}, indexers={})',
+            self.audio_providers,
+            self.usenet_settings.get('enabled'),
+            len(self.usenet_settings.get('indexers') or []),
+        )
         youtube_searched = False
         for provider in self.audio_providers:
-            if provider == 'slskd':
-                if not self.slskd_settings.get('enabled'):
-                    continue
-                local = download_from_slskd(
-                    song, self.slskd_settings, progress_cb=progress_cb
-                )
+            if provider in {'slskd', 'usenet'}:
+                local = self._try_local_source(provider, song, progress_cb)
                 if local is not None:
-                    return None, None, 'slskd', local
-                logger.info(
-                    'Audio provider slskd: no match for {!r}', song.get('name')
-                )
-                _report(progress_cb, 0.0, 'Trying next source', 'slskd')
-            elif provider == 'usenet':
-                if not self.usenet_settings.get('enabled'):
-                    continue
-                local = download_from_usenet(
-                    song, self.usenet_settings, progress_cb=progress_cb
-                )
-                if local is not None:
-                    return None, None, 'usenet', local
-                logger.info(
-                    'Audio provider usenet: no match for {!r}',
-                    song.get('name'),
-                )
-                _report(progress_cb, 0.0, 'Trying next source', 'usenet')
+                    return None, None, provider, local
             elif provider == 'youtube-music':
                 # find_match falls back to standard YouTube on its own when
                 # YouTube Music has nothing (or only a far-off length).
@@ -1105,6 +1137,30 @@ class Downloader:
             video_id = None
         if not video_id and (song.get('source') == 'youtube'):
             video_id = song.get('song_id')
+
+        # A pinned YouTube Music video must not bypass a lossless source the
+        # user put before YouTube in the source order. Try those first, then
+        # fall back to the pinned video unchanged.
+        if (
+            video_id
+            and not song.get('youtube_id_override')
+            and {'youtube-music', 'youtube'} & set(self.audio_providers)
+        ):
+            for local_provider in self._local_sources_before_youtube():
+                local = self._try_local_source(
+                    local_provider, song, progress_cb
+                )
+                if local is not None:
+                    return self._downloaded(
+                        song,
+                        self._finalize_local_source(
+                            song,
+                            local,
+                            local_provider,
+                            progress_cb,
+                            subdir,
+                        ),
+                    )
 
         match: Optional[dict[str, Any]] = None
         provider: Optional[str] = 'youtube-music' if video_id else None

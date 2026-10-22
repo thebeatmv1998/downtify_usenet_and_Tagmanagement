@@ -779,6 +779,28 @@ def test_effective_audio_providers_defaults_when_missing():
     assert _effective_audio_providers({}) == ['youtube-music']
 
 
+def test_an_enabled_source_missing_from_the_order_is_still_used():
+    # A settings file (or a save from a UI that dropped it) can have Usenet
+    # enabled but absent from the source order. The connection test then
+    # passes while no search is ever made, so the enabled source is appended.
+    settings = {
+        'audio_providers': ['youtube-music'],
+        'usenet': {
+            'enabled': True,
+            'indexers': [
+                {'name': 'x', 'base_url': 'http://x', 'api_key': 'k'}
+            ],
+        },
+    }
+    assert _effective_audio_providers(settings) == [
+        'usenet',
+        'youtube-music',
+    ]
+
+    settings['usenet']['enabled'] = False
+    assert _effective_audio_providers(settings) == ['youtube-music']
+
+
 def test_effective_slskd_settings_defaults_when_missing():
     out = _effective_slskd_settings({})
     assert out['enabled'] is False
@@ -1021,7 +1043,11 @@ def test_update_settings_rejects_enabled_usenet_without_sabnzbd(
     with pytest.raises(HTTPException) as exc_info:
         _update(
             monkeypatch,
-            {'usenet': _enabled_usenet(sabnzbd={'base_url': '', 'api_key': ''})},
+            {
+                'usenet': _enabled_usenet(
+                    sabnzbd={'base_url': '', 'api_key': ''}
+                )
+            },
         )
     assert exc_info.value.status_code == 400
     assert 'SABnzbd' in exc_info.value.detail

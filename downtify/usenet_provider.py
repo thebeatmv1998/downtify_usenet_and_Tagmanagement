@@ -74,9 +74,9 @@ def configure_album_cache(path: Optional[Path]) -> None:
                 logger.info('usenet: album cache unreadable at {}', path)
                 return
             if isinstance(data, dict):
-                _ALBUM_FOLDERS.update(
-                    {str(k): str(v) for k, v in data.items()}
-                )
+                _ALBUM_FOLDERS.update({
+                    str(k): str(v) for k, v in data.items()
+                })
 
 
 def _album_cache_save() -> None:
@@ -91,9 +91,7 @@ def _album_cache_save() -> None:
 
 
 def _album_cache_key(song: dict[str, Any]) -> str:
-    artist = ' '.join(
-        str(a) for a in (song.get('artists') or [])[:1]
-    ).strip()
+    artist = ' '.join(str(a) for a in (song.get('artists') or [])[:1]).strip()
     album = str(song.get('album_name') or '').strip()
     if not artist or not album:
         return ''
@@ -194,9 +192,7 @@ class NewznabClient:
 
     def __init__(self, indexer: dict[str, Any], timeout: int = 20):
         self.name = str(indexer.get('name') or '').strip() or 'indexer'
-        self.base_url = (
-            str(indexer.get('base_url') or '').strip().rstrip('/')
-        )
+        self.base_url = str(indexer.get('base_url') or '').strip().rstrip('/')
         self.api_key = str(indexer.get('api_key') or '').strip()
         self.type = (
             'prowlarr'
@@ -248,22 +244,26 @@ class NewznabClient:
 
     def search(self, query: str) -> list[dict[str, Any]]:
         """Run an audio-category search; returns parsed release rows."""
-        resp = self._get({
-            't': 'search',
-            'q': query,
-            'cat': '3000,3010',
-            'apikey': self.api_key,
-            'extended': '1',
-            'limit': '100',
-        } if self.type == 'newznab' else [
-            ('query', query),
-            # Prowlarr rejects a comma-joined categories value with 400;
-            # the API takes repeated parameters.
-            ('categories', '3000'),
-            ('categories', '3010'),
-            ('apikey', self.api_key),
-            ('limit', '100'),
-        ])
+        resp = self._get(
+            {
+                't': 'search',
+                'q': query,
+                'cat': '3000,3010',
+                'apikey': self.api_key,
+                'extended': '1',
+                'limit': '100',
+            }
+            if self.type == 'newznab'
+            else [
+                ('query', query),
+                # Prowlarr rejects a comma-joined categories value with 400;
+                # the API takes repeated parameters.
+                ('categories', '3000'),
+                ('categories', '3010'),
+                ('apikey', self.api_key),
+                ('limit', '100'),
+            ]
+        )
         if self.type == 'prowlarr':
             try:
                 rows = resp.json()
@@ -451,7 +451,9 @@ def _release_extension_bonus(
     folded = title.casefold()
     for idx, ext in enumerate(extensions):
         bonus = (3, 2, 1)[min(idx, 2)]
-        if ext == 'flac' and re.search(r'(?:^|[^a-z])flac(?:[^a-z]|$)', folded):
+        if ext == 'flac' and re.search(
+            r'(?:^|[^a-z])flac(?:[^a-z]|$)', folded
+        ):
             return bonus, 'ext_flac'
         if ext == 'mp3' and (
             re.search(r'(?:^|[^a-z0-9])(?:320|mp3)(?:[^a-z0-9]|$)', folded)
@@ -624,17 +626,11 @@ def _rank_usenet_candidates(
     return ranked
 
 
-def _sort_ranked(
-    ranked: list[dict[str, Any]], prefer_albums: bool
-) -> None:
+def _sort_ranked(ranked: list[dict[str, Any]], prefer_albums: bool) -> None:
     """Sort in place: album releases first when preferred, then score."""
     ranked.sort(
         key=lambda row: (
-            (
-                0
-                if prefer_albums and row.get('match_kind') == 'album'
-                else 1
-            ),
+            (0 if prefer_albums and row.get('match_kind') == 'album' else 1),
             -_to_int(row.get('match_score')),
             -_to_int(row.get('grabs')),
         )
@@ -657,8 +653,9 @@ def _search_indexers(
         max_workers=max(1, len(indexers)),
         thread_name_prefix='downtify-newznab',
     ) as pool:
-        futures = {pool.submit(client.search, query): client
-                   for client in indexers}
+        futures = {
+            pool.submit(client.search, query): client for client in indexers
+        }
         for future, client in futures.items():
             try:
                 results.extend(future.result())
@@ -1094,10 +1091,14 @@ def download_from_usenet(  # noqa: PLR0914  # search, rank, queue, poll, verify
     found (the downloader then tries the next audio provider).
     """
     if not bool(settings.get('enabled')):
+        logger.info(
+            'usenet: disabled in settings title={!r}', song.get('name')
+        )
         return None
 
-    timeout = _int_setting(settings, 'timeout_seconds', 20, minimum=5,
-                           maximum=120)
+    timeout = _int_setting(
+        settings, 'timeout_seconds', 20, minimum=5, maximum=120
+    )
     raw_indexers = settings.get('indexers')
     indexers = [
         NewznabClient(row, timeout=timeout)
@@ -1107,14 +1108,23 @@ def download_from_usenet(  # noqa: PLR0914  # search, rank, queue, poll, verify
     indexers = [client for client in indexers if client.configured()]
     client = SabnzbdClient(settings, timeout=timeout)
     if not client.configured() or not indexers:
-        logger.info(
-            'usenet: missing configuration title={!r}', song.get('name')
+        logger.warning(
+            'usenet: missing configuration title={!r} sab_configured={} '
+            'enabled_indexers={}',
+            song.get('name'),
+            client.configured(),
+            len(indexers),
         )
         return None
 
     spotify_row = snapshot_spotify_metadata(song)
     queries = _usenet_search_queries(spotify_row)
     if not queries:
+        logger.warning(
+            'usenet: no search queries for title={!r} artists={}',
+            song.get('name'),
+            song.get('artists'),
+        )
         return None
 
     def report(pct: float, message: str) -> None:
@@ -1132,8 +1142,11 @@ def download_from_usenet(  # noqa: PLR0914  # search, rank, queue, poll, verify
                 )
 
     min_score = _int_setting(
-        settings, 'min_score', _DEFAULT_MATCH_MIN_SCORE,
-        minimum=0, maximum=100,
+        settings,
+        'min_score',
+        _DEFAULT_MATCH_MIN_SCORE,
+        minimum=0,
+        maximum=100,
     )
     sab = settings.get('sabnzbd')
     sab = sab if isinstance(sab, dict) else {}
@@ -1261,8 +1274,7 @@ def download_from_usenet(  # noqa: PLR0914  # search, rank, queue, poll, verify
                     nzo_id = client.add_url(nzb_url, release_name)
                 except Exception as exc:
                     logger.info(
-                        'usenet: addurl failed title={!r} release={!r} '
-                        'err={}',
+                        'usenet: addurl failed title={!r} release={!r} err={}',
                         song.get('name'),
                         release_name,
                         exc,
@@ -1273,7 +1285,8 @@ def download_from_usenet(  # noqa: PLR0914  # search, rank, queue, poll, verify
                     # instead.
                     indexer = next(
                         (
-                            c for c in indexers
+                            c
+                            for c in indexers
                             if c.name == release.get('indexer')
                         ),
                         indexers[0],
@@ -1293,16 +1306,21 @@ def download_from_usenet(  # noqa: PLR0914  # search, rank, queue, poll, verify
                     continue
 
                 slot = _wait_for_sabnzbd(
-                    client, nzo_id, settings,
-                    progress_cb=progress_cb, deadline=deadline,
+                    client,
+                    nzo_id,
+                    settings,
+                    progress_cb=progress_cb,
+                    deadline=deadline,
                 )
                 if slot is None:
                     continue
 
                 if is_album:
                     found = _find_album_track(
-                        complete_dir, str(slot.get('storage') or ''),
-                        spotify_row, settings,
+                        complete_dir,
+                        str(slot.get('storage') or ''),
+                        spotify_row,
+                        settings,
                     )
                 else:
                     found = _find_completed_file(

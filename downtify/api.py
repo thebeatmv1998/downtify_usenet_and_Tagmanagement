@@ -944,9 +944,12 @@ def _effective_usenet_settings(settings: dict[str, Any]) -> dict[str, Any]:
 def _effective_audio_providers(settings: dict[str, Any]) -> list[str]:
     """Enabled audio providers in the configured order.
 
-    slskd and usenet are dropped while their integration is disabled. The
-    user's selection is respected as-is: a source the UI shows as disabled
-    must not be appended at runtime either.
+    slskd and usenet are dropped while their integration is disabled. An
+    integration that *is* enabled but vanished from the saved source order
+    (an older settings file, or a save from a build whose UI omitted it)
+    is put at the front instead of being silently ignored — the admin
+    turned that source on, and the source-order UI also puts these two
+    first when enabled.
     """
 
     slskd_enabled = bool(_effective_slskd_settings(settings).get('enabled'))
@@ -960,6 +963,21 @@ def _effective_audio_providers(settings: dict[str, Any]) -> list[str]:
             continue
         if name in AUDIO_PROVIDERS and name not in out:
             out.append(name)
+    missing = [
+        name
+        for name, enabled in (
+            ('slskd', slskd_enabled),
+            ('usenet', usenet_enabled),
+        )
+        if enabled and name not in out
+    ]
+    if missing:
+        logger.warning(
+            'Audio source(s) {} enabled but missing from the saved source '
+            'order; putting them first so they are actually used',
+            ', '.join(repr(name) for name in missing),
+        )
+        out = [*missing, *out]
     return out or ['youtube-music']
 
 

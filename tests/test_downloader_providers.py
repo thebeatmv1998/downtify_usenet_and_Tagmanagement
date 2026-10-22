@@ -300,6 +300,56 @@ def test_usenet_local_source_is_copied_to_destination(
     assert no_youtube == []
 
 
+def test_a_pinned_youtube_video_does_not_bypass_usenet_first(
+    tmp_path, monkeypatch, no_youtube
+):
+    calls = []
+
+    def _usenet(song, settings, progress_cb=None):
+        calls.append(song.get('name'))
+
+    monkeypatch.setattr(downloader_mod, 'download_from_usenet', _usenet)
+    d = Downloader(
+        tmp_path,
+        audio_providers=['usenet', 'youtube-music'],
+        usenet_settings={'enabled': True},
+    )
+
+    stored = d.download({**_SONG, 'youtube_id': 'pinned12345'})
+
+    assert stored == 'Artist - Track.mp3'
+    # Usenet was searched even though the row came with a pinned video;
+    # the pin was only used as the fallback.
+    assert calls == ['Track']
+    assert no_youtube == ['https://music.youtube.com/watch?v=pinned12345']
+
+
+def test_a_pinned_video_uses_usenet_when_it_has_the_track(
+    tmp_path, monkeypatch, no_youtube
+):
+    usenet_dir = tmp_path / 'usenet'
+    source = usenet_dir / 'Artist - Track.mp3'
+    usenet_dir.mkdir()
+    _minimal_mp3(source)
+    monkeypatch.setattr(
+        downloader_mod, 'download_from_usenet', lambda *a, **k: source
+    )
+    monkeypatch.setattr(
+        downloader_mod, '_download_cover', lambda url: b'IMG-BYTES'
+    )
+    d = Downloader(
+        tmp_path / 'downloads',
+        audio_providers=['usenet', 'youtube-music'],
+        usenet_settings={'enabled': True},
+    )
+
+    stored = d.download({**_SONG, 'youtube_id': 'pinned12345'})
+
+    assert stored == 'Artist - Track.mp3'
+    assert (tmp_path / 'downloads' / 'Artist - Track.mp3').is_file()
+    assert no_youtube == []
+
+
 def test_no_audio_match_mentions_audio_when_usenet_enabled(
     tmp_path, monkeypatch, no_youtube
 ):
@@ -363,9 +413,7 @@ def test_explicit_video_override_still_downloads_that_video(
     monkeypatch.setattr(
         downloader_mod, 'download_from_usenet', lambda *a, **k: None
     )
-    monkeypatch.setattr(
-        downloader_mod, '_download_cover', lambda url: b'IMG'
-    )
+    monkeypatch.setattr(downloader_mod, '_download_cover', lambda url: b'IMG')
     d = Downloader(
         tmp_path / 'downloads',
         audio_providers=['usenet'],

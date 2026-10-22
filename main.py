@@ -656,6 +656,15 @@ def build_app() -> FastAPI:
         usenet_settings=api._effective_usenet_settings(api.state.settings),
         max_track_duration_seconds=api._max_track_duration_seconds(),
     )
+    logger.info(
+        'Audio providers (in order): {}', api.state.downloader.audio_providers
+    )
+    usenet_cfg = api.state.downloader.usenet_settings
+    logger.info(
+        'Usenet source: enabled={} indexers={}',
+        bool(usenet_cfg.get('enabled')),
+        len(usenet_cfg.get('indexers') or []),
+    )
     api.normalize_lyrics_location(api.state.settings)
     api.bind_lrc_resolver()
     # A finished download (from the UI or a monitor sweep alike) seeds its
