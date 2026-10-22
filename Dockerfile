@@ -34,9 +34,16 @@ RUN if [ "$(uname -m)" = "x86_64" ] && ls ./wheels/*.whl >/dev/null 2>&1; then \
 # stale dist. `npm ci` installs exactly what package-lock.json pins; the
 # source is copied afterwards so dependency layers stay cached across
 # source-only changes.
-FROM node:26-alpine AS frontend-builder
+# Pinned to the Node.js release that fixes CVE-2026-111497 (Brotli
+# decoder). Node is only used to build the SPA in this stage; the final
+# runtime image below contains no Node.js at all.
+FROM node:26.12.1-alpine AS frontend-builder
 
 WORKDIR /frontend
+
+# Refuse to build with an older 26.x: a cached/floating tag must never
+# silently reintroduce the vulnerable runtime.
+RUN node -e "const v=process.versions.node.split('.').map(Number); if (v[0] < 26 || (v[0] === 26 && (v[1] < 12 || (v[1] === 12 && v[2] < 1)))) { console.error('Node.js ' + process.versions.node + ' is below the CVE-2026-111497 fixed baseline (26.12.1)'); process.exit(1); }"
 
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm install -g npm@latest && npm ci

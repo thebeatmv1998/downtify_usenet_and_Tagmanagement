@@ -52,7 +52,8 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: '26'
+          # CVE-2026-111497 fixed in 26.12.1 (Brotli decoder).
+          node-version: '26.12.1'
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
