@@ -36,6 +36,7 @@ from .playlist_catalog import PlaylistCatalog
 from .playlist_spotify_cache import PlaylistSpotifyCache
 from .playlist_tracks import build_library_song_index, resolve_track_file
 from .podcasts import PodcastStore, sync_show
+from .sqlite_utils import ClosingConnection
 from .track_index import TrackIndex, normalize_spotify_track_id
 from .track_owners import TrackOwners
 
@@ -291,7 +292,9 @@ class PlaylistMonitorDB:
         self._init_db()
 
     def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self._path, check_same_thread=False)
+        conn = sqlite3.connect(
+            self._path, check_same_thread=False, factory=ClosingConnection
+        )
         conn.execute('PRAGMA foreign_keys = ON')
         conn.row_factory = sqlite3.Row
         return conn
@@ -694,56 +697,52 @@ class PlaylistMonitorDB:
         return {str(row['name']) for row in rows}
 
     def update_filename_for_spotify(
-        self, track_spotify_id: str, filename: str
+        self,
+        track_spotify_id: str,
+        filename: str,
+        *,
+        by_filename: bool = False,
     ) -> set[str]:
         """Point every watch's record of this track at ``filename``.
 
         Used when the track is downloaded again elsewhere (another
         playlist, a single download), so a watch doesn't keep a stale
-        path. Returns the playlists that have the track.
+        path. With *by_filename* the first argument is the recorded path
+        instead of a Spotify id, which also covers YouTube Music / Deezer
+        watches whose track id isn't a Spotify one. Returns the playlists
+        that have the track.
         """
 
-        tid = str(track_spotify_id or '').strip()
+        key = str(track_spotify_id or '').strip().replace('\\', '/')
         name = str(filename or '').strip().replace('\\', '/')
-        if not tid or not name:
+        if not key or not name:
             return set()
         with self._connect() as conn:
-            conn.execute(
-                """UPDATE downloaded_tracks SET filename = ?
-                   WHERE track_spotify_id = ?
-                   AND (filename IS NULL OR filename != ?)""",
-                (name, tid, name),
-            )
-        return self.playlists_for_track(tid)
-
-    def update_filename(
-        self, old_filename: str, new_filename: str
-    ) -> set[str]:
-        """Point every watch's record of a file at *new_filename*.
-
-        Unlike :meth:`update_filename_for_spotify` this matches on the
-        recorded path, so it also covers YouTube Music / Deezer watches
-        whose track id isn't a Spotify one. Returns the playlists that
-        had the file.
-        """
-
-        old = str(old_filename or '').strip().replace('\\', '/')
-        new = str(new_filename or '').strip().replace('\\', '/')
-        if not old or not new or old == new:
-            return set()
-        with self._connect() as conn:
-            conn.execute(
-                """UPDATE downloaded_tracks SET filename = ?
-                   WHERE filename = ?""",
-                (new, old),
-            )
-            rows = conn.execute(
-                """SELECT DISTINCT p.name FROM downloaded_tracks dt
-                   JOIN monitored_playlists p ON p.id = dt.playlist_id
-                   WHERE dt.filename = ?""",
-                (new,),
-            ).fetchall()
-        return {str(row['name']) for row in rows}
+            if by_filename:
+                if key == name:
+                    return set()
+                conn.execute(
+                    """UPDATE downloaded_tracks SET filename = ?
+                       WHERE filename = ?""",
+                    (name, key),
+                )
+                rows = conn.execute(
+                    """SELECT DISTINCT p.name FROM downloaded_tracks dt
+                       JOIN monitored_playlists p ON p.id = dt.playlist_id
+                       WHERE dt.filename = ?""",
+                    (name,),
+                ).fetchall()
+            else:
+                conn.execute(
+                    """UPDATE downloaded_tracks SET filename = ?
+                       WHERE track_spotify_id = ?
+                       AND (filename IS NULL OR filename != ?)""",
+                    (name, key, name),
+                )
+                rows = []
+        if by_filename:
+            return {str(row['name']) for row in rows}
+        return self.playlists_for_track(key)
 
     def mark_track_downloaded(
         self,
@@ -856,6 +855,9 @@ async def _fill_from_spotify_track(song: dict[str, Any]) -> None:
     for key in ('track_number', 'album_track_total'):
         if not song.get(key) and full.get(key):
             song[key] = full[key]
+    # The track's own page is the surer word on explicit lyrics.
+    if full.get('explicit'):
+        song['explicit'] = True
 
 
 async def check_playlist(

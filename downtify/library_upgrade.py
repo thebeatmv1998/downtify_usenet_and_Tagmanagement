@@ -41,6 +41,7 @@ the existing file untouched.
 
 from __future__ import annotations
 
+import errno
 import os
 import shutil
 import threading
@@ -117,6 +118,8 @@ DEFAULT_METADATA_MODE = METADATA_MODE_FILL
 #: run is tens of thousands of tracks long and every message costs a
 #: count query plus a broadcast.
 _PUBLISH_INTERVAL_SECONDS = 1.0
+
+_READ_ONLY_DETAIL = 'Read-only filesystem; original file left unchanged'
 
 
 @dataclass(frozen=True)
@@ -487,6 +490,23 @@ class UpgradeOutcome:
     changed: list[str] = field(default_factory=list)
     artwork_px: int = 0
     artwork_source: str = ''
+    checked: bool = True
+
+
+def _read_only_filesystem(path: Path) -> bool:
+    """Inspect mount flags, including when the process runs as root.
+
+    Windows has no statvfs; staging still reports any write failure.
+    Do not use permission bits to turn unexpected access errors into skips.
+    """
+
+    statvfs = getattr(os, 'statvfs', None)
+    if statvfs is None:
+        return False
+    read_only = getattr(os, 'ST_RDONLY', 1)
+    return any(
+        statvfs(target).f_flag & read_only for target in (path, path.parent)
+    )
 
 
 @dataclass
@@ -654,6 +674,8 @@ def _write_upgrade(
     try:
         stage = _stage(full)
     except OSError as exc:
+        if exc.errno == errno.EROFS:
+            return _READ_ONLY_DETAIL
         return f'Could not stage a copy: {exc}'
 
     try:
@@ -793,6 +815,8 @@ def upgrade_track(
     if found is None:
         return UpgradeOutcome(JOB_SKIPPED, 'File is no longer in the library')
     full, entry = found
+    if _read_only_filesystem(full):
+        return UpgradeOutcome(JOB_SKIPPED, _READ_ONLY_DETAIL, checked=False)
     return _apply_track(
         full,
         entry,
@@ -861,6 +885,8 @@ def _apply_track(
             new_lyrics=new_lyrics,
             write_tags=bool(_AUDIO_CATEGORIES.intersection(changed)),
         )
+        if error == _READ_ONLY_DETAIL:
+            return UpgradeOutcome(JOB_SKIPPED, error, checked=False)
         if error:
             return UpgradeOutcome(JOB_FAILED, error)
     if old_key and deps.rekey_owners is not None:
@@ -1206,7 +1232,7 @@ class LibraryUpgradeRunner:
             detail=outcome.detail,
             changed=outcome.changed,
         )
-        if outcome.status != JOB_FAILED:
+        if outcome.status != JOB_FAILED and outcome.checked:
             # Only the categories this run actually looked at: the rest
             # stay due, so a later run for them still considers the
             # track.

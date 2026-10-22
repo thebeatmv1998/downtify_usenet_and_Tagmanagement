@@ -507,7 +507,11 @@ def _relink(
                 ctx.playlist_catalog.update_filename(old_stored, new_stored)
             )
         if monitor_db is not None:
-            affected.update(monitor_db.update_filename(old_stored, new_stored))
+            affected.update(
+                monitor_db.update_filename_for_spotify(
+                    old_stored, new_stored, by_filename=True
+                )
+            )
     except Exception:
         logger.opt(exception=True).debug(
             'Album merge: relinking {} failed', old_stored

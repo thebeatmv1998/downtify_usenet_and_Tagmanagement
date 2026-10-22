@@ -37,6 +37,11 @@ from yt_dlp.postprocessor.ffmpeg import FFmpegExtractAudioPP
 from . import cover_sources
 from . import lyrics as lyrics_mod
 from . import spotify as spotify_mod
+from .content_advisory import (
+    ADVISORY_EXPLICIT,
+    ADVISORY_TAG,
+    MP4_ADVISORY_ATOM,
+)
 from .cookies import CookiesStore, check_cookies_file
 from .file_naming import sanitize_file_name
 from .itunes import fetch_genre as _fetch_itunes_genre
@@ -644,14 +649,11 @@ class Downloader:
                 continue
             indexers.append({
                 'name': str(row.get('name') or '').strip(),
-                'base_url': str(row.get('base_url') or '')
-                .strip()
-                .rstrip('/'),
+                'base_url': str(row.get('base_url') or '').strip().rstrip('/'),
                 'api_key': str(row.get('api_key') or '').strip(),
                 'type': (
                     'prowlarr'
-                    if str(row.get('type') or '').strip().lower()
-                    == 'prowlarr'
+                    if str(row.get('type') or '').strip().lower() == 'prowlarr'
                     else 'newznab'
                 ),
                 'enabled': bool(row.get('enabled', True)),
@@ -920,16 +922,7 @@ class Downloader:
         ``download_dir`` (``<subdir>/<file>.<ext>``).
         """
 
-        output_parts = self._format_output_parts(song)
-        basename = output_parts[-1]
-        output_subdir = (
-            Path(*output_parts[:-1]) if len(output_parts) > 1 else None
-        )
-        effective_subdir = self._effective_subdir(song, subdir)
-        target_dir, prefix = self._resolve_target_dir(effective_subdir)
-        if output_subdir is not None:
-            target_dir /= output_subdir
-            prefix = f'{prefix}{output_subdir.as_posix()}/'
+        target_dir, prefix, basename = self._expected_location(song, subdir)
         primary = target_dir / f'{basename}.{self.audio_format}'
         if primary.exists():
             return f'{prefix}{primary.name}'
@@ -945,6 +938,34 @@ class Downloader:
                 ):
                     return f'{prefix}{candidate.name}'
         return None
+
+    def _expected_location(
+        self, song: dict[str, Any], subdir: Optional[str]
+    ) -> tuple[Path, str, str]:
+        """``(target_dir, relative_prefix, basename)`` a download of
+        ``song`` lands at - no disk access."""
+
+        output_parts = self._format_output_parts(song)
+        basename = output_parts[-1]
+        output_subdir = (
+            Path(*output_parts[:-1]) if len(output_parts) > 1 else None
+        )
+        effective_subdir = self._effective_subdir(song, subdir)
+        target_dir, prefix = self._resolve_target_dir(effective_subdir)
+        if output_subdir is not None:
+            target_dir /= output_subdir
+            prefix = f'{prefix}{output_subdir.as_posix()}/'
+        return target_dir, prefix, basename
+
+    def expected_stem_for(
+        self, song: dict[str, Any], subdir: Optional[str] = None
+    ) -> str:
+        """The library path :meth:`existing_filename_for` looks for,
+        without the extension (``<subdir>/<file>``) - no disk access, so
+        many songs can be checked against an in-memory listing."""
+
+        _target_dir, prefix, basename = self._expected_location(song, subdir)
+        return f'{prefix}{basename}'
 
     def find_existing_download(
         self,
@@ -1725,6 +1746,8 @@ def embed_metadata(
     recording_date = _recording_date_for_tags(song)
     genre = (song.get('genre') or '').strip()
     release_type = _release_type_for_tags(song)
+    # Only ever added: a file is never un-flagged by a song that doesn't say.
+    explicit = bool(song.get('explicit'))
     if not download_cover:
         cover_bytes = None
     elif cover_bytes is None:
@@ -1773,6 +1796,7 @@ def embed_metadata(
             track_number,
             album_track_total,
             release_type,
+            explicit,
         )
     elif suffix in {'m4a', 'mp4', 'aac'}:
         _tag_mp4(
@@ -1787,6 +1811,7 @@ def embed_metadata(
             track_number,
             album_track_total,
             release_type,
+            explicit,
         )
     elif suffix == 'flac':
         _tag_flac(
@@ -1801,6 +1826,7 @@ def embed_metadata(
             track_number,
             album_track_total,
             release_type,
+            explicit,
         )
     elif suffix in {'ogg', 'oga'}:
         _tag_ogg_vorbis(
@@ -1815,6 +1841,7 @@ def embed_metadata(
             track_number,
             album_track_total,
             release_type,
+            explicit,
         )
     elif suffix == 'opus':
         _tag_opus(
@@ -1829,6 +1856,7 @@ def embed_metadata(
             track_number,
             album_track_total,
             release_type,
+            explicit,
         )
 
 
@@ -1844,6 +1872,7 @@ def _tag_mp3(
     track_number: Optional[int],
     album_track_total: Optional[int],
     release_type: str = '',
+    explicit: bool = False,
 ) -> None:
     audio = MP3(str(path), ID3=ID3)
     if audio.tags is None:
@@ -1883,6 +1912,11 @@ def _tag_mp3(
                 text=release_type,
             )
         )
+    if explicit:
+        audio.tags.delall(f'TXXX:{ADVISORY_TAG}')
+        audio.tags.add(
+            TXXX(encoding=3, desc=ADVISORY_TAG, text=ADVISORY_EXPLICIT)
+        )
     if cover_bytes:
         audio.tags.add(
             APIC(
@@ -1916,6 +1950,7 @@ def _tag_mp4(
     track_number: Optional[int],
     album_track_total: Optional[int],
     release_type: str = '',
+    explicit: bool = False,
 ) -> None:
     audio = MP4(str(path))
     audio['\xa9nam'] = title
@@ -1938,6 +1973,8 @@ def _tag_mp4(
         audio['----:com.apple.iTunes:MusicBrainz Album Type'] = [
             MP4FreeForm(release_type.encode('utf-8'))
         ]
+    if explicit:
+        audio[MP4_ADVISORY_ATOM] = [int(ADVISORY_EXPLICIT)]
     if cover_bytes:
         audio['covr'] = [
             MP4Cover(cover_bytes, imageformat=MP4Cover.FORMAT_JPEG)
@@ -1957,6 +1994,7 @@ def _tag_flac(
     track_number: Optional[int],
     album_track_total: Optional[int],
     release_type: str = '',
+    explicit: bool = False,
 ) -> None:
     audio = FLAC(str(path))
     audio['title'] = title
@@ -1978,6 +2016,8 @@ def _tag_flac(
         audio['genre'] = genre
     if release_type:
         audio['releasetype'] = release_type
+    if explicit:
+        audio[ADVISORY_TAG] = ADVISORY_EXPLICIT
     if cover_bytes:
         picture = Picture()
         picture.data = cover_bytes
@@ -2000,6 +2040,7 @@ def _tag_ogg_vorbis(
     track_number: Optional[int],
     album_track_total: Optional[int],
     release_type: str = '',
+    explicit: bool = False,
 ) -> None:
     audio = OggVorbis(str(path))
     _apply_vorbis_comments(
@@ -2014,6 +2055,7 @@ def _tag_ogg_vorbis(
         track_number,
         album_track_total,
         release_type,
+        explicit,
     )
     audio.save()
 
@@ -2030,6 +2072,7 @@ def _tag_opus(
     track_number: Optional[int],
     album_track_total: Optional[int],
     release_type: str = '',
+    explicit: bool = False,
 ) -> None:
     audio = OggOpus(str(path))
     _apply_vorbis_comments(
@@ -2044,6 +2087,7 @@ def _tag_opus(
         track_number,
         album_track_total,
         release_type,
+        explicit,
     )
     audio.save()
 
@@ -2060,6 +2104,7 @@ def _apply_vorbis_comments(
     track_number: Optional[int],
     album_track_total: Optional[int],
     release_type: str = '',
+    explicit: bool = False,
 ):
     audio['title'] = title
     if artists:
@@ -2078,6 +2123,8 @@ def _apply_vorbis_comments(
         audio['date'] = year
     if release_type:
         audio['RELEASETYPE'] = release_type
+    if explicit:
+        audio[ADVISORY_TAG] = ADVISORY_EXPLICIT
     if genre:
         audio['genre'] = genre
     if cover_bytes:
