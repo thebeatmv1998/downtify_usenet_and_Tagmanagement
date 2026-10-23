@@ -35,7 +35,7 @@
     <button
       v-else-if="round && auth.isAdmin.value"
       type="button"
-      class="tile-play absolute top-2.5 right-2.5 flex size-10 items-center justify-center rounded-full shadow-float transition-transform hover:scale-105"
+      class="absolute top-2.5 right-2.5 flex size-10 items-center justify-center rounded-full shadow-float transition-transform hover:scale-105"
       :class="
         discographyStarted
           ? 'bg-surface text-accent'
