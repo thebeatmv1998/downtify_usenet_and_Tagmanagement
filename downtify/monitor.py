@@ -1312,6 +1312,7 @@ def _progress_cb(
                 'message': message,
                 'provider': provider or '',
                 'playlist_name': label,
+                'status': 'done' if pct >= 100 else 'downloading',
             }),
             loop,
         )

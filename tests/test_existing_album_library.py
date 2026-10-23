@@ -195,3 +195,28 @@ def test_complete_album_batch_reuses_existing_imports_without_provider_calls(
     assert all(
         api.state.download_jobs[job_id]['status'] == 'done' for job_id in ids
     )
+
+
+def test_existing_songs_are_done_while_missing_songs_remain_waiting(
+    tmp_path, monkeypatch
+):
+    tagged_file(tmp_path, 'Import/existing.mp3', title='Existing')
+    monkeypatch.setattr(api.state, 'downloader', Downloader(tmp_path))
+    monkeypatch.setattr(api.state, 'download_jobs', {})
+    monkeypatch.setattr(api.state, 'track_index', None)
+    messages = []
+
+    async def broadcast(users, message):
+        messages.append(message)
+
+    monkeypatch.setattr(api.state.connections, 'broadcast_job', broadcast)
+    tracks = [
+        {**song(title), 'song_id': title} for title in ['Existing', 'Missing']
+    ]
+    ids = [api._register_job(track, status='queued') for track in tracks]
+    asyncio.run(api._mark_existing_queue_jobs(tracks, ids))
+    assert api.state.download_jobs[ids[0]]['status'] == 'done'
+    assert api.state.download_jobs[ids[0]]['progress'] == 100
+    assert api.state.download_jobs[ids[0]]['filename'] == 'Import/existing.mp3'
+    assert api.state.download_jobs[ids[1]]['status'] == 'queued'
+    assert [message['status'] for message in messages] == ['done']

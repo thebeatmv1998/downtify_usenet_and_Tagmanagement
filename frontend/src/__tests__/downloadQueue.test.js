@@ -70,6 +70,26 @@ afterEach(() => {
 })
 
 describe('queue reconciliation', () => {
+  it('moves statusless monitor completion to Done and ignores late progress', () => {
+    const row = job('monitor-song')
+    send({ song: row.song, progress: 100, message: 'Already in library' })
+    expect(tracker.getBySong(row.song).state).toBe('done')
+    send({ song: row.song, progress: 45, message: 'Old progress' })
+    expect(tracker.getBySong(row.song).state).toBe('done')
+    expect(tracker.getBySong(row.song).progress).toBe(100)
+  })
+
+  it('does not let a stale poll demote Done to In progress', async () => {
+    const row = job('finished', { status: 'downloading', progress: 50 })
+    fixture.jobs = [row]
+    send({ ...row, status: 'done', filename: 'finished.mp3' })
+    await model.syncQueueFromServer()
+    expect(tracker.getBySong(row.song).state).toBe('done')
+    expect(tracker.getBySong(row.song).filename).toBe('finished.mp3')
+    send({ ...row, status: 'queued', progress: 0 })
+    expect(tracker.getBySong(row.song).state).toBe('queued')
+  })
+
   it('discards an old poll response after Stop all', async () => {
     send(job('visible'))
     let resolve

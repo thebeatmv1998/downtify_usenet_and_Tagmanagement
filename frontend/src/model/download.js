@@ -152,6 +152,8 @@ class DownloadItem {
 }
 
 function applyServerJob(item, job) {
+  // A poll started before completion can arrive after the final WS frame.
+  if (item.isDownloaded() && ['queued', 'downloading'].includes(job.status)) return
   item.patch({
     ...(job.provider ? { provider: job.provider } : {}),
     message: job.message || '',
@@ -267,13 +269,16 @@ API.onMessage((data) => {
   if (!data.song) return
   batchQueueChanges(() => {
     const item = findItem(data.song) || appendSong(data.song)
-    item.wsUpdate(data.status === 'done' ? { ...data, progress: 100 } : data)
-    if (data.status === 'done') {
+    // Legacy monitor frames have progress but no explicit status.
+    const status = data.status || (data.progress >= 100 ? 'done' : 'downloading')
+    if (item.isDownloaded() && status === 'downloading') return
+    item.wsUpdate(status === 'done' ? { ...data, progress: 100 } : data)
+    if (status === 'done') {
       item.setFile(data.filename)
       item.setDownloaded()
-    } else if (data.status === 'error') {
+    } else if (status === 'error') {
       item.setError()
-    } else if (data.status === 'queued') {
+    } else if (status === 'queued') {
       item.setStatus(STATUS.QUEUED)
     } else {
       item.setDownloading()

@@ -3781,6 +3781,54 @@ def _register_job(
     return song_id
 
 
+async def _mark_existing_queue_jobs(
+    songs: list[dict[str, Any]],
+    job_ids: list[str],
+    subdir: Optional[str] = None,
+) -> None:
+    """Classify existing tracks before album prefetch or waiting for slots."""
+    downloader = state.downloader
+    if downloader is None or not hasattr(downloader, 'download_dir'):
+        return
+    generation = download_control.current_generation()
+    for song, job_id in zip(songs, job_ids):
+        job = state.download_jobs.get(job_id)
+        if not job or job.get('status') != 'queued':
+            continue
+        if not song.get('_usenet_prefer_album') and getattr(
+            downloader, 'overwrite_existing_files', True
+        ):
+            continue
+        hit = await asyncio.to_thread(
+            resolve_existing_download,
+            downloader,
+            song,
+            subdir=subdir,
+            track_index=state.track_index,
+        )
+        if download_control.is_cancelled(generation):
+            return
+        if (
+            hit
+            and state.download_jobs.get(job_id) is job
+            and job.get('status') == 'queued'
+        ):
+            filename, message = hit
+            job.update(
+                status='done', progress=100, filename=filename, message=message
+            )
+            await state.connections.broadcast_job(
+                _job_users(job),
+                {
+                    'song': song,
+                    'status': 'done',
+                    'progress': 100,
+                    'filename': filename,
+                    'message': message,
+                },
+            )
+
+
 def _job_users(job: dict[str, Any]) -> set[int]:
     """The accounts waiting on a job row (any shape it comes in)."""
 
@@ -4025,13 +4073,26 @@ async def _run_download_locked(
                 j = state.download_jobs.get(song_id)
                 if j is not job:
                     return
+                if j.get('status') != 'downloading':
+                    return
                 if j:
                     j['progress'] = pct
                     j['message'] = message
                     if provider:
                         j['provider'] = provider
-                asyncio.run_coroutine_threadsafe(
-                    state.connections.broadcast_job(
+
+                async def send_progress() -> None:
+                    if (
+                        job.get('status') != 'downloading'
+                        or state.download_jobs.get(song_id) is not job
+                    ):
+                        return
+                    if (
+                        cancel_generation is not None
+                        and download_control.is_cancelled(cancel_generation)
+                    ):
+                        return
+                    await state.connections.broadcast_job(
                         _job_users(j or {}),
                         {
                             'song': song,
@@ -4041,9 +4102,9 @@ async def _run_download_locked(
                             or (j or {}).get('provider', ''),
                             'status': 'downloading',
                         },
-                    ),
-                    loop,
-                )
+                    )
+
+                asyncio.run_coroutine_threadsafe(send_progress(), loop)
 
             filename = await loop.run_in_executor(
                 DOWNLOAD_EXECUTOR,
@@ -4825,6 +4886,7 @@ async def _process_batch_impl(  # noqa: PLR0914
     # This is one download and deliberately bypasses the per-track
     # parallel limit; if no album release exists, songs fall back to
     # their normal per-track search.
+    await _mark_existing_queue_jobs(songs, job_ids, batch_subdir)
     await asyncio.to_thread(
         _prefetch_usenet_albums,
         songs,
@@ -9667,11 +9729,16 @@ async def _queue_artist_discography(
             )
         queued = []
         for album_id, album_name, songs in batches:
+            if download_control.is_cancelled(generation):
+                raise HTTPException(
+                    status_code=409, detail='Artist download was stopped'
+                )
             ids = [
                 _register_job(song, status='queued', user_id=playlist.user_id)
                 for song in songs
             ]
             queued.append((album_id, album_name, songs, ids))
+            await _mark_existing_queue_jobs(songs, ids)
         await state.connections.broadcast({'type': 'queue_reload'})
 
         async def run_albums() -> None:

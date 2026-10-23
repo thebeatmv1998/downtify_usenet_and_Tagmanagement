@@ -88,6 +88,12 @@ tags across the download library and configured Soulseek source folder. This
 also recognizes renamed imports, older album layouts and different audio formats;
 another artist or a distinct live recording is not treated as the same song.
 
+Existing tracks are classified as **Done** before album prefetch starts; missing
+tracks stay **Waiting** until their download actually begins. Finished tracks
+stay in **Done**, including monitor downloads: delayed progress messages and old
+queue snapshots cannot move them back to **In progress**. An explicit retry can
+still start a new attempt.
+
 ## YouTube bot check ("Sign in to confirm you're not a bot")
 
 YouTube aggressively gates datacenter IPs. If downloads or metadata lookups fail:
