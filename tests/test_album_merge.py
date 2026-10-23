@@ -239,12 +239,126 @@ def test_base_album_strips_edition_suffixes() -> None:
     assert album_merge.base_album('X (Deluxe Edition) [2011 Remaster]') == 'X'
     assert album_merge.base_album('X (Bonus Tracks)') == 'X'
     assert album_merge.base_album('X (25th Anniversary Edition)') == 'X'
+    assert album_merge.base_album('Thriller (1982)') == 'Thriller'
+    assert album_merge.base_album('Bad (1987)') == 'Bad'
+    assert album_merge.base_album('Thriller [1982]') == 'Thriller'
+    assert album_merge.base_album('Thriller - 1982') == 'Thriller'
     # An album genuinely called Deluxe, or a live/single release, is not
     # an edition of a shorter album and must stay distinct.
     assert album_merge.base_album('Deluxe') == 'Deluxe'
     assert album_merge.base_album('Something Special') == 'Something Special'
     assert album_merge.base_album('X (Live)') == 'X (Live)'
     assert album_merge.base_album('X - Single') == 'X - Single'
+    assert album_merge.base_album('Blade Runner 2049') == 'Blade Runner 2049'
+    assert album_merge.base_album('1984') == '1984'
+
+
+def test_release_year_suffix_is_the_same_album(tmp_path: Path) -> None:
+    ctx = _context(tmp_path)
+    plain = ctx.download_dir / 'Michael Jackson' / 'Thriller'
+    year = ctx.download_dir / 'Michael Jackson' / 'Thriller (1982)'
+    _write_track(
+        plain / 'A.mp3', title='A', album='Thriller', number='1', frames=80
+    )
+    _write_track(
+        plain / 'B.mp3', title='B', album='Thriller', number='2', frames=60
+    )
+    _write_track(
+        year / 'A.mp3',
+        title='A',
+        album='Thriller (1982)',
+        number='1',
+        frames=40,
+    )
+    _write_track(
+        year / 'B.mp3',
+        title='B',
+        album='Thriller (1982)',
+        number='2',
+        frames=50,
+    )
+
+    plans = album_merge.detect_split_albums(
+        ctx,
+        resolver=lambda *_a, **_k: (_ for _ in ()).throw(
+            AssertionError('no lookup needed')
+        ),
+    )
+
+    assert len(plans) == 1
+    plan = plans[0]
+    assert plan.album == 'Thriller'
+    assert plan.track_count == 2
+    assert plan.dropped_count == 2
+
+
+def test_folder_year_variant_merges_even_with_identical_tags(
+    tmp_path: Path,
+) -> None:
+    ctx = _context(tmp_path)
+    plain = ctx.download_dir / 'Michael Jackson' / 'Thriller'
+    year = ctx.download_dir / 'Michael Jackson' / 'Thriller (1982)'
+    # Both folders carry the same album tag and hold different songs,
+    # so only the normalized folder names identify them as one album.
+    _write_track(plain / 'A.mp3', title='A', album='Thriller', number='1')
+    _write_track(plain / 'B.mp3', title='B', album='Thriller', number='2')
+    _write_track(year / 'C.mp3', title='C', album='Thriller', number='3')
+    _write_track(year / 'D.mp3', title='D', album='Thriller', number='4')
+
+    plans = album_merge.detect_split_albums(
+        ctx,
+        resolver=lambda *_a, **_k: (_ for _ in ()).throw(
+            AssertionError('no lookup needed')
+        ),
+    )
+
+    assert len(plans) == 1
+    plan = plans[0]
+    assert plan.album == 'Thriller'
+    assert plan.track_count == 4
+    assert plan.dropped_count == 0
+    assert plan.editions == ['Thriller', 'Thriller (1982)']
+
+
+def test_anniversary_edition_with_more_songs_wins(
+    tmp_path: Path,
+) -> None:
+    ctx = _context(tmp_path)
+    year = ctx.download_dir / 'Michael Jackson' / 'Bad (1987)'
+    anniversary = ctx.download_dir / 'Michael Jackson' / 'Bad 25th Anniversary'
+    _write_track(year / 'A.mp3', title='A', album='Bad (1987)', number='1')
+    _write_track(year / 'B.mp3', title='B', album='Bad (1987)', number='2')
+    _write_track(
+        anniversary / 'A.mp3',
+        title='A',
+        album='Bad 25th Anniversary',
+        number='1',
+    )
+    _write_track(
+        anniversary / 'B.mp3',
+        title='B',
+        album='Bad 25th Anniversary',
+        number='2',
+    )
+    _write_track(
+        anniversary / 'C.mp3',
+        title='C',
+        album='Bad 25th Anniversary',
+        number='3',
+    )
+
+    plans = album_merge.detect_split_albums(
+        ctx,
+        resolver=lambda *_a, **_k: (_ for _ in ()).throw(
+            AssertionError('no lookup needed')
+        ),
+    )
+
+    assert len(plans) == 1
+    plan = plans[0]
+    assert plan.album == 'Bad 25th Anniversary'
+    assert plan.track_count == 3
+    assert plan.dropped_count == 2
 
 
 def test_deluxe_edition_wins_and_best_quality_copy_is_kept(  # noqa: PLR0915
@@ -278,6 +392,10 @@ def test_deluxe_edition_wins_and_best_quality_copy_is_kept(  # noqa: PLR0915
         number='3',
         frames=40,
     )
+    # Leftovers in the source album folder must not keep it alive after
+    # the merge: the .lrc travels with its track, the cover is orphaned.
+    (normal / 'A.lrc').write_text('[00:01] hi\n', encoding='utf-8')
+    (normal / 'cover.png').write_bytes(_png(600))
 
     def _must_not_look_up(*_args: Any, **_kwargs: Any) -> Any:
         raise AssertionError('edition merges must not call a tag source')
@@ -337,6 +455,7 @@ def test_deluxe_edition_wins_and_best_quality_copy_is_kept(  # noqa: PLR0915
     assert first.is_file()
     assert second.is_file()
     assert third.is_file()
+    assert album_merge.lyrics_mod.lrc_path_for(first).is_file()
     assert not normal.exists()
     assert not (deluxe / 'A.mp3').exists()
     assert not (deluxe / 'B.mp3').exists()

@@ -57,8 +57,10 @@ def delete_album_cover_if_orphaned(audio_path: Path) -> None:
     dependent.
     """
     folder = audio_path.parent
-    cover = folder / ALBUM_COVER_FILENAME
-    if not cover.is_file():
+    from .album_covers import find_cover  # noqa: PLC0415  (avoid cycle)
+
+    cover = find_cover(folder)
+    if cover is None:
         return
     still_used = any(
         p.is_file() and p.suffix.lower() in _AUDIO_EXTENSIONS

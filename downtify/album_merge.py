@@ -44,6 +44,7 @@ from . import (
     library_cleanup,
     spotify,
 )
+from . import lyrics as lyrics_mod
 from .downloader import _sanitize, embed_metadata
 from .library_catalog import (
     LibraryContext,
@@ -119,7 +120,19 @@ _EDITION_TAIL = re.compile(
     r'|\s+(?:the\s+)?(?:special|expanded|anniversary|collector\'?s|'
     r'limited|platinum|legacy|bonus(?:\s+tracks?)?)'
     r'\s+(?:edition|version)(?:\s+(?:19|20)\d{2})?'
+    # "Bad 25th Anniversary" without a following "Edition".
+    r'|\s+(?:the\s+)?(?:\d+(?:st|nd|rd|th)\s+)?anniversary'
+    r'(?:\s+(?:edition|version))?(?:\s+(?:19|20)\d{2})?'
+    # A release year is not a different album: "Thriller (1982)".
+    r'|\s*[\(\[]\s*(?:19|20)\d{2}\s*[\)\]]'
+    r'|\s*[-–—:]\s*(?:19|20)\d{2}'
     r')\s*$',
+    re.IGNORECASE,
+)
+
+_EDITION_RANK_WORDS = re.compile(
+    r'deluxe|special|expanded|anniversary|remaster|bonus|'
+    r'collector|limited|platinum|legacy',
     re.IGNORECASE,
 )
 
@@ -335,9 +348,11 @@ def base_album(title: str) -> str:
 
 
 def _edition_rank(title: str) -> int:
-    """1 for a title that carries an edition marker (tie-break only)."""
+    """1 for a real edition marker, 0 for a bare release year."""
 
-    return 1 if fold_text(base_album(title)) != fold_text(title) else 0
+    if fold_text(base_album(title)) == fold_text(title):
+        return 0
+    return 1 if _EDITION_RANK_WORDS.search(title) else 0
 
 
 def _field(data: Any, name: str, default: Any = 0) -> Any:
@@ -379,6 +394,42 @@ def _quality_label(data: Any) -> str:
     if sample_rate:
         parts.append(f'{sample_rate / 1000:g} kHz')
     return ' · '.join(parts)
+
+
+def _stored_parent_basename(stored: str) -> str:
+    """The immediate folder name of a stored library path (``''`` in a root)."""
+
+    text = str(stored or '').replace('\\', '/').rstrip('/')
+    if '/' not in text:
+        return ''
+    parent = text.rsplit('/', 1)[0]
+    return parent.rsplit('/', 1)[-1] if parent else ''
+
+
+def _folder_variants(items: list[_Entry], group_base: str) -> set[str]:
+    """Album-folder names that normalize to the same album.
+
+    Tag values sometimes already agree while the folders still carry a
+    year or edition suffix (``Thriller`` and ``Thriller (1982)``). Those
+    are the same album and should become one folder. A folder is only
+    considered when its normalized name matches the album's normalized
+    title, so an artist root, a disc subfolder or a per-track folder is
+    never treated as an edition of the album.
+    """
+
+    names: set[str] = set()
+    for item in items:
+        name = _stored_parent_basename(str(item.entry.get('file') or ''))
+        if not name:
+            continue
+        if fold_text(base_album(name)) != group_base:
+            continue
+        # An artist root can have the album's name (a self-titled album);
+        # it is not an album folder of its own.
+        if fold_text(name) == fold_text(item.group_artist):
+            continue
+        names.add(name.strip())
+    return names if len(names) > 1 else set()
 
 
 def _duration_clusters(
@@ -717,13 +768,15 @@ def _build_plan(  # noqa: PLR0914
         key=lambda bucket: (
             distinct_songs(bucket),
             _edition_rank(str(bucket['title'])),
+            -len(str(bucket['title'])),
             len(bucket['items']),
-            len(str(bucket['title'])),
         ),
     )
     target_title = str(target['title']).strip()
     target_items: list[_Entry] = target['items']
     target_fold = fold_text(target_title)
+    group_base = fold_text(base_album(target_title))
+    folder_variants = _folder_variants(items, group_base)
 
     artist_counts: dict[str, int] = {}
     for item in target_items:
@@ -797,7 +850,7 @@ def _build_plan(  # noqa: PLR0914
     if len(clusters) < 2 and duplicate_count == 0:
         # One song with no duplicate is not an album merge.
         return None
-    if not (local_tags_differ or duplicate_count > 0):
+    if not (local_tags_differ or duplicate_count > 0 or folder_variants):
         # Already one album with one copy per song. A multi-disc album
         # split over two folders is left alone rather than flattened
         # into a single folder behind the user's back.
@@ -821,14 +874,20 @@ def _build_plan(  # noqa: PLR0914
         track.track_number = number
     dropped.sort(key=lambda track: (track.title.casefold(), track.file))
 
-    edition_titles = [target_title] + sorted(
-        (
+    edition_titles = [target_title]
+    for title in sorted(
+        [
             str(bucket['title']).strip()
             for key, bucket in editions.items()
             if key != target_fold
-        ),
+        ]
+        + sorted(folder_variants),
         key=str.casefold,
-    )
+    ):
+        if fold_text(title) not in {
+            fold_text(existing) for existing in edition_titles
+        }:
+            edition_titles.append(title)
     return MergePlan(
         album=target_title,
         album_artist=target_artist,
@@ -999,6 +1058,32 @@ def _refresh_track_facts(track: MergeTrack, source: Path) -> None:
     track.quality = _quality_label(track)
 
 
+def _move_sidecar(source: Path, target: Path) -> None:
+    """Move an existing ``.lrc`` with its audio, so the old folder empties.
+
+    The destination honours the configured lyrics location; duplicate
+    sidecars left in old locations are removed afterwards.
+    """
+
+    try:
+        for sidecar in lyrics_mod.lrc_candidates(source):
+            if not sidecar.is_file():
+                continue
+            destination = lyrics_mod.lrc_path_for(target)
+            if sidecar.resolve() != destination.resolve():
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                try:
+                    os.replace(str(sidecar), str(destination))
+                except OSError:
+                    shutil.move(str(sidecar), str(destination))
+            break
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Album merge: could not move lyrics for {}', source
+        )
+    library_cleanup.delete_lrc_sidecar(source)
+
+
 def _prune_after_move(
     stored: str,
     source: Path,
@@ -1105,6 +1190,7 @@ def apply_merge(  # noqa: PLR0914
                 if final is None:
                     failed.append(stored)
                     continue
+                _move_sidecar(source, final)
                 try:
                     embed_metadata(
                         final,
