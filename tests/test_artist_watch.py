@@ -42,12 +42,22 @@ class _FakeDownloader:
         self.download_dir = tmp_path
         self.fail_song_ids = fail_song_ids
         self.calls: list[str] = []
+        self.usenet_album_flags: list[bool] = []
 
     def download(self, song, progress_cb=None, subdir=None):
         if song['song_id'] in self.fail_song_ids:
             raise RuntimeError('boom')
         self.calls.append(song['song_id'])
+        self.usenet_album_flags.append(bool(song.get('_usenet_prefer_album')))
         return f'{song["song_id"]}.mp3'
+
+
+class _JsonRequest:
+    def __init__(self, payload):
+        self._payload = payload
+
+    async def json(self):
+        return self._payload
 
 
 def _db(tmp_path) -> monitor.PlaylistMonitorDB:
@@ -113,6 +123,26 @@ def test_downloads_every_track_of_a_new_release(monkeypatch, tmp_path):
     assert _run_check(pl, db, dl) == 2
     assert dl.calls == ['t1', 't2']
     assert db.get_seen_album_ids(pl.id) == {'AL1'}
+
+
+def test_artist_watch_marks_usenet_album_downloads(monkeypatch, tmp_path):
+    _patch_provider(
+        monkeypatch,
+        [_album('AL1', 'First Album')],
+        {
+            'AL1': [
+                _track('t1', 'One', 'First Album', 1),
+                _track('t2', 'Two', 'First Album', 2),
+            ]
+        },
+    )
+    db = _db(tmp_path)
+    pl = _add_artist(db)
+    dl = _FakeDownloader(tmp_path)
+
+    _run_check(pl, db, dl)
+
+    assert dl.usenet_album_flags == [True, True]
 
 
 def test_second_sweep_downloads_nothing_new(monkeypatch, tmp_path):
@@ -414,6 +444,93 @@ def test_resolve_rejects_spotify_track_url(monkeypatch):
     with pytest.raises(HTTPException) as exc:
         _resolve('https://open.spotify.com/track/3C0nOe05EIt1390bVABLyN')
     assert exc.value.status_code == 400
+
+
+# ── whole-discography download endpoint ───────────────────────────────────
+
+
+def test_discography_endpoint_creates_and_starts_an_artist_watch(
+    monkeypatch, tmp_path
+):
+    db = _db(tmp_path)
+    started: list[int] = []
+    monkeypatch.setattr(api.state, 'monitor_db', db)
+    monkeypatch.setattr(api.state, 'downloader', object())
+    monkeypatch.setattr(
+        api, '_youtube_artist_for_name', lambda name: (CHANNEL_ID, name)
+    )
+    monkeypatch.setattr(
+        api, '_start_initial_check', lambda pl, _db: started.append(pl.id)
+    )
+    monkeypatch.setattr(api, 'request_user_id', lambda _request: 1)
+
+    out = asyncio.run(
+        api.download_artist_discography_endpoint(
+            _JsonRequest({'name': 'Test Artist'})
+        )
+    )
+
+    assert out['created'] is True
+    watch = out['watch']
+    assert watch['kind'] == monitor.KIND_ARTIST
+    assert set(watch['release_types']) == set(
+        monitor.ALL_RELEASE_TYPES.split(',')
+    )
+    assert not watch['new_only']
+    assert started == [watch['id']]
+
+    second = asyncio.run(
+        api.download_artist_discography_endpoint(
+            _JsonRequest({'name': 'Test Artist'})
+        )
+    )
+    assert second['created'] is False
+    assert second['watch']['id'] == watch['id']
+    assert started == [watch['id'], watch['id']]
+
+
+def test_discography_endpoint_restores_the_full_back_catalogue(
+    monkeypatch, tmp_path
+):
+    db = _db(tmp_path)
+    watch = db.add_playlist(
+        CHANNEL_ID,
+        'Test Artist',
+        'url',
+        60,
+        monitor.KIND_ARTIST,
+        'album',
+        True,
+        1,
+    )
+    db.mark_albums_skipped(watch.id, [_album('OLD', 'Old')])
+    db.update_playlist(watch.id, enabled=0)
+    started: list[int] = []
+    monkeypatch.setattr(api.state, 'monitor_db', db)
+    monkeypatch.setattr(api.state, 'downloader', object())
+    monkeypatch.setattr(
+        api.providers,
+        'artist_info_from_channel_id',
+        lambda _channel: {'name': 'Test Artist'},
+    )
+    monkeypatch.setattr(
+        api, '_start_initial_check', lambda pl, _db: started.append(pl.id)
+    )
+    monkeypatch.setattr(api, 'request_user_id', lambda _request: 1)
+
+    out = asyncio.run(
+        api.download_artist_discography_endpoint(
+            _JsonRequest({'channel_id': CHANNEL_ID})
+        )
+    )
+
+    assert out['created'] is False
+    updated = db.get_playlist(watch.id)
+    assert updated.release_types == monitor.ALL_RELEASE_TYPES
+    assert not updated.new_only
+    assert updated.enabled
+    assert db.get_seen_album_ids(watch.id) == set()
+    assert started == [watch.id]
 
 
 # ── monitor_loop dispatch ───────────────────────────────────────────────────

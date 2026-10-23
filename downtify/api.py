@@ -529,6 +529,7 @@ from .usenet_provider import (
     SabnzbdClient as UsenetSabnzbdClient,
 )
 from .usenet_provider import (
+    clear_album_cache,
     reset_usenet_parallelism,
 )
 
@@ -5615,6 +5616,10 @@ async def download_album_endpoint(
         song_id = str(song.get('song_id') or '')
         if not song_id:
             return '', None
+        # An album download should fetch one Usenet release for the whole
+        # album, not one per track. The provider caches the album folder
+        # and the remaining tracks reuse it.
+        song = {**song, '_usenet_prefer_album': True}
         job_id = _register_job(song, status='downloading', user_id=user_id)
         try:
             filename = await _run_download(
@@ -7830,17 +7835,24 @@ async def test_slskd_endpoint(request: Request) -> dict[str, Any]:
 
 @router.post('/api/usenet/cleanup')
 def cleanup_usenet_endpoint() -> dict[str, Any]:
-    """Delete every finished SABnzbd history entry and its files.
+    """Delete finished SABnzbd jobs and the album folders kept for reuse.
 
-    Manual counterpart of the automatic per-track cleanup: album folders
-    kept for reuse are removed here too.
+    SABnzbd history deletion removes the files of every entry it still
+    knows. An album folder cached for the rest of a playlist can outlive
+    its history entry, so the cache is cleared and those folders are
+    removed from the configured complete directory immediately.
     """
 
     cfg = _effective_usenet_settings(state.settings)
     client = UsenetSabnzbdClient(cfg)
     if not client.configured():
         raise HTTPException(status_code=400, detail='usenet_not_configured')
-    return {'deleted': client.delete_all_history()}
+    deleted = client.delete_all_history()
+    complete_dir = Path(
+        str((cfg.get('sabnzbd') or {}).get('complete_dir') or '/usenet')
+    )
+    albums = clear_album_cache(complete_dir=complete_dir, delete_folders=True)
+    return {'deleted': deleted, 'albums': albums}
 
 
 @router.post('/api/usenet/test')
@@ -9125,6 +9137,98 @@ def _start_initial_check(
             logger.exception('Initial check failed for watch {}', playlist.id)
 
     spawn_task(_initial_check(), name='monitor-initial-check')
+
+
+@router.post('/api/artists/discography/download')
+async def download_artist_discography_endpoint(
+    request: Request,
+) -> dict[str, Any]:
+    """Start downloading an artist's complete discography.
+
+    Uses the artist-watch machinery: a new watch gets every release type
+    and the full back catalogue, an existing one is switched back to the
+    full catalogue and checked right away. The first pass runs in the
+    background, so the response is immediate and progress is visible on
+    the Monitor page.
+    """
+
+    if state.downloader is None:
+        raise HTTPException(status_code=500, detail='Downloader not ready')
+    db = _require_monitor_db()
+    payload = await _json_object(request)
+    name = str(payload.get('name') or '').strip()
+    channel_id = str(payload.get('channel_id') or '').strip()
+    url = str(payload.get('url') or '').strip()
+
+    if url:
+        kind, watch_key, resolved_name = await _resolve_watch_target(url)
+        if kind != KIND_ARTIST:
+            raise HTTPException(
+                status_code=400, detail='An artist URL is required'
+            )
+        channel_id, name = watch_key, resolved_name
+    elif channel_id:
+        try:
+            info = await asyncio.to_thread(
+                providers.artist_info_from_channel_id, channel_id
+            )
+            name = str(info.get('name') or name or channel_id)
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Could not resolve artist channel {}', channel_id
+            )
+            name = name or channel_id
+    elif name:
+        channel_id, name = await asyncio.to_thread(
+            _youtube_artist_for_name, name
+        )
+    else:
+        raise HTTPException(
+            status_code=400, detail='name, channel_id or url is required'
+        )
+
+    user_id = request_user_id(request)
+    existing = await asyncio.to_thread(db.get_by_spotify_id, channel_id, None)
+    created = existing is None
+    if created:
+        playlist = await asyncio.to_thread(
+            db.add_playlist,
+            channel_id,
+            name,
+            f'https://music.youtube.com/channel/{channel_id}',
+            360,
+            KIND_ARTIST,
+            ALL_RELEASE_TYPES,
+            False,
+            user_id,
+        )
+    else:
+        assert existing is not None
+        updates: dict[str, Any] = {}
+        if existing.release_types != ALL_RELEASE_TYPES:
+            updates['release_types'] = ALL_RELEASE_TYPES
+        if not existing.enabled:
+            updates['enabled'] = True
+        playlist = existing
+        if updates:
+            playlist = (
+                await asyncio.to_thread(
+                    db.update_playlist, existing.id, **updates
+                )
+                or existing
+            )
+        if existing.new_only:
+            playlist = (
+                await asyncio.to_thread(db.set_new_only, existing.id, False)
+                or playlist
+            )
+
+    _start_initial_check(playlist, db)
+    return {
+        'created': created,
+        'started': True,
+        'watch': playlist.to_dict(),
+    }
 
 
 async def _change_watch_url(

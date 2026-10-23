@@ -536,6 +536,12 @@ export default {
     kicker: 'Изпълнител',
     notFound: 'Изпълнителят не е намерен',
     findMore: 'Намери още',
+    downloadDiscography: 'Download full discography',
+    discographyStarted:
+      'Downloading the complete discography of {name} in the background. Manage it under Monitor.',
+    discographyChecking:
+      'Checking {name} for missing releases in the background.',
+    discographyFailed: 'Could not start the discography download.',
     relatedArtists: 'На феновете допада и',
     topSongsLink: 'Още популярни песни',
     linksTab: 'Връзки',
@@ -988,7 +994,7 @@ export default {
     usenetCleanupNowHint:
       'Изтрива всички завършени задачи и файловете им от SABnzbd — включително папките с албуми, запазени за повторна употреба.',
     usenetCleanupDone:
-      'Премахнати {count} завършени задачи и техните файлове от SABnzbd.',
+      'Removed {count} finished job(s) and {albums} cached album folder(s) from SABnzbd.',
     usenetCleanupFailed:
       'Почистването на SABnzbd не успя — проверете настройките за връзка.',
     usenetPreferAlbumsHint:

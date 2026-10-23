@@ -1427,9 +1427,13 @@ async def check_artist(
             if track_id in known_tracks:
                 continue
             try:
+                # An artist's releases are downloaded album by album. Tell
+                # the Usenet provider to fetch the album release once and
+                # let its other tracks reuse the cached folder.
+                prepared = {**song, '_usenet_prefer_album': True}
                 filename = await loop.run_in_executor(
                     DOWNLOAD_EXECUTOR,
-                    lambda s=song: downloader.download(
+                    lambda s=prepared: downloader.download(
                         s, _progress_cb(s, playlist.name, broadcast, loop)
                     ),
                 )

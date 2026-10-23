@@ -544,6 +544,12 @@ export default {
     kicker: 'Sanatçı',
     notFound: 'Sanatçı bulunamadı',
     findMore: 'Daha fazlasını bul',
+    downloadDiscography: 'Download full discography',
+    discographyStarted:
+      'Downloading the complete discography of {name} in the background. Manage it under Monitor.',
+    discographyChecking:
+      'Checking {name} for missing releases in the background.',
+    discographyFailed: 'Could not start the discography download.',
     relatedArtists: 'Hayranların beğendiği diğerleri',
     topSongsLink: 'Daha fazla popüler şarkı',
     linksTab: 'Bağlantılar',
@@ -999,7 +1005,7 @@ export default {
     usenetCleanupNowHint:
       "SABnzbd'deki tüm tamamlanmış işleri ve dosyalarını siler — yeniden kullanılmak üzere saklanan albüm klasörleri dahil.",
     usenetCleanupDone:
-      "{count} tamamlanmış iş ve dosyaları SABnzbd'den kaldırıldı.",
+      "{count} tamamlanmış iş ve {albums} önbelleğe alınmış albüm klasörü SABnzbd'den kaldırıldı.",
     usenetCleanupFailed:
       'SABnzbd temizliği başarısız oldu — bağlantı ayarlarını kontrol edin.',
     usenetPreferAlbumsHint:

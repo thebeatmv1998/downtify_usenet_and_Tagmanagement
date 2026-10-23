@@ -105,16 +105,12 @@ def test_score_excludes_passworded_attr():
         'title': 'Artist - Track FLAC',
         'passworded': 1,
     }
-    assert (
-        _score_usenet_candidate(_SONG, release, target_duration=200) is None
-    )
+    assert _score_usenet_candidate(_SONG, release, target_duration=200) is None
 
 
 def test_score_excludes_password_keyword_in_title():
     release = {'title': 'Artist - Track FLAC password', 'passworded': 0}
-    assert (
-        _score_usenet_candidate(_SONG, release, target_duration=200) is None
-    )
+    assert _score_usenet_candidate(_SONG, release, target_duration=200) is None
 
 
 def test_score_extension_bonus_prefers_flac():
@@ -143,9 +139,7 @@ def test_score_rejects_implausible_size():
         'size': 100_000,  # way too small for a 200 s track
         'duration': 200,
     }
-    assert (
-        _score_usenet_candidate(_SONG, release, target_duration=200) is None
-    )
+    assert _score_usenet_candidate(_SONG, release, target_duration=200) is None
 
 
 def test_rank_usenet_candidates_orders_by_score_then_grabs():
@@ -291,9 +285,7 @@ def test_verify_failure_tries_next_candidate(tmp_path, monkeypatch):
 
 
 def test_download_flow_all_indexers_empty_returns_none(tmp_path, monkeypatch):
-    monkeypatch.setattr(
-        usenet, '_search_indexers', lambda indexers, query: []
-    )
+    monkeypatch.setattr(usenet, '_search_indexers', lambda indexers, query: [])
     assert download_from_usenet(dict(_SONG), _settings(tmp_path)) is None
 
 
@@ -370,9 +362,12 @@ def test_wait_for_sabnzbd_stops_when_deadline_passed(tmp_path, monkeypatch):
         queued=[],
     )
     client = SabnzbdClient(_settings(tmp_path))
-    assert usenet._wait_for_sabnzbd(
-        client, 'nzo1', _settings(tmp_path), deadline=0.0
-    ) is None
+    assert (
+        usenet._wait_for_sabnzbd(
+            client, 'nzo1', _settings(tmp_path), deadline=0.0
+        )
+        is None
+    )
 
 
 def test_newznab_client_falls_back_to_prowlarr_endpoint(monkeypatch):
@@ -393,9 +388,11 @@ def test_newznab_client_falls_back_to_prowlarr_endpoint(monkeypatch):
         return FakeResp(404 if url.endswith('/api') else 200)
 
     monkeypatch.setattr(usenet.httpx, 'get', fake_get)
-    client = usenet.NewznabClient(
-        {'name': 'prowlarr', 'base_url': 'http://prowlarr:9696', 'api_key': 'k'}
-    )
+    client = usenet.NewznabClient({
+        'name': 'prowlarr',
+        'base_url': 'http://prowlarr:9696',
+        'api_key': 'k',
+    })
     resp = client._get({'t': 'search'})
     assert resp.status_code == 200
     assert calls == [
@@ -428,23 +425,26 @@ def test_newznab_client_explicit_endpoint_used_verbatim(monkeypatch):
 
 
 def test_parse_prowlarr_results_keeps_usenet_only():
-    rows = usenet.parse_prowlarr_results([
-        {
-            'protocol': 'usenet',
-            'indexer': 'NZBGeek',
-            'title': 'Artist - Track FLAC',
-            'downloadUrl': '/1/download?token=abc',
-            'size': 25_000_000,
-        },
-        {
-            'protocol': 'torrent',
-            'indexer': 'SomeTracker',
-            'title': 'Artist - Track FLAC',
-            'downloadUrl': '/9/download?token=def',
-            'size': 25_000_000,
-        },
-        {'protocol': 'usenet', 'title': 'no url'},
-    ], 'prowlarr')
+    rows = usenet.parse_prowlarr_results(
+        [
+            {
+                'protocol': 'usenet',
+                'indexer': 'NZBGeek',
+                'title': 'Artist - Track FLAC',
+                'downloadUrl': '/1/download?token=abc',
+                'size': 25_000_000,
+            },
+            {
+                'protocol': 'torrent',
+                'indexer': 'SomeTracker',
+                'title': 'Artist - Track FLAC',
+                'downloadUrl': '/9/download?token=def',
+                'size': 25_000_000,
+            },
+            {'protocol': 'usenet', 'title': 'no url'},
+        ],
+        'prowlarr',
+    )
     assert len(rows) == 1
     row = rows[0]
     assert row['indexer'] == 'NZBGeek'
@@ -469,13 +469,15 @@ def test_prowlarr_client_uses_native_endpoint_and_header(monkeypatch):
             return None
 
         def json(self):
-            return [{
-                'protocol': 'usenet',
-                'indexer': 'Geek',
-                'title': 'Artist - Track FLAC',
-                'downloadUrl': 'http://prowlarr:9696/1/download?token=x',
-                'size': 25_000_000,
-            }]
+            return [
+                {
+                    'protocol': 'usenet',
+                    'indexer': 'Geek',
+                    'title': 'Artist - Track FLAC',
+                    'downloadUrl': 'http://prowlarr:9696/1/download?token=x',
+                    'size': 25_000_000,
+                }
+            ]
 
     def fake_get(url, params=None, headers=None, **kwargs):
         if isinstance(params, dict):
@@ -491,17 +493,19 @@ def test_prowlarr_client_uses_native_endpoint_and_header(monkeypatch):
         'type': 'prowlarr',
     })
     rows = client.search('artist track')  # noqa: F841
-    assert calls == [(
-        'http://prowlarr:9696/api/v1/search',
-        [
-            ('query', 'artist track'),
-            ('categories', '3000'),
-            ('categories', '3010'),
-            ('apikey', 'pk'),
-            ('limit', '100'),
-        ],
-        {'X-Api-Key': 'pk'},
-    )]
+    assert calls == [
+        (
+            'http://prowlarr:9696/api/v1/search',
+            [
+                ('query', 'artist track'),
+                ('categories', '3000'),
+                ('categories', '3010'),
+                ('apikey', 'pk'),
+                ('limit', '100'),
+            ],
+            {'X-Api-Key': 'pk'},
+        )
+    ]
     assert rows[0]['title'] == 'Artist - Track FLAC'
     # The proxied download URL is fetched with the API key both as header
     # and query param (Prowlarr's download route accepts either).
@@ -524,19 +528,32 @@ def test_configured_bitrate_bounds_filter_releases():
         }
 
     # 120 kbps implied bitrate: within the default plausibility window...
-    assert usenet._score_usenet_candidate(
-        song, _release(3_000_000), target_duration=200, settings={}
-    ) is not None
+    assert (
+        usenet._score_usenet_candidate(
+            song, _release(3_000_000), target_duration=200, settings={}
+        )
+        is not None
+    )
     # ...but rejected when the user demands at least 320 kbps...
-    assert usenet._score_usenet_candidate(
-        song, _release(3_000_000), target_duration=200,
-        settings={'min_bitrate': 320},
-    ) is None
+    assert (
+        usenet._score_usenet_candidate(
+            song,
+            _release(3_000_000),
+            target_duration=200,
+            settings={'min_bitrate': 320},
+        )
+        is None
+    )
     # ...or caps the maximum at 100 kbps.
-    assert usenet._score_usenet_candidate(
-        song, _release(3_000_000), target_duration=200,
-        settings={'max_bitrate': 100},
-    ) is None
+    assert (
+        usenet._score_usenet_candidate(
+            song,
+            _release(3_000_000),
+            target_duration=200,
+            settings={'max_bitrate': 100},
+        )
+        is None
+    )
 
 
 _ALBUM_RELEASE = {
@@ -552,9 +569,12 @@ _ALBUM_RELEASE = {
 
 def test_album_release_rejected_without_prefer_albums():
     # Default: album-only releases don't match a track search at all.
-    assert _score_usenet_candidate(
-        _SONG, _ALBUM_RELEASE, target_duration=200, settings={}
-    ) is None
+    assert (
+        _score_usenet_candidate(
+            _SONG, _ALBUM_RELEASE, target_duration=200, settings={}
+        )
+        is None
+    )
 
 
 def test_album_release_scores_with_prefer_albums():
@@ -568,6 +588,33 @@ def test_album_release_scores_with_prefer_albums():
     assert 'album' in reasons
     ranked = _rank_usenet_candidates(_SONG, [_ALBUM_RELEASE], settings)
     assert ranked[0]['match_kind'] == 'album'
+
+
+def test_album_download_intent_overrides_the_setting():
+    settings = {'prefer_albums': False}
+    assert _rank_usenet_candidates(_SONG, [_ALBUM_RELEASE], settings) == []
+    ranked = _rank_usenet_candidates(
+        {**_SONG, '_usenet_prefer_album': True},
+        [_ALBUM_RELEASE],
+        settings,
+    )
+    assert ranked[0]['match_kind'] == 'album'
+
+
+def test_album_cache_key_uses_album_artist_for_featured_tracks():
+    main = {
+        'name': 'Track',
+        'artists': ['Main Artist'],
+        'album_artist': 'Main Artist',
+        'album_name': 'Album',
+    }
+    featured = {
+        'name': 'Other Track',
+        'artists': ['Featured Artist'],
+        'album_artist': 'Main Artist',
+        'album_name': 'Album',
+    }
+    assert usenet._album_cache_key(main) == usenet._album_cache_key(featured)
 
 
 def test_album_releases_rank_ahead_of_tracks_when_preferred():
@@ -621,9 +668,9 @@ def test_download_prefers_album_and_extracts_track(tmp_path, monkeypatch):
     monkeypatch.setattr(
         SabnzbdClient,
         'add_url',
-        lambda self, url, name: 'nzo-album'
-        if 'Album' in name
-        else 'nzo-track',
+        lambda self, url, name: (
+            'nzo-album' if 'Album' in name else 'nzo-track'
+        ),
     )
     monkeypatch.setattr(
         SabnzbdClient,
@@ -657,7 +704,9 @@ def _reset_album_cache():
     usenet.configure_album_cache(None)
 
 
-def test_album_downloaded_once_and_reused_for_more_songs(tmp_path, monkeypatch):
+def test_album_downloaded_once_and_reused_for_more_songs(
+    tmp_path, monkeypatch
+):
     album, wanted, other = _album_folder(tmp_path)
     settings = _settings(tmp_path, prefer_albums=True)
 
@@ -694,7 +743,9 @@ def test_album_downloaded_once_and_reused_for_more_songs(tmp_path, monkeypatch):
     # A different song from the same album.
     song2 = {
         'name': 'Other Song',
-        'artists': ['Artist'],
+        # A featured credit must not give the same album another cache key.
+        'artists': ['Featured Artist'],
+        'album_artist': 'Artist',
         'album_name': 'Album',
         'duration': 200_000,
     }
@@ -723,9 +774,9 @@ def test_album_cache_survives_restart(tmp_path):
 
     # A fresh process loads the same mapping.
     usenet.configure_album_cache(cache_file)
-    assert usenet._album_cache_get(
-        usenet._album_cache_key(dict(_SONG))
-    ) == album
+    assert (
+        usenet._album_cache_get(usenet._album_cache_key(dict(_SONG))) == album
+    )
 
 
 def test_album_cache_drops_stale_folders(tmp_path):
@@ -735,6 +786,28 @@ def test_album_cache_drops_stale_folders(tmp_path):
     assert usenet._album_cache_get(key) is None
 
 
+def test_clear_album_cache_removes_only_folders_under_complete_dir(
+    tmp_path,
+):
+    complete = tmp_path / 'usenet'
+    inside = complete / 'Artist - Album'
+    outside = tmp_path / 'outside'
+    inside.mkdir(parents=True)
+    outside.mkdir()
+    usenet.configure_album_cache(tmp_path / 'albums.json')
+    usenet._album_cache_put('inside', inside)
+    usenet._album_cache_put('outside', outside)
+
+    assert (
+        usenet.clear_album_cache(complete_dir=complete, delete_folders=True)
+        == 1
+    )
+    assert not inside.exists()
+    assert outside.exists()
+    assert usenet._album_cache_get('inside') is None
+    assert usenet._album_cache_get('outside') is None
+
+
 def test_delete_all_history_removes_every_entry(monkeypatch):
     calls: list[dict] = []
 
@@ -742,14 +815,23 @@ def test_delete_all_history_removes_every_entry(monkeypatch):
         calls.append(params)
         if params.get('name') == 'delete':
             return {}
-        return {'history': {'slots': [
-            {'nzo_id': 'a'}, {'nzo_id': 'b'}, {},
-        ]}}
+        return {
+            'history': {
+                'slots': [
+                    {'nzo_id': 'a'},
+                    {'nzo_id': 'b'},
+                    {},
+                ]
+            }
+        }
 
     monkeypatch.setattr(SabnzbdClient, '_api', fake_api)
-    client = SabnzbdClient({'sabnzbd': {
-        'base_url': 'http://sab:8080', 'api_key': 'k',
-    }})
+    client = SabnzbdClient({
+        'sabnzbd': {
+            'base_url': 'http://sab:8080',
+            'api_key': 'k',
+        }
+    })
     assert client.delete_all_history() == 2
     deletes = [c for c in calls if c.get('name') == 'delete']
     assert sorted(c['value'] for c in deletes) == ['a', 'b']
@@ -782,8 +864,12 @@ def test_newznab_fallback_translates_params_for_prowlarr(monkeypatch):
     assert calls[0] == (
         'http://prowlarr:9696/api',
         {
-            't': 'search', 'q': 'artist track', 'cat': '3000,3010',
-            'apikey': 'pk', 'extended': '1', 'limit': '100',
+            't': 'search',
+            'q': 'artist track',
+            'cat': '3000,3010',
+            'apikey': 'pk',
+            'extended': '1',
+            'limit': '100',
         },
     )
     # The retry speaks Prowlarr's REST dialect, not Newznab's — otherwise

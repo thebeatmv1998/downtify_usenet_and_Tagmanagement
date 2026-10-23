@@ -1202,6 +1202,7 @@ async function cleanupSabnzbd() {
     const res = await API.cleanupUsenet()
     usenetCleanupText.value = t('settings.usenetCleanupDone', {
       count: res.data?.deleted ?? 0,
+      albums: res.data?.albums ?? 0,
     })
   } catch {
     usenetCleanupText.value = t('settings.usenetCleanupFailed')

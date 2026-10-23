@@ -1039,6 +1039,7 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         # Admin (after the client rules, which carve out exceptions):
         # changes to the library, the queue, watches and profiles.
         (_m('POST', 'PUT', 'DELETE'), r'^/api/artists/(art|profile)', ADMIN),
+        (_m('POST'), r'^/api/artists/discography/download$', ADMIN),
         (_m('POST'), r'^/api/download/csv$', ADMIN),
         (_m('POST'), r'^/api/playlist/m3u$', ADMIN),
         (_m('POST', 'DELETE'), r'^/api/playlists/', ADMIN),

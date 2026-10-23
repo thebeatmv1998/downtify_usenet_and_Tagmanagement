@@ -536,6 +536,12 @@ export default {
     kicker: 'Artist',
     notFound: 'Artist not found',
     findMore: 'Find more',
+    downloadDiscography: 'Download full discography',
+    discographyStarted:
+      'Downloading the complete discography of {name} in the background. Manage it under Monitor.',
+    discographyChecking:
+      'Checking {name} for missing releases in the background.',
+    discographyFailed: 'Could not start the discography download.',
     relatedArtists: 'Fans also like',
     topSongsLink: 'See more popular songs',
     linksTab: 'Links',
@@ -981,7 +987,7 @@ export default {
     usenetCleanupNowHint:
       'Deletes every finished job and its files from SABnzbd — including album folders kept for reuse.',
     usenetCleanupDone:
-      'Removed {count} finished job(s) and their files from SABnzbd.',
+      'Removed {count} finished job(s) and {albums} cached album folder(s) from SABnzbd.',
     usenetCleanupFailed:
       'SABnzbd cleanup failed — check the connection settings.',
     usenetPreferAlbumsHint:

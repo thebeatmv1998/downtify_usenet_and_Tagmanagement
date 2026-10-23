@@ -542,6 +542,12 @@ export default {
     kicker: 'Előadó',
     notFound: 'Az előadó nem található',
     findMore: 'Továbbiak keresése',
+    downloadDiscography: 'Download full discography',
+    discographyStarted:
+      'Downloading the complete discography of {name} in the background. Manage it under Monitor.',
+    discographyChecking:
+      'Checking {name} for missing releases in the background.',
+    discographyFailed: 'Could not start the discography download.',
     relatedArtists: 'A rajongók ezt is szeretik',
     topSongsLink: 'További népszerű számok',
     linksTab: 'Linkek',
@@ -999,7 +1005,7 @@ export default {
     usenetCleanupNowHint:
       'Törli az összes befejezett feladatot és fájljait a SABnzbd-ből — beleértve az újrahasznosításhoz megőrzött albummappákat is.',
     usenetCleanupDone:
-      '{count} befejezett feladat és fájljai eltávolítva a SABnzbd-ből.',
+      'Removed {count} finished job(s) and {albums} cached album folder(s) from SABnzbd.',
     usenetCleanupFailed:
       'A SABnzbd takarítás sikertelen — ellenőrizze a kapcsolat beállításait.',
     usenetPreferAlbumsHint:

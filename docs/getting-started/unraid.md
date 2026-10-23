@@ -52,6 +52,16 @@ DrunkenSlug, …) and hand the resulting NZB to SABnzbd:
 After a successful download, Downtify copies the file into your library, tags it,
 and — unless disabled — removes the job and its files from SABnzbd's history.
 
+Album releases are downloaded **once**. The album folder is kept so every
+other track of the same release is matched from it and marked successful
+without another NZB; this is forced for album and artist-discography downloads
+and can be enabled for playlists with **Prefer album releases**. The cache uses
+the album artist, so a featured track does not trigger a second copy.
+
+**Settings → Usenet → Clean up SABnzbd now** deletes every finished SABnzbd job
+plus any cached album folders immediately, including folders whose history entry
+is already gone.
+
 ## YouTube bot check ("Sign in to confirm you're not a bot")
 
 YouTube aggressively gates datacenter IPs. If downloads or metadata lookups fail:

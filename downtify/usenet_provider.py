@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
 import threading
 import time
 import xml.etree.ElementTree as ET
@@ -91,11 +92,79 @@ def _album_cache_save() -> None:
 
 
 def _album_cache_key(song: dict[str, Any]) -> str:
-    artist = ' '.join(str(a) for a in (song.get('artists') or [])[:1]).strip()
+    """Stable key for one release, even when a track credits a feature.
+
+    ``album_artist`` is the album's own artist (set by YouTube Music's
+    album resolver and most Spotify rows). Falling back to the track's
+    first artist would give a featured track a different key and download
+    the same album again.
+    """
+
+    artist = str(song.get('album_artist') or '').strip()
+    if not artist:
+        artist = ' '.join(
+            str(a).strip()
+            for a in (song.get('artists') or [])[:1]
+            if str(a).strip()
+        ).strip()
+    if not artist:
+        artist = str(song.get('artist') or '').strip()
     album = str(song.get('album_name') or '').strip()
     if not artist or not album:
         return ''
     return _alnum_only(f'{artist} {album}').casefold()
+
+
+def _prefer_albums(song: dict[str, Any], settings: dict[str, Any]) -> bool:
+    """Album releases when the user prefers them or the caller needs an album.
+
+    Album and artist-discography downloads set ``_usenet_prefer_album`` on
+    the song so one SABnzbd fetch covers the whole release even when the
+    global "prefer album releases" switch is off.
+    """
+
+    return bool(
+        settings.get('prefer_albums') or song.get('_usenet_prefer_album')
+    )
+
+
+def clear_album_cache(
+    *,
+    complete_dir: Optional[Path] = None,
+    delete_folders: bool = False,
+) -> int:
+    """Forget cached albums and optionally remove their SABnzbd folders.
+
+    The manual cleanup button uses this after deleting SABnzbd history:
+    an album folder kept for reuse may no longer have a history entry,
+    so history deletion alone would leave it behind. Only folders below
+    *complete_dir* are touched; nothing outside SABnzbd's own tree is
+    ever removed.
+    """
+
+    with _ALBUM_CACHE_LOCK:
+        folders = list(_ALBUM_FOLDERS.values())
+        _ALBUM_FOLDERS.clear()
+    _album_cache_save()
+    if not delete_folders or complete_dir is None:
+        return 0
+    try:
+        root = complete_dir.resolve()
+    except OSError:
+        return 0
+    removed = 0
+    for raw in folders:
+        folder = Path(raw)
+        try:
+            resolved = folder.resolve()
+            if resolved == root or root not in resolved.parents:
+                continue
+            if folder.is_dir():
+                shutil.rmtree(folder, ignore_errors=True)
+                removed += 1
+        except OSError:
+            logger.info('usenet: could not remove cached album {}', folder)
+    return removed
 
 
 def _album_cache_get(key: str) -> Optional[Path]:
@@ -498,7 +567,7 @@ def _score_usenet_candidate(  # noqa: PLR0914  # mirrors slskd scorer
     """
     settings = settings or {}
     tol = duration_tolerances_from_settings(settings)
-    prefer_albums = bool(settings.get('prefer_albums'))
+    prefer_albums = _prefer_albums(song, settings)
     artist = _alnum_only(
         ' '.join(str(a) for a in (song.get('artists') or [])[:1])
     )
@@ -604,7 +673,7 @@ def _rank_usenet_candidates(
 ) -> list[dict[str, Any]]:
     """Score and sort all viable releases (highest confidence first)."""
     target_duration = _song_duration_seconds(song)
-    prefer_albums = bool((settings or {}).get('prefer_albums'))
+    prefer_albums = _prefer_albums(song, settings or {})
     ranked: list[dict[str, Any]] = []
     for release in releases:
         scored = _score_usenet_candidate(
@@ -1079,7 +1148,7 @@ def _schedule_cleanup(client: SabnzbdClient, nzo_id: str) -> None:
     timer.start()
 
 
-def download_from_usenet(  # noqa: PLR0914  # search, rank, queue, poll, verify
+def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll, verify
     song: dict[str, Any],
     settings: dict[str, Any],
     progress_cb: Optional[ProgressCallback] = None,
@@ -1118,6 +1187,10 @@ def download_from_usenet(  # noqa: PLR0914  # search, rank, queue, poll, verify
         return None
 
     spotify_row = snapshot_spotify_metadata(song)
+    if _prefer_albums(song, settings):
+        # snapshot_spotify_metadata keeps only the public metadata; carry
+        # the album-download intent through to ranking.
+        spotify_row['_usenet_prefer_album'] = True
     queries = _usenet_search_queries(spotify_row)
     if not queries:
         logger.warning(
@@ -1151,7 +1224,7 @@ def download_from_usenet(  # noqa: PLR0914  # search, rank, queue, poll, verify
     sab = settings.get('sabnzbd')
     sab = sab if isinstance(sab, dict) else {}
     complete_dir = Path(str(sab.get('complete_dir') or '/usenet'))
-    album_key = _album_cache_key(spotify_row)
+    album_key = _album_cache_key(song)
 
     # A previously downloaded album with this artist+album is still on
     # disk: extract the track from it instead of re-downloading anything.
@@ -1171,9 +1244,9 @@ def download_from_usenet(  # noqa: PLR0914  # search, rank, queue, poll, verify
         if found is not None:
             _discard_mismatched_download(found)
 
-    with _usenet_semaphore(settings):
+    with _usenet_semaphore(settings):  # noqa: PLR1702
         deadline = _usenet_deadline(settings)
-        prefer_albums = bool(settings.get('prefer_albums'))
+        prefer_albums = _prefer_albums(spotify_row, settings)
         report(5.0, 'searching')
         ranked: list[dict[str, Any]] = []
         seen_urls: set[str] = set()

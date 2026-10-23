@@ -60,6 +60,8 @@ Use a YouTube Music playlist for songs that aren't on Spotify: remixes, live set
 
 Instead of building a playlist per artist, paste an artist link and Downtify follows their whole catalogue. Add one from the **Artists** tab of the Monitor page — paste the URL, pick an interval, click **Watch artist**. Artist watches show a release count instead of a track count.
 
+An admin can also start the same thing from an artist's page in the library with **Download full discography**. It creates the artist watch if needed (or reuses it), enables every release type and the full back catalogue, and starts a check immediately. Progress is visible on the Monitor page, where the watch can be paused or removed later.
+
 Accepted URLs:
 
 - A Spotify artist URL (`https://open.spotify.com/artist/…`)

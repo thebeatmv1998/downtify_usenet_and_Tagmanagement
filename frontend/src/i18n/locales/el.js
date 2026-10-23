@@ -544,6 +544,12 @@ export default {
     kicker: 'Καλλιτέχνης',
     notFound: 'Ο καλλιτέχνης δεν βρέθηκε',
     findMore: 'Βρες περισσότερα',
+    downloadDiscography: 'Download full discography',
+    discographyStarted:
+      'Downloading the complete discography of {name} in the background. Manage it under Monitor.',
+    discographyChecking:
+      'Checking {name} for missing releases in the background.',
+    discographyFailed: 'Could not start the discography download.',
     relatedArtists: 'Στους θαυμαστές αρέσει επίσης',
     topSongsLink: 'Περισσότερα δημοφιλή τραγούδια',
     linksTab: 'Σύνδεσμοι',
@@ -1003,7 +1009,7 @@ export default {
     usenetCleanupNowHint:
       'Διαγράφει κάθε ολοκληρωμένη εργασία και τα αρχεία της από το SABnzbd — συμπεριλαμβανομένων των φακέλων άλμπουμ που κρατήθηκαν για επαναχρησιμοποίηση.',
     usenetCleanupDone:
-      'Αφαιρέθηκαν {count} ολοκληρωμένες εργασίες και τα αρχεία τους από το SABnzbd.',
+      'Removed {count} finished job(s) and {albums} cached album folder(s) from SABnzbd.',
     usenetCleanupFailed:
       'Ο καθαρισμός του SABnzbd απέτυχε — ελέγξτε τις ρυθμίσεις σύνδεσης.',
     usenetPreferAlbumsHint:

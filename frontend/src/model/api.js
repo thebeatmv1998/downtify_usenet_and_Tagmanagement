@@ -296,6 +296,15 @@ function artistTopSongsSaved(name) {
   return API.get('/api/artists/top_songs/spotify', { params: { name } })
 }
 
+// Start a background artist watch that downloads the complete discography
+// (all albums, singles and EPs) and keeps watching for future releases.
+function downloadArtistDiscography(name, channelId = '') {
+  return API.post('/api/artists/discography/download', {
+    name,
+    channel_id: channelId,
+  })
+}
+
 // ── Downloads ────────────────────────────────────────────────────────
 function download(songURL) {
   const url = typeof songURL === 'string' ? songURL : songURL.url
@@ -894,6 +903,7 @@ export default {
   resolveUrl,
   artistTopSongs,
   artistTopSongsSaved,
+  downloadArtistDiscography,
   download,
   downloadBatch,
   downloadAlbum,

@@ -1146,11 +1146,20 @@ def test_usenet_cleanup_endpoint_deletes_history(monkeypatch):
             deleted.append('x')
             return 3
 
+    cleanup_calls: list[dict] = []
+
+    def _clear(**kwargs):
+        cleanup_calls.append(kwargs)
+        return 2
+
     monkeypatch.setattr(api, 'UsenetSabnzbdClient', _FakeClient)
+    monkeypatch.setattr(api, 'clear_album_cache', _clear)
     # A sync endpoint: callable directly, FastAPI runs it in a thread.
     out = api.cleanup_usenet_endpoint()
-    assert out == {'deleted': 3}
+    assert out == {'deleted': 3, 'albums': 2}
     assert len(deleted) == 1
+    assert cleanup_calls[0]['delete_folders'] is True
+    assert str(cleanup_calls[0]['complete_dir']).endswith('usenet')
 
 
 def test_usenet_cleanup_endpoint_requires_configuration(monkeypatch):

@@ -45,6 +45,15 @@
             {{ t('actions.addToQueue') }}
           </UiButton>
           <UiButton
+            v-if="auth.isAdmin.value"
+            :variant="artBannerUrl ? 'photo' : 'ghost'"
+            icon="download"
+            :loading="discographyBusy"
+            @click="downloadDiscography"
+          >
+            {{ t('artist.downloadDiscography') }}
+          </UiButton>
+          <UiButton
             :variant="artBannerUrl ? 'photo' : 'ghost'"
             icon="search"
             :to="{ name: 'Search', params: { query: artist.name } }"
@@ -219,6 +228,7 @@ import PlayButton from '/src/components/library/PlayButton.vue'
 import TopSongsShelf from '/src/components/library/TopSongsShelf.vue'
 import TrackList from '/src/components/library/TrackList.vue'
 import API from '/src/model/api'
+import { useAuth } from '/src/model/auth'
 import { useLibrary } from '/src/model/library'
 import { usePlayer } from '/src/model/player'
 import { usePlaylistActions } from '/src/model/playlistActions'
@@ -235,6 +245,7 @@ import { useI18n } from '/src/i18n'
 
 const { t, locale } = useI18n()
 const route = useRoute()
+const auth = useAuth()
 const library = useLibrary()
 const player = usePlayer()
 const actions = useTrackActions()
@@ -503,6 +514,36 @@ const profileReady = ref(false)
 const spotifyId = computed(() =>
   String(profile.value.platforms_id?.spotify || '')
 )
+
+// Admin action: a background artist watch downloads the whole back
+// catalogue and keeps watching for future releases.
+const discographyBusy = ref(false)
+async function downloadDiscography() {
+  const a = artist.value
+  if (!a || discographyBusy.value) return
+  discographyBusy.value = true
+  try {
+    const res = await API.downloadArtistDiscography(
+      a.name,
+      String(profile.value.platforms_id?.youtubemusic || '')
+    )
+    ui.toast(
+      t(
+        res.data?.created
+          ? 'artist.discographyStarted'
+          : 'artist.discographyChecking',
+        { name: a.name }
+      ),
+      { kind: 'success' }
+    )
+  } catch (err) {
+    ui.toast(err?.response?.data?.detail || t('artist.discographyFailed'), {
+      kind: 'error',
+    })
+  } finally {
+    discographyBusy.value = false
+  }
+}
 
 // The saved bio is plain text (see artist_profile._format_bio_text): a
 // blank line separates paragraphs, anything within one stays a line break.
