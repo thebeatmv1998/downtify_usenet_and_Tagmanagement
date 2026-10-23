@@ -77,6 +77,11 @@ Incomplete album batches retain their source folder for retry; fully copied
 batches still clean up automatically. Album downloads skip songs already in
 the library, including when the general overwrite setting is enabled.
 
+Automatic cleanup waits until the entire artist/discography run and all active
+download workers have released their source folders. Cleanup requests made by
+individual album batches are deferred without dropping their cache entries.
+Old folder/history cleanup timers also wait while downloads are using releases.
+
 ## YouTube bot check ("Sign in to confirm you're not a bot")
 
 YouTube aggressively gates datacenter IPs. If downloads or metadata lookups fail:

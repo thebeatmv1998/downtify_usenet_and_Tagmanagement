@@ -1361,7 +1361,22 @@ def _cleanup_usenet_album(
         )
 
 
-async def check_artist(  # noqa: PLR0914
+async def check_artist(
+    playlist: MonitoredPlaylist,
+    db: PlaylistMonitorDB,
+    downloader: Downloader,
+    broadcast: Callable[[dict[str, Any]], Any],
+    loop: asyncio.AbstractEventLoop,
+    settings: Optional[dict[str, Any]] = None,
+    library: Optional[LibraryStores] = None,
+) -> int:
+    with usenet_provider.hold_album_cleanup():
+        return await _check_artist_impl(
+            playlist, db, downloader, broadcast, loop, settings, library
+        )
+
+
+async def _check_artist_impl(  # noqa: PLR0914
     playlist: MonitoredPlaylist,
     db: PlaylistMonitorDB,
     downloader: Downloader,

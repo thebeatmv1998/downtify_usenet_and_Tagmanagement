@@ -67,6 +67,27 @@ _ALBUM_EVENTS: dict[str, threading.Event] = {}
 _NZB_LOCK = threading.Lock()
 _NZB_CLAIMS: dict[str, threading.Event] = {}
 _NZB_FOLDERS: dict[str, str] = {}
+_CLEANUP_LOCK = threading.RLock()
+_CLEANUP_HOLDS = 0
+_PENDING_ALBUM_CLEANUPS: list[tuple[set[str], Path, float]] = []
+
+
+@contextlib.contextmanager
+def hold_album_cleanup():
+    """Keep shared releases and their cache entries alive while consumers run."""
+    global _CLEANUP_HOLDS
+    with _CLEANUP_LOCK:
+        _CLEANUP_HOLDS += 1
+    try:
+        yield
+    finally:
+        with _CLEANUP_LOCK:
+            _CLEANUP_HOLDS -= 1
+            if not _CLEANUP_HOLDS:
+                pending = list(_PENDING_ALBUM_CLEANUPS)
+                _PENDING_ALBUM_CLEANUPS.clear()
+                for keys, root, delay in pending:
+                    cleanup_albums(keys, root, delay=delay)
 
 
 def configure_album_cache(path: Optional[Path]) -> None:
@@ -203,6 +224,10 @@ def cleanup_albums(
 
     if not keys:
         return 0
+    with _CLEANUP_LOCK:
+        if _CLEANUP_HOLDS:
+            _PENDING_ALBUM_CLEANUPS.append((set(keys), complete_dir, delay))
+            return 0
     folders: list[Path] = []
     with _ALBUM_CACHE_LOCK:
         for key in keys:
@@ -235,6 +260,20 @@ def cleanup_albums(
 
 
 def _remove_cached_folder(folder: Path, root: Path) -> None:
+    with _CLEANUP_LOCK:
+        if _CLEANUP_HOLDS:
+            # A timer scheduled by an older batch must not delete a folder
+            # while a new batch is copying it. Retry after consumers finish.
+            timer = threading.Timer(
+                5.0, _remove_cached_folder, args=(folder, root)
+            )
+            timer.daemon = True
+            timer.start()
+            return
+        _remove_cached_folder_unlocked(folder, root)
+
+
+def _remove_cached_folder_unlocked(folder: Path, root: Path) -> None:
     try:
         resolved = folder.resolve()
         if resolved == root or root not in resolved.parents:
@@ -1412,10 +1451,20 @@ def _schedule_cleanup(client: SabnzbdClient, nzo_id: str) -> None:
     until that copy is done (see the module docstring).
     """
     timer = threading.Timer(
-        _CLEANUP_DELAY_SECONDS, client.delete_history, args=(nzo_id,)
+        _CLEANUP_DELAY_SECONDS,
+        _delete_history_when_idle,
+        args=(client, nzo_id),
     )
     timer.daemon = True
     timer.start()
+
+
+def _delete_history_when_idle(client: SabnzbdClient, nzo_id: str) -> None:
+    with _CLEANUP_LOCK:
+        if _CLEANUP_HOLDS:
+            _schedule_cleanup(client, nzo_id)
+            return
+        client.delete_history(nzo_id)
 
 
 def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll, verify

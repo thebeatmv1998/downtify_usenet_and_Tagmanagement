@@ -54,7 +54,7 @@ from .providers import (
     find_match_youtube_only,
 )
 from .slskd_provider import download_from_slskd
-from .usenet_provider import download_from_usenet
+from .usenet_provider import download_from_usenet, hold_album_cleanup
 
 # Extensions that count as "this song is already downloaded". Deliberately
 # excludes sidecars written next to the audio (.lrc, cover.jpg, .m3u) so a
@@ -1113,6 +1113,21 @@ class Downloader:
         return self.download_dir / Path(*parts), f'{rel}/'
 
     def download(
+        self,
+        song: dict[str, Any],
+        progress_cb: Optional[ProgressCallback] = None,
+        subdir: Optional[str] = None,
+        *,
+        cancel_generation: Optional[int] = None,
+    ) -> str:
+        # Hold the source through the actual worker-thread copy/tag lifetime,
+        # even if the asyncio task awaiting this worker was cancelled.
+        with hold_album_cleanup():
+            return self._download(
+                song, progress_cb, subdir, cancel_generation=cancel_generation
+            )
+
+    def _download(
         self,
         song: dict[str, Any],
         progress_cb: Optional[ProgressCallback] = None,

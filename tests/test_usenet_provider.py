@@ -1057,6 +1057,61 @@ def test_cleanup_albums_removes_the_cached_folder(tmp_path, monkeypatch):
     assert usenet._album_cache_get(key) is None
 
 
+def test_cleanup_waits_for_last_album_consumer_and_preserves_cache(
+    tmp_path, monkeypatch
+):
+    album, _, _ = _album_folder(tmp_path)
+    key = usenet.album_cache_key(dict(_SONG))
+    usenet._album_cache_put(key, album)
+    timers = []
+
+    class Timer:
+        daemon = False
+
+        def __init__(self, delay, callback, args=()):
+            self.callback = callback
+            self.args = args
+
+        def start(self):
+            timers.append(self)
+
+    monkeypatch.setattr(usenet.threading, 'Timer', Timer)
+    with usenet.hold_album_cleanup():
+        with usenet.hold_album_cleanup():
+            assert usenet.cleanup_albums([key], tmp_path) == 0
+        assert usenet._album_cache_get(key) == album
+        assert album.exists()
+        assert not timers
+    assert len(timers) == 1
+    timers[0].callback(*timers[0].args)
+    assert not album.exists()
+
+
+def test_old_cleanup_timer_cannot_remove_an_album_in_use(
+    tmp_path, monkeypatch
+):
+    album, _, _ = _album_folder(tmp_path)
+    timers = []
+
+    class Timer:
+        daemon = False
+
+        def __init__(self, delay, callback, args=()):
+            self.callback = callback
+            self.args = args
+
+        def start(self):
+            timers.append(self)
+
+    monkeypatch.setattr(usenet.threading, 'Timer', Timer)
+    with usenet.hold_album_cleanup():
+        usenet._remove_cached_folder(album, tmp_path)
+        assert album.exists()
+    assert len(timers) == 1
+    timers[0].callback(*timers[0].args)
+    assert not album.exists()
+
+
 def test_delete_all_history_removes_every_entry(monkeypatch):
     calls: list[dict] = []
 

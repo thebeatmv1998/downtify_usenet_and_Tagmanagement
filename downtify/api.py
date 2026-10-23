@@ -535,6 +535,7 @@ from .usenet_provider import (
     cleanup_albums,
     clear_album_cache,
     download_from_usenet,
+    hold_album_cleanup,
     reset_usenet_parallelism,
 )
 
@@ -4704,7 +4705,33 @@ def _cleanup_usenet_albums(songs: list[dict[str, Any]]) -> None:
         )
 
 
-async def _process_batch(  # noqa: PLR0914
+async def _process_batch(
+    songs: list[dict[str, Any]],
+    job_ids: list[str],
+    playlist_url: str,
+    generate_m3u: bool,
+    playlist_name: Optional[str] = None,
+    *,
+    batch_id: Optional[int] = None,
+    cover_url: Optional[str] = None,
+    user_id: int = 0,
+    album: bool = False,
+) -> None:
+    with hold_album_cleanup():
+        await _process_batch_impl(
+            songs,
+            job_ids,
+            playlist_url,
+            generate_m3u,
+            playlist_name,
+            batch_id=batch_id,
+            cover_url=cover_url,
+            user_id=user_id,
+            album=album,
+        )
+
+
+async def _process_batch_impl(  # noqa: PLR0914
     songs: list[dict[str, Any]],
     job_ids: list[str],
     playlist_url: str,
@@ -9642,7 +9669,7 @@ async def _queue_artist_discography(
             queued.append((album_id, album_name, songs, ids))
         await state.connections.broadcast({'type': 'queue_reload'})
 
-        async def run() -> None:
+        async def run_albums() -> None:
             try:
                 for album_id, album_name, songs, ids in queued:
                     if download_control.is_cancelled(generation):
@@ -9681,6 +9708,12 @@ async def _queue_artist_discography(
                 )
             finally:
                 _checks_running.discard(playlist.id)
+
+        async def run() -> None:
+            # Different album editions can resolve to the same source NZB.
+            # Keep it alive until every album in this artist has finished.
+            with hold_album_cleanup():
+                await run_albums()
 
         task = spawn_download_task(run(), name='artist-discography-download')
         task.add_done_callback(
