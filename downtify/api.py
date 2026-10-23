@@ -6182,15 +6182,25 @@ async def library_albums_merge_preview() -> dict[str, Any]:
     """
 
     ctx = library_context()
-    stats = {'looked_up': 0, 'resolved': 0}
+    stats: dict[str, Any] = {
+        'looked_up': 0,
+        'resolved': 0,
+        'tracks': 0,
+        'groups': 0,
+        'lookups': 0,
+        'elapsed_ms': 0,
+    }
+    stats_lock = threading.Lock()
 
     def _counting_resolver(
         song: dict[str, Any], spotify_id: str
     ) -> Optional[dict[str, Any]]:
-        stats['looked_up'] += 1
+        with stats_lock:
+            stats['looked_up'] += 1
         found = album_merge.default_resolver(song, spotify_id)
         if found and found.get('album_name'):
-            stats['resolved'] += 1
+            with stats_lock:
+                stats['resolved'] += 1
         return found
 
     def _detect() -> list[album_merge.MergePlan]:
@@ -6198,13 +6208,18 @@ async def library_albums_merge_preview() -> dict[str, Any]:
             ctx,
             spotify_id_for=_spotify_id_lookup(),
             resolver=_counting_resolver,
+            stats=stats,
         )
 
     plans = await asyncio.to_thread(_detect)
     return {
         'candidates': [plan.to_dict() for plan in plans],
-        'looked_up': stats['looked_up'],
-        'resolved': stats['resolved'],
+        'looked_up': stats.get('looked_up', 0),
+        'resolved': stats.get('resolved', 0),
+        'tracks': stats.get('tracks', 0),
+        'groups': stats.get('groups', 0),
+        'lookups': stats.get('lookups', 0),
+        'elapsed_ms': stats.get('elapsed_ms', 0),
     }
 
 

@@ -125,16 +125,18 @@ Swapping the audio file a user already has is a different problem from rewriting
 
 ## Merge split albums
 
-An album that was downloaded one single at a time often ends up filed under the *song's* own title, so a player shows a dozen one-track albums instead of the album they belong to (the classic case: a track whose album tag is its own name). **Merge split albums** asks the tag sources which album each track is really on, groups the tracks that agree, and — after you confirm — rewrites their tags and moves them into one album folder.
+An album that was downloaded one single at a time often ends up filed under the *song's* own title, so a player shows a dozen one-track albums instead of the album they belong to. The same album also often sits in the library twice, once as the standard edition and once as a deluxe edition with bonus tracks. **Merge split albums** groups tracks by their album title with edition markers (`Deluxe`, `Expanded`, `Special`, `Remastered`, ...) removed, so both cases become one album.
 
-1. Click **Find split albums**. Nothing is written; Downtify looks only at artists whose tracks are spread over several album tags, where at least one looks like a standalone single, so a healthy library costs no requests.
-2. Each candidate album is listed with its tracks. Untick what you don't want.
-3. **Merge** rewrites album, album artist, year and track number from the tag source, moves the files into `Artist/Album/` (following your [file organization](file-organization.md) layout), and refreshes the M3Us and Navidrome playlists that pointed at the old paths.
+The edition with the most distinct songs wins. Every song is kept once: FLAC/ALAC beats lossy, then higher bitrate/sample rate wins, and the largest file breaks a tie. Duplicate copies are marked as such in the preview and deleted only after the kept copy has been moved into the album folder successfully. Copies whose lengths differ by more than five seconds are treated as different recordings (an extended mix or a live version), so both survive.
 
-A track the tag sources can't place with confidence is left where it is; the preview never guesses. The preview reports how many tracks a source matched; if a source was rate-limited (Apple Music refuses a burst of requests), the count is low and a note tells you to try again shortly. Lookups are paced and cached, and Deezer is used as a fallback when Apple Music is busy.
+1. Click **Find split albums**. Nothing is written. Standard/deluxe editions and duplicate copies are found from the local tags with no network request at all; only tracks that look like standalone singles are looked up, in parallel and cached. A repeated scan therefore costs almost nothing.
+2. Each candidate is listed with its editions, the resulting track count and how many duplicate files will be removed. Untick what you don't want.
+3. **Merge** rewrites album, album artist, year and track number (the winning edition's order, with bonus tracks appended), moves the kept files into one `Artist/Album/` folder (following your [file organization](file-organization.md) layout), deletes the losing duplicate copies, and refreshes the M3Us and Navidrome playlists that pointed at the old paths.
+
+A track the tag sources can't place with confidence is left where it is; the preview never guesses. The preview reports how many tracks a source matched and how long the scan took. If a source was rate-limited (Apple Music refuses a burst of requests), the count is low and a note tells you to try again shortly. Deezer is asked before Apple Music because it answers faster, and every successful answer is cached for the life of the process.
 
 ::: tip This is the one upgrade that moves files
-Everything else on this page rewrites tags in place. A merge renames and moves the audio, which is why it always shows a preview and is never part of the per-track queue.
+Everything else on this page rewrites tags in place. A merge renames and moves the audio and deletes duplicate copies, which is why it always shows a preview and is never part of the per-track queue.
 :::
 
 ## Rebuild playlist files

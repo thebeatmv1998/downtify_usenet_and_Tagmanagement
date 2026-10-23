@@ -270,16 +270,22 @@
           {{ t('upgrade.mergeNone') }}
         </span>
       </div>
-      <p
-        v-if="mergeSearched && mergeLookedUp > 0"
-        class="mt-1.5 text-[13px] text-muted"
-      >
+      <p v-if="mergeSearched" class="mt-1.5 text-[13px] text-muted">
         {{
-          t('upgrade.mergeStats', {
-            resolved: mergeResolved,
-            looked_up: mergeLookedUp,
+          t('upgrade.mergeScanned', {
+            tracks: mergeTracks,
+            seconds: (mergeElapsedMs / 1000).toFixed(1),
           })
         }}
+        <template v-if="mergeLookedUp > 0">
+          ·
+          {{
+            t('upgrade.mergeStats', {
+              resolved: mergeResolved,
+              looked_up: mergeLookedUp,
+            })
+          }}
+        </template>
       </p>
       <p
         v-if="mergeSearched && mergeLookedUp > 0 && mergeResolved === 0"
@@ -299,7 +305,26 @@
             :description="plan.album_artist"
             class="flex-1"
             @update:model-value="(on) => toggleMerge(index, on)"
-          />
+          >
+            <span
+              class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-muted"
+            >
+              <span v-if="plan.editions?.length">
+                {{
+                  t('upgrade.mergeEditions', {
+                    editions: plan.editions.join(' · '),
+                  })
+                }}
+              </span>
+              <span v-if="plan.dropped_count" class="text-warn">
+                {{
+                  t('upgrade.mergeDuplicates', {
+                    count: plan.dropped_count,
+                  })
+                }}
+              </span>
+            </span>
+          </UiSwitch>
           <UiBadge tone="accent">
             {{ t('upgrade.tracksAffected', { count: plan.track_count }) }}
           </UiBadge>
@@ -528,6 +553,8 @@ const mergeBusy = ref(false)
 const mergeNote = ref('')
 const mergeLookedUp = ref(0)
 const mergeResolved = ref(0)
+const mergeTracks = ref(0)
+const mergeElapsedMs = ref(0)
 
 const describeError = (err) =>
   err?.response?.data?.detail || err?.message || 'failed'
@@ -541,6 +568,8 @@ async function findSplitAlbums() {
     mergeSelected.value = mergeCandidates.value.map((_, index) => index)
     mergeLookedUp.value = res.data?.looked_up || 0
     mergeResolved.value = res.data?.resolved || 0
+    mergeTracks.value = res.data?.tracks || 0
+    mergeElapsedMs.value = res.data?.elapsed_ms || 0
     mergeSearched.value = true
   } catch (err) {
     mergeNote.value = describeError(err)
@@ -565,9 +594,13 @@ async function applyMerge() {
   mergeNote.value = ''
   try {
     const res = await API.mergeAlbums(plans)
-    mergeNote.value = t('upgrade.mergeDone', { moved: res.data?.moved || 0 })
+    mergeNote.value = t('upgrade.mergeDone', {
+      moved: res.data?.moved || 0,
+      deleted: res.data?.deleted || 0,
+    })
     mergeCandidates.value = []
     mergeSelected.value = []
+    mergeSearched.value = false
     await load()
     await refreshJobs()
   } catch (err) {

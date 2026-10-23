@@ -486,7 +486,13 @@ export default {
       'Write a cover.jpg into an album folder that has audio but no cover image, using the artwork already embedded in its tracks.',
     mergeTitle: 'Merge split albums',
     mergeHint:
-      'An album saved as separate singles shows up as many one-track albums. Ask Spotify and Apple Music which album the tracks belong to, then merge the confirmed ones into a single folder.',
+      'Alben, die als einzelne Singles oder als Standard- und Deluxe-Edition vorliegen, werden in einem Ordner zusammengeführt. Die Edition mit den meisten Songs gewinnt; bei doppelten Songs bleibt die Datei mit der besten Qualität, die übrigen Kopien werden gelöscht.',
+    mergeEditions: 'Editionen: {editions}',
+    mergeDuplicates: {
+      one: '{count} doppelte Datei wird entfernt',
+      other: '{count} doppelte Dateien werden entfernt',
+    },
+    mergeScanned: '{tracks} Titel in {seconds}s geprüft.',
     mergeFind: 'Find split albums',
     mergeSearching: 'Looking for split albums…',
     mergeNone: 'No split albums found.',
@@ -499,7 +505,7 @@ export default {
       other: 'Merge {count} albums',
     },
     mergeApplying: 'Merging…',
-    mergeDone: 'Merged {moved} track(s).',
+    mergeDone: '{moved} Titel zusammengeführt, {deleted} Duplikat(e) entfernt.',
     mergeStats:
       '{resolved} of {looked_up} tracks were matched to an album by a tag source.',
     mergeLimited:
