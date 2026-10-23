@@ -1253,6 +1253,11 @@ def _pick_track_in_album(
             score += 3
         if full_key and full_key != title_key and full_key in name_key:
             score += 1
+        # Duration alone must never select a different song from an album.
+        if not score:
+            continue
+        if not verify_downloaded_file_matches_spotify(entry, song):
+            continue
         duration = int(float(meta.get('duration') or 0))
         if (
             target
@@ -1268,6 +1273,37 @@ def _pick_track_in_album(
         if score > 0 and (best is None or score > best[0]):
             best = (score, entry)
     return best[1] if best else None
+
+
+def _existing_album_folder(
+    complete_dir: Path, song: dict[str, Any]
+) -> Optional[Path]:
+    """Recover completed releases from disk even after a cache loss/restart."""
+    album = _alnum_only(str(song.get('album_name') or ''))
+    artists = song.get('artists') or []
+    artist = _alnum_only(
+        str(song.get('album_artist') or (artists[0] if artists else ''))
+    )
+    if not album or not artist or not complete_dir.is_dir():
+        return None
+    for entry in sorted(complete_dir.rglob('*')):
+        if (
+            not entry.is_file()
+            or entry.suffix.lower().lstrip('.') not in _AUDIO_EXTENSIONS
+        ):
+            continue
+        meta = read_audio_metadata(entry)
+        text = _alnum_only(
+            ' '.join([
+                str(entry.relative_to(complete_dir)),
+                str(meta.get('album') or ''),
+                ' '.join(meta.get('artists') or []),
+                str(meta.get('album_artist') or ''),
+            ])
+        )
+        if artist in text and album in text:
+            return entry.parent
+    return None
 
 
 def _audio_files_in(
@@ -1477,6 +1513,11 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
     # A previously downloaded album with this artist+album is still on
     # disk: extract the track from it instead of re-downloading anything.
     cached_album = _album_cache_get(album_key)
+    if cached_album is None:
+        cached_album = _existing_album_folder(complete_dir, song)
+        if cached_album is not None:
+            for key in cache_keys:
+                _album_cache_put(key, cached_album)
     if cached_album is not None:
         if album_only:
             return cached_album
@@ -1491,8 +1532,7 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
                 cached_album.name,
             )
             return found
-        if found is not None:
-            _discard_mismatched_download(found)
+        # Shared album files belong to the whole batch, not this one song.
 
     semaphore = (
         contextlib.nullcontext() if album_only else _usenet_semaphore(settings)
@@ -1577,8 +1617,6 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
                     verify_downloaded_file_matches_spotify(found, spotify_row)
                 ):
                     return found
-                if found is not None:
-                    _discard_mismatched_download(found)
                 continue
             if nzb_state == 'wait' and nzb_event is not None:
                 while not nzb_event.wait(1.0):
@@ -1596,8 +1634,6 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
                         )
                     ):
                         return found
-                    if found is not None:
-                        _discard_mismatched_download(found)
                 continue
             claim_event = nzb_event if nzb_state == 'owner' else None
             claim_done = False
@@ -1634,8 +1670,6 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
                             song.get('name'),
                         )
                         return found
-                    if found is not None:
-                        _discard_mismatched_download(found)
                     continue
 
             try:
@@ -1709,6 +1743,17 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
                     continue
 
                 if is_album:
+                    # Remember the successful release BEFORE matching a track.
+                    # A missing/mismatched song must not release the NZB claim
+                    # and submit the entire album again for the next song.
+                    release_folder = _album_storage_folder(
+                        complete_dir, str(slot.get('storage') or '')
+                    )
+                    if release_folder is not None:
+                        for key in cache_keys:
+                            _album_cache_put(key, release_folder)
+                        _finish_nzb_claim(nzb_url, claim_event, release_folder)
+                        claim_done = True
                     found = _find_album_track(
                         complete_dir,
                         str(slot.get('storage') or ''),
@@ -1750,7 +1795,8 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
                         len(ranked),
                         _file_basename(found.name)[:120],
                     )
-                    _discard_mismatched_download(found)
+                    if not is_album:
+                        _discard_mismatched_download(found)
                     continue
 
                 if is_album:

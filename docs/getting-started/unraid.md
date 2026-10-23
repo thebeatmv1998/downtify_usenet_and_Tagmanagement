@@ -69,6 +69,14 @@ nor the organize-by-artist/album switches already define a folder layout.
 plus any remaining cached release folders immediately, including folders whose
 history entry is already gone.
 
+Before submitting an album NZB, Downtify also scans the mounted completed
+download directory for an existing artist/album release, even when its cache
+was lost. A track that cannot be matched never deletes other songs from the
+shared source album or allows that same cached release to be submitted again.
+Incomplete album batches retain their source folder for retry; fully copied
+batches still clean up automatically. Album downloads skip songs already in
+the library, including when the general overwrite setting is enabled.
+
 ## YouTube bot check ("Sign in to confirm you're not a bot")
 
 YouTube aggressively gates datacenter IPs. If downloads or metadata lookups fail:

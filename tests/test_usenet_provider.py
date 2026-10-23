@@ -728,6 +728,78 @@ def test_pick_track_in_album_matches_by_tags(tmp_path):
     assert found != other
 
 
+def test_completed_album_on_disk_is_reused_without_cache_or_nzb(
+    tmp_path, monkeypatch
+):
+    album, wanted, other = _album_folder(tmp_path)
+    monkeypatch.setattr(
+        usenet,
+        '_search_indexers',
+        lambda *args: pytest.fail('must check disk before searching'),
+    )
+    settings = _settings(tmp_path, prefer_albums=True)
+    assert (
+        download_from_usenet(dict(_SONG), settings, album_only=True) == album
+    )
+    assert download_from_usenet(dict(_SONG), settings) == wanted
+    assert wanted.exists()
+    assert other.exists()
+
+
+def test_wrong_album_song_is_not_deleted_or_selected_by_duration(
+    tmp_path, monkeypatch
+):
+    album, wanted, other = _album_folder(tmp_path)
+    monkeypatch.setattr(
+        usenet,
+        'read_audio_metadata',
+        lambda path: {
+            'title': 'Different song',
+            'artists': ['Artist'],
+            'duration': 200,
+        },
+    )
+    assert (
+        usenet._pick_track_in_album(
+            album, {**_SONG, 'name': 'Missing song'}, {}
+        )
+        is None
+    )
+    assert wanted.exists()
+    assert other.exists()
+
+
+def test_missing_song_does_not_submit_same_completed_album_again(
+    tmp_path, monkeypatch
+):
+    album, wanted, other = _album_folder(tmp_path)
+    monkeypatch.setattr(usenet, '_existing_album_folder', lambda *args: None)
+    monkeypatch.setattr(
+        usenet, '_search_indexers', lambda *args: [_ALBUM_RELEASE]
+    )
+    monkeypatch.setattr(usenet, '_pick_track_in_album', lambda *args: None)
+    submitted = []
+    monkeypatch.setattr(
+        SabnzbdClient,
+        'add_url',
+        lambda self, url, name: submitted.append(url) or 'job',
+    )
+    monkeypatch.setattr(
+        SabnzbdClient,
+        'history_slot',
+        lambda self, nzo: {
+            'status': 'Completed',
+            'storage': str(album),
+        },
+    )
+    settings = _settings(tmp_path, prefer_albums=True)
+    assert download_from_usenet(dict(_SONG), settings) is None
+    assert download_from_usenet(dict(_SONG), settings) is None
+    assert len(submitted) == 1
+    assert wanted.exists()
+    assert other.exists()
+
+
 def test_download_prefers_album_and_extracts_track(tmp_path, monkeypatch):
     album, wanted, other = _album_folder(tmp_path)
     settings = _settings(tmp_path, prefer_albums=True)
@@ -785,6 +857,7 @@ def _reset_album_cache():
 def test_album_only_prefetch_caches_the_release_without_picking_a_track(
     tmp_path, monkeypatch
 ):
+    monkeypatch.setattr(usenet, '_existing_album_folder', lambda *args: None)
     album, _wanted, _other = _album_folder(tmp_path)
     settings = _settings(tmp_path, prefer_albums=False)
 
@@ -857,6 +930,7 @@ def test_nzb_claim_allows_only_one_owner(tmp_path):
 def test_album_downloaded_once_and_reused_for_more_songs(
     tmp_path, monkeypatch
 ):
+    monkeypatch.setattr(usenet, '_existing_album_folder', lambda *args: None)
     album, wanted, other = _album_folder(tmp_path)
     settings = _settings(tmp_path, prefer_albums=True)
 

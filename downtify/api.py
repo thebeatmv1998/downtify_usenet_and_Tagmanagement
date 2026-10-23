@@ -3959,7 +3959,9 @@ async def _run_download_locked(
             ):
                 # Stop all was pressed while this job waited for a slot.
                 raise download_control.DownloadCancelled()
-            if not getattr(state.downloader, 'overwrite_existing_files', True):
+            if song.get('_usenet_prefer_album') or not getattr(
+                state.downloader, 'overwrite_existing_files', True
+            ):
                 existing_hit = await asyncio.to_thread(
                     resolve_existing_download,
                     state.downloader,
@@ -4887,7 +4889,8 @@ async def _process_batch(  # noqa: PLR0914
 
     # Every track has been copied and tagged; SABnzbd album folders
     # used by this batch are no longer needed.
-    _cleanup_usenet_albums(songs)
+    if all(resolved.get(i) for i in range(len(songs))):
+        _cleanup_usenet_albums(songs)
 
     if wants_m3u:
         await _write_batch_m3u(

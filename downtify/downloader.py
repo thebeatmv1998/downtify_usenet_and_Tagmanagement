@@ -1147,7 +1147,9 @@ class Downloader:
         if cancelled():
             raise download_control.DownloadCancelled()
 
-        skip_existing = not self.overwrite_existing_files
+        skip_existing = not self.overwrite_existing_files or bool(
+            song.get('_usenet_prefer_album')
+        )
         if skip_existing and self._can_resolve_path_early(song):
             existing = self.find_existing_download(song, subdir)
             if existing is not None:

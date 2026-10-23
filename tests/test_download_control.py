@@ -55,6 +55,26 @@ def test_sleep_interruptible_runs_a_whole_sleep_without_a_stop(monkeypatch):
     assert slept == [0.25, 0.25, 0.25, 0.25]
 
 
+def test_album_download_skips_existing_song_even_if_overwrite_is_enabled(
+    tmp_path, monkeypatch
+):
+    downloader = Downloader(tmp_path, overwrite_existing_files=True)
+    monkeypatch.setattr(
+        downloader, '_can_resolve_path_early', lambda song: True
+    )
+    monkeypatch.setattr(
+        downloader, 'find_existing_download', lambda *args: 'existing.mp3'
+    )
+    assert (
+        downloader.download({
+            'name': 'Existing',
+            'artists': ['Artist'],
+            '_usenet_prefer_album': True,
+        })
+        == 'existing.mp3'
+    )
+
+
 class _Task:
     def __init__(self):
         self.cancelled = False
