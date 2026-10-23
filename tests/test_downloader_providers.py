@@ -233,6 +233,126 @@ def test_audio_providers_are_normalized():
     ]) == ['usenet']
 
 
+def _failover_downloader(tmp_path, providers=('usenet', 'youtube')):
+    return Downloader(
+        tmp_path,
+        audio_providers=list(providers),
+        usenet_settings={'enabled': True},
+    )
+
+
+def test_a_failing_source_gets_three_tries_before_the_next_one(
+    tmp_path, monkeypatch
+):
+    d = _failover_downloader(tmp_path)
+    calls = []
+
+    def attempt(song, progress_cb=None, subdir=None, *, providers=None, **_k):
+        calls.append(providers[0])
+        if providers == ['usenet']:
+            raise RuntimeError('indexer down')
+        return 'Artist - Track.mp3'
+
+    monkeypatch.setattr(d, '_download_from_provider', attempt)
+    reports = []
+    assert (
+        d.download(dict(_SONG), lambda *a: reports.append(a))
+        == 'Artist - Track.mp3'
+    )
+    assert calls == ['usenet', 'usenet', 'usenet', 'youtube']
+    messages = [report[1] for report in reports]
+    assert 'Retrying usenet (2/3)' in messages
+    assert 'Trying next source' in messages
+
+
+def test_a_source_that_recovers_does_not_switch(tmp_path, monkeypatch):
+    d = _failover_downloader(tmp_path)
+    calls = []
+
+    def attempt(song, progress_cb=None, subdir=None, *, providers=None, **_k):
+        calls.append(providers[0])
+        if len(calls) < 3:
+            raise RuntimeError('temporary')
+        return 'Artist - Track.mp3'
+
+    monkeypatch.setattr(d, '_download_from_provider', attempt)
+    assert d.download(dict(_SONG)) == 'Artist - Track.mp3'
+    assert calls == ['usenet', 'usenet', 'usenet']
+
+
+def test_a_source_without_a_match_is_skipped_without_retries(
+    tmp_path, monkeypatch
+):
+    d = _failover_downloader(tmp_path)
+    calls = []
+
+    def attempt(song, progress_cb=None, subdir=None, *, providers=None, **_k):
+        calls.append(providers[0])
+        if providers == ['usenet']:
+            raise NoAudioMatchError('nothing there')
+        return 'Artist - Track.mp3'
+
+    monkeypatch.setattr(d, '_download_from_provider', attempt)
+    assert d.download(dict(_SONG)) == 'Artist - Track.mp3'
+    assert calls == ['usenet', 'youtube']
+
+
+def test_the_last_source_error_is_reported_after_all_sources_fail(
+    tmp_path, monkeypatch
+):
+    d = _failover_downloader(tmp_path)
+    calls = []
+
+    def attempt(song, progress_cb=None, subdir=None, *, providers=None, **_k):
+        calls.append(providers[0])
+        raise RuntimeError(f'{providers[0]} failed')
+
+    monkeypatch.setattr(d, '_download_from_provider', attempt)
+    with pytest.raises(RuntimeError, match='youtube failed'):
+        d.download(dict(_SONG))
+    assert calls == ['usenet'] * 3 + ['youtube'] * 3
+
+
+def test_a_failed_youtube_music_fetch_still_tries_standard_youtube(
+    tmp_path, monkeypatch
+):
+    d = Downloader(tmp_path, audio_providers=['youtube-music', 'youtube'])
+    calls = []
+
+    def attempt(song, progress_cb=None, subdir=None, *, providers=None, **_k):
+        calls.append(providers[0])
+        if providers == ['youtube-music']:
+            raise RuntimeError('video unavailable')
+        return 'Artist - Track.mp3'
+
+    monkeypatch.setattr(d, '_download_from_provider', attempt)
+    assert d.download(dict(_SONG)) == 'Artist - Track.mp3'
+    assert calls == ['youtube-music'] * 3 + ['youtube']
+
+
+def test_a_known_long_track_is_not_retried_or_switched(tmp_path, monkeypatch):
+    d = _failover_downloader(tmp_path)
+    calls = []
+
+    def attempt(song, progress_cb=None, subdir=None, *, providers=None, **_k):
+        calls.append(providers[0])
+        raise downloader_mod.TrackTooLongError('too long')
+
+    monkeypatch.setattr(d, '_download_from_provider', attempt)
+    with pytest.raises(downloader_mod.TrackTooLongError):
+        d.download(dict(_SONG))
+    assert calls == ['usenet']
+
+
+def test_disabled_sources_are_not_tried(tmp_path):
+    d = Downloader(
+        tmp_path,
+        audio_providers=['usenet', 'youtube'],
+        usenet_settings={'enabled': False},
+    )
+    assert d._provider_order() == ['youtube']
+
+
 def test_usenet_dispatch_enabled(tmp_path, monkeypatch, no_youtube):
     calls = []
 
@@ -322,6 +442,33 @@ def test_a_pinned_youtube_video_does_not_bypass_usenet_first(
     # the pin was only used as the fallback.
     assert calls == ['Track']
     assert no_youtube == ['https://music.youtube.com/watch?v=pinned12345']
+
+
+def test_a_youtube_search_result_still_tries_usenet_first(
+    tmp_path, monkeypatch, no_youtube
+):
+    calls = []
+
+    def _usenet(song, settings, progress_cb=None, **kwargs):
+        calls.append(song.get('name'))
+
+    monkeypatch.setattr(downloader_mod, 'download_from_usenet', _usenet)
+    d = Downloader(
+        tmp_path,
+        audio_providers=['usenet', 'youtube-music'],
+        usenet_settings={'enabled': True},
+    )
+
+    stored = d.download({
+        **_SONG,
+        'source': 'youtube',
+        'song_id': 'vid12345678',
+    })
+
+    assert stored == 'Artist - Track.mp3'
+    # The pinned id must not replace the lossless source before it.
+    assert calls == ['Track']
+    assert no_youtube == ['https://music.youtube.com/watch?v=vid12345678']
 
 
 def test_a_pinned_video_uses_usenet_when_it_has_the_track(

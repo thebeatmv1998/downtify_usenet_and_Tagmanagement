@@ -149,7 +149,7 @@ def test_a_file_a_provider_downloaded_calls_the_hook(tmp_path, monkeypatch):
     monkeypatch.setattr(
         Downloader,
         '_resolve_source',
-        lambda self, song, cb, cancelled=None: (
+        lambda self, song, cb, cancelled=None, **kwargs: (
             None,
             None,
             'slskd',

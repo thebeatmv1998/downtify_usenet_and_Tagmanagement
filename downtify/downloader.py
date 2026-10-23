@@ -82,6 +82,9 @@ class NoAudioMatchError(RuntimeError):
 #: this bound, for downloads and streams alike; ``0`` means no limit.
 MAX_TRACK_DURATION_SECONDS = 600
 
+#: Failed fetch attempts per audio source before the next source is tried.
+MAX_SOURCE_ATTEMPTS = 3
+
 
 class TrackTooLongError(RuntimeError):
     """The song's known duration is past the duration limit."""
@@ -715,11 +718,13 @@ class Downloader:
             ),
         }
 
-    def _local_sources_before_youtube(self) -> list[str]:
+    def _local_sources_before_youtube(
+        self, providers: Optional[list[str]] = None
+    ) -> list[str]:
         """Enabled slskd/usenet sources that precede the first YouTube one."""
 
         out: list[str] = []
-        for provider in self.audio_providers:
+        for provider in providers or self.audio_providers:
             if provider in {'youtube-music', 'youtube'}:
                 break
             if provider in {'slskd', 'usenet'}:
@@ -776,6 +781,8 @@ class Downloader:
         song: dict[str, Any],
         progress_cb: Optional[ProgressCallback],
         cancelled: Optional[Callable[[], bool]] = None,
+        *,
+        providers: Optional[list[str]] = None,
     ) -> tuple[
         Optional[str], Optional[dict[str, Any]], Optional[str], Optional[Path]
     ]:
@@ -784,17 +791,19 @@ class Downloader:
         Returns ``(video_id, ytm_match, provider, local_path)``: a YouTube
         video id (with its YouTube Music result, if any) or, for slskd, the
         path of the already-downloaded file. All ``None`` when every
-        provider came up empty.
+        provider came up empty. ``providers`` narrows the search to one
+        source, which the failover loop uses to retry a single provider.
         """
 
+        providers = providers or self.audio_providers
         logger.debug(
             'Audio providers: {} (usenet enabled={}, indexers={})',
-            self.audio_providers,
+            providers,
             self.usenet_settings.get('enabled'),
             len(self.usenet_settings.get('indexers') or []),
         )
         youtube_searched = False
-        for provider in self.audio_providers:
+        for provider in providers:
             if cancelled is not None and cancelled():
                 raise download_control.DownloadCancelled()
             if provider in {'slskd', 'usenet'}:
@@ -1189,6 +1198,125 @@ class Downloader:
         *,
         cancel_generation: Optional[int] = None,
     ) -> str:
+        """Download from the first working source, retrying each one.
+
+        Every enabled source gets :data:`MAX_SOURCE_ATTEMPTS` tries. A
+        failed attempt (network error, bot check, rejected/undecodable
+        download, failed verification) retries the same source; after the
+        last try the next source in the configured order takes over. A
+        source with no match at all is skipped immediately - searching
+        it again would only repeat the same empty result.
+        """
+
+        generation = (
+            cancel_generation
+            if cancel_generation is not None
+            else download_control.current_generation()
+        )
+
+        def cancelled() -> bool:
+            return download_control.is_cancelled(generation)
+
+        providers = self._provider_order()
+        if not providers:
+            raise NoAudioMatchError(
+                f'No audio source is enabled for {song.get("name")!r}'
+            )
+
+        last_error: Optional[BaseException] = None
+        no_match_error: Optional[NoAudioMatchError] = None
+        youtube_music_had_no_match = False
+        for provider in providers:
+            if cancelled():
+                raise download_control.DownloadCancelled()
+            if provider == 'youtube' and youtube_music_had_no_match:
+                # YouTube Music's matcher already falls back to standard
+                # YouTube, so a second search would only repeat the same
+                # empty result. After an actual fetch error, though, the
+                # standard-YouTube source may well find another video.
+                continue
+            for attempt in range(1, MAX_SOURCE_ATTEMPTS + 1):
+                try:
+                    return self._download_from_provider(
+                        song,
+                        progress_cb,
+                        subdir,
+                        providers=[provider],
+                        cancel_generation=generation,
+                    )
+                except download_control.DownloadCancelled:
+                    raise
+                except TrackTooLongError:
+                    # A deliberate policy, not a source failure.
+                    raise
+                except NoAudioMatchError as exc:
+                    # Keep the first one: it describes every enabled audio
+                    # source, while a later YouTube-only message would hide
+                    # that lossless sources were tried too.
+                    if no_match_error is None:
+                        no_match_error = exc
+                    if provider == 'youtube-music':
+                        youtube_music_had_no_match = True
+                    break
+                except Exception as exc:
+                    last_error = exc
+                    if attempt < MAX_SOURCE_ATTEMPTS:
+                        logger.warning(
+                            'Audio source {} failed (attempt {}/{}): {}',
+                            provider,
+                            attempt,
+                            MAX_SOURCE_ATTEMPTS,
+                            exc,
+                        )
+                        _report(
+                            progress_cb,
+                            0.0,
+                            f'Retrying {provider} '
+                            f'({attempt + 1}/{MAX_SOURCE_ATTEMPTS})',
+                            provider,
+                        )
+                        continue
+                    logger.warning(
+                        'Audio source {} failed {} times; trying next source: {}',
+                        provider,
+                        MAX_SOURCE_ATTEMPTS,
+                        exc,
+                    )
+                    _report(progress_cb, 0.0, 'Trying next source', provider)
+                    break
+
+        if last_error is not None:
+            raise last_error
+        if no_match_error is not None:
+            raise no_match_error
+        raise NoAudioMatchError(
+            f'Could not find an audio match for {song.get("name")!r}'
+        )
+
+    def _provider_order(self) -> list[str]:
+        """Configured sources that are actually enabled, deduplicated."""
+
+        order: list[str] = []
+        for provider in self.audio_providers:
+            if provider == 'slskd' and not self.slskd_settings.get('enabled'):
+                continue
+            if provider == 'usenet' and not self.usenet_settings.get(
+                'enabled'
+            ):
+                continue
+            if provider not in order:
+                order.append(provider)
+        return order
+
+    def _download_from_provider(
+        self,
+        song: dict[str, Any],
+        progress_cb: Optional[ProgressCallback] = None,
+        subdir: Optional[str] = None,
+        *,
+        providers: Optional[list[str]] = None,
+        cancel_generation: Optional[int] = None,
+    ) -> str:
         """Download ``song`` and return the resulting file name.
 
         When ``subdir`` is provided the file is written under
@@ -1209,6 +1337,7 @@ class Downloader:
             if cancel_generation is not None
             else download_control.current_generation()
         )
+        providers = providers or self.audio_providers
 
         def cancelled() -> bool:
             return download_control.is_cancelled(generation)
@@ -1231,13 +1360,20 @@ class Downloader:
         if (
             video_id
             and not song.get('youtube_id_override')
-            and not {'youtube-music', 'youtube'} & set(self.audio_providers)
+            and not {'youtube-music', 'youtube'} & set(providers)
         ):
             # YouTube Music playlists pin tracks to their exact video; with
             # the YouTube sources disabled that pin must not bypass the
             # source order — resolve the track like any other instead.
             video_id = None
-        if not video_id and (song.get('source') == 'youtube'):
+        if (
+            not video_id
+            and song.get('source') == 'youtube'
+            and {'youtube-music', 'youtube'} & set(providers)
+        ):
+            # Only pin the video when a YouTube source is part of this
+            # attempt; otherwise a lossless source placed before it would
+            # be skipped for YouTube-sourced search results.
             video_id = song.get('song_id')
 
         # A pinned YouTube Music video must not bypass a lossless source the
@@ -1246,9 +1382,11 @@ class Downloader:
         if (
             video_id
             and not song.get('youtube_id_override')
-            and {'youtube-music', 'youtube'} & set(self.audio_providers)
+            and {'youtube-music', 'youtube'} & set(providers)
         ):
-            for local_provider in self._local_sources_before_youtube():
+            for local_provider in self._local_sources_before_youtube(
+                providers
+            ):
                 local = self._try_local_source(
                     local_provider, song, progress_cb
                 )
@@ -1277,7 +1415,7 @@ class Downloader:
             if cancelled():
                 raise download_control.DownloadCancelled()
             video_id, match, provider, local_source = self._resolve_source(
-                song, progress_cb, cancelled
+                song, progress_cb, cancelled, providers=providers
             )
         elif not song.get('album_name') or not song.get('cover_url'):
             # We already have a target video, but the metadata is incomplete.
@@ -1292,11 +1430,9 @@ class Downloader:
 
         if not video_id and local_source is None:
             audio_enabled = (
-                'slskd' in self.audio_providers
-                and self.slskd_settings.get('enabled')
+                'slskd' in providers and self.slskd_settings.get('enabled')
             ) or (
-                'usenet' in self.audio_providers
-                and self.usenet_settings.get('enabled')
+                'usenet' in providers and self.usenet_settings.get('enabled')
             )
             source = 'an audio match' if audio_enabled else 'a YouTube match'
             raise NoAudioMatchError(

@@ -166,7 +166,13 @@ With it off, Downtify looks for the song **anywhere in the download folder**, no
 - any playlist's folder (playlist downloads, CSV imports, Playlist Monitor),
 - an artist/album folder, or the flat layout from before you turned *Organize by artist/album* on or off.
 
-A song counts as already downloaded when an audio file (`.mp3`, `.flac`, `.m4a`, `.ogg`, `.opus`) has the name the [output filename template](#output-filename-template) produces for it, compared case-insensitively. A leftover `.lrc` lyrics file alone doesn't count. If the template contains folders (e.g. `{artists}/{title}`), those folders must match too, so another artist's song with the same title isn't mistaken for this one. Because files don't carry a Spotify/YouTube track ID, matching is by name: a file you renamed, or one saved under a different filename template, won't be recognized.
+A song counts as already downloaded when Downtify finds it in the library: by a
+known Spotify track ID, by the path the [output filename template](#output-filename-template)
+produces, by a filename match anywhere in the library, or by normalized
+artist/title tags (also in the configured Soulseek source folder). That covers
+renamed files, other audio formats, older folder layouts and imports. A
+leftover `.lrc` lyrics file alone doesn't count, and another artist or a
+distinct live version is not mistaken for the same song.
 
 When a song is skipped:
 
@@ -183,6 +189,15 @@ When a song is skipped:
 The default audio provider is **YouTube Music**. Downtify uses [`ytmusicapi`](https://ytmusicapi.readthedocs.io/) to search for the best match by comparing track duration. When YouTube Music has no acceptable match, or only one whose duration is far off (a likely different recording), Downtify automatically falls back to searching standard YouTube — see [How it works](../how-it-works.md#fallback-to-standard-youtube).
 
 **Settings → Audio source** can also use standard **YouTube** only, or **slskd** (Soulseek), as an ordered fallback list — see [slskd & Navidrome](slskd-navidrome.md#audio-sources-and-fallback-order).
+
+Every enabled source gets up to **three attempts**. A failed attempt — network
+error, YouTube bot check, rejected or undecodable download, failed metadata
+verification — is retried on the same source, showing *Retrying … (2/3)* in the
+queue. After the third failure the next source in the configured order takes
+over (*Trying next source*); the final error is only reported once every source
+has failed. A source that simply has no match moves on immediately, since
+searching it again would repeat the same empty result, and a track past the
+length limit is refused without retrying.
 
 ### Force a specific audio source
 

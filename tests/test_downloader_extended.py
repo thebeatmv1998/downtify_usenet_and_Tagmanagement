@@ -1086,7 +1086,9 @@ def test_download_registers_bitrate_aware_extract_audio_pp(
     except _CapturedOpts:
         pass
     assert 'postprocessors' not in _FakeYoutubeDL.captured
-    [(pp, when)] = _FakeYoutubeDL.post_processors
+    # The fake aborts every attempt by raising, so the source failover loop
+    # builds the same post-processor once per try; inspect the last one.
+    pp, when = _FakeYoutubeDL.post_processors[-1]
     assert isinstance(pp, _ExtractAudioPP)
     assert when == 'post_process'
     assert pp._codec == 'm4a'
