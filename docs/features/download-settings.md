@@ -199,6 +199,12 @@ has failed. A source that simply has no match moves on immediately, since
 searching it again would repeat the same empty result, and a track past the
 length limit is refused without retrying.
 
+Each waiting or running song also has a **skip-source** button in the queue
+(↻-style arrow next to remove). It abandons the current source at the next safe
+point and continues with the next one immediately, without waiting out the
+three attempts; the request is visible as *Skipping to next source*. Skipping
+the last configured source reports that attempt as failed.
+
 ### Force a specific audio source
 
 If Downtify picks the wrong YouTube Music video (e.g. a cover instead of the original), you can override it per track:

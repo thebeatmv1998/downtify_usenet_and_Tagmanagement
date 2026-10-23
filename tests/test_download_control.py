@@ -139,6 +139,68 @@ def test_stop_endpoint_cancels_tasks_clears_jobs_and_closes_batches(
     assert batches.finished == [(1, 3, 0, 'incomplete')]
 
 
+def test_skip_source_endpoint_requests_a_skip_for_a_running_song(monkeypatch):
+
+    class Request:
+        async def json(self):
+            return {'song_id': 'song-1'}
+
+    messages = []
+
+    async def broadcast(users, message):
+        messages.append((users, message))
+
+    monkeypatch.setattr(api, '_queue_job_visible', lambda job, request: True)
+    monkeypatch.setattr(
+        api.state,
+        'download_jobs',
+        {
+            'song-1': {
+                'song': {'song_id': 'song-1', 'name': 'Song'},
+                'status': 'downloading',
+                'progress': 42,
+                'provider': 'usenet',
+                'user_ids': {1},
+            },
+        },
+    )
+    monkeypatch.setattr(api.state.connections, 'broadcast_job', broadcast)
+    download_control.clear_source_skip('song-1')
+
+    result = asyncio.run(api.skip_source_endpoint(Request()))
+
+    assert result == {'skipped': True}
+    assert download_control.source_skip_requested('song-1') is True
+    assert messages[0][0] == {1}
+    assert messages[0][1]['message'] == 'Skipping to next source'
+    download_control.clear_source_skip('song-1')
+
+
+def test_skip_source_endpoint_rejects_a_finished_song(monkeypatch):
+    from fastapi import HTTPException
+
+    class Request:
+        async def json(self):
+            return {'song_id': 'done-1'}
+
+    monkeypatch.setattr(api, '_queue_job_visible', lambda job, request: True)
+    monkeypatch.setattr(
+        api.state,
+        'download_jobs',
+        {
+            'done-1': {
+                'song': {'song_id': 'done-1', 'name': 'Song'},
+                'status': 'done',
+                'user_ids': {1},
+            },
+        },
+    )
+
+    with pytest.raises(HTTPException) as error:
+        asyncio.run(api.skip_source_endpoint(Request()))
+    assert error.value.status_code == 409
+
+
 def test_stop_endpoint_deletes_sab_jobs_even_without_visible_jobs(monkeypatch):
     from types import SimpleNamespace
 

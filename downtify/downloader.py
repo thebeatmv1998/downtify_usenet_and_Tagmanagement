@@ -1223,6 +1223,11 @@ class Downloader:
                 f'No audio source is enabled for {song.get("name")!r}'
             )
 
+        skip_key = str(song.get('song_id') or song.get('url') or '')
+        # A request made while the song was still waiting skips the first
+        # source too, instead of ignoring the user until a retry.
+        skip_this_source = download_control.take_source_skip(skip_key)
+
         last_error: Optional[BaseException] = None
         no_match_error: Optional[NoAudioMatchError] = None
         youtube_music_had_no_match = False
@@ -1235,6 +1240,11 @@ class Downloader:
                 # empty result. After an actual fetch error, though, the
                 # standard-YouTube source may well find another video.
                 continue
+            if skip_this_source:
+                skip_this_source = False
+                logger.info('Audio source {} skipped by user', provider)
+                _report(progress_cb, 0.0, 'Skipping source', provider)
+                continue
             for attempt in range(1, MAX_SOURCE_ATTEMPTS + 1):
                 try:
                     return self._download_from_provider(
@@ -1243,9 +1253,17 @@ class Downloader:
                         subdir,
                         providers=[provider],
                         cancel_generation=generation,
+                        skip_key=skip_key,
                     )
                 except download_control.DownloadCancelled:
                     raise
+                except download_control.SourceSkipRequested:
+                    # The user asked this song to move on: drop the request
+                    # and take the next configured source immediately.
+                    download_control.take_source_skip(skip_key)
+                    logger.info('Audio source {} skipped by user', provider)
+                    _report(progress_cb, 0.0, 'Skipping source', provider)
+                    break
                 except TrackTooLongError:
                     # A deliberate policy, not a source failure.
                     raise
@@ -1316,6 +1334,7 @@ class Downloader:
         *,
         providers: Optional[list[str]] = None,
         cancel_generation: Optional[int] = None,
+        skip_key: str = '',
     ) -> str:
         """Download ``song`` and return the resulting file name.
 
@@ -1340,6 +1359,10 @@ class Downloader:
         providers = providers or self.audio_providers
 
         def cancelled() -> bool:
+            # A manual skip aborts the current source only; the failover
+            # wrapper catches it and moves to the next provider.
+            if skip_key and download_control.source_skip_requested(skip_key):
+                raise download_control.SourceSkipRequested()
             return download_control.is_cancelled(generation)
 
         if cancelled():
@@ -1791,7 +1814,10 @@ class Downloader:
                     when='post_process',
                 )
                 ydl.download([url])
-        except download_control.DownloadCancelled:
+        except (
+            download_control.DownloadCancelled,
+            download_control.SourceSkipRequested,
+        ):
             raise
         except Exception as exc:
             raise _translate_download_error(

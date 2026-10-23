@@ -265,6 +265,9 @@ export default {
     stopAll: 'Arr?ter tous les t?l?chargements',
     stopped: '{count} t?l?chargement(s) arr?t?(s).',
     stopFailed: "Impossible d'arr?ter les t?l?chargements.",
+    skipSource: 'Passer ? la source suivante',
+    skipRequested: 'Passage ? la source audio suivante.',
+    skipFailed: "Impossible de passer la source.",
     emptyTitle: 'La file est vide',
     emptyBody:
       'Cherchez de la musique ou collez un lien — les téléchargements apparaissent ici.',

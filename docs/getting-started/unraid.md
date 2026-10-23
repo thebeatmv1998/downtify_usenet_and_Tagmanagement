@@ -65,6 +65,22 @@ of its tracks, the SABnzbd release folder is deleted automatically.
 Album batches are filed under `Artist/Album` when neither the output template
 nor the organize-by-artist/album switches already define a folder layout.
 
+Edition variants count as one album for source reuse: `(Deluxe Edition)`,
+`(Reissue)`, `(Remastered)`, bonus tracks and `CD1`/`Disc 2` suffixes all map to
+the same artist + base album. Once one such release is on disk, the other
+variants and their tracks reuse it. A track that is genuinely missing from the
+downloaded release is **not** answered by downloading another release of the
+same album; it moves on to the next source instead (or to a per-track search).
+This is also why a discography no longer leaves several `.1`, `.2` copies of
+the same album behind. Incomplete batches keep their source folder until the
+run ends; only then does the automatic cleanup delete it.
+
+**Queue → skip icon on a song** (next to ↻/✕) abandons that song's current
+audio source immediately and continues with the next source in the configured
+order, without waiting for the three-attempt limit to run out. It works while
+the song is waiting or downloading. The source list, retry behaviour and
+automatic failover are unchanged for every other song.
+
 **Settings → Usenet → Clean up SABnzbd now** deletes every finished SABnzbd job
 plus any remaining cached release folders immediately, including folders whose
 history entry is already gone.

@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 from mutagen.id3 import ID3
 
+from downtify import download_control
 from downtify import downloader as downloader_mod
 from downtify.downloader import Downloader, NoAudioMatchError
 from tests.test_downloader_extended import _minimal_mp3
@@ -328,6 +329,45 @@ def test_a_failed_youtube_music_fetch_still_tries_standard_youtube(
     monkeypatch.setattr(d, '_download_from_provider', attempt)
     assert d.download(dict(_SONG)) == 'Artist - Track.mp3'
     assert calls == ['youtube-music'] * 3 + ['youtube']
+
+
+def test_a_manual_skip_moves_to_the_next_source_without_retrying(
+    tmp_path, monkeypatch
+):
+    d = _failover_downloader(tmp_path)
+    calls = []
+
+    def attempt(song, progress_cb=None, subdir=None, *, providers=None, **_k):
+        calls.append(providers[0])
+        if providers == ['usenet']:
+            raise download_control.SourceSkipRequested()
+        return 'Artist - Track.mp3'
+
+    monkeypatch.setattr(d, '_download_from_provider', attempt)
+    assert d.download({**_SONG, 'song_id': 'skip-me'}) == 'Artist - Track.mp3'
+    assert calls == ['usenet', 'youtube']
+
+
+def test_a_skip_requested_while_waiting_skips_the_first_source(
+    tmp_path, monkeypatch
+):
+    d = _failover_downloader(tmp_path)
+    calls = []
+
+    def attempt(song, progress_cb=None, subdir=None, *, providers=None, **_k):
+        calls.append(providers[0])
+        return 'Artist - Track.mp3'
+
+    monkeypatch.setattr(d, '_download_from_provider', attempt)
+    download_control.request_source_skip('queued-skip')
+    try:
+        assert (
+            d.download({**_SONG, 'song_id': 'queued-skip'})
+            == 'Artist - Track.mp3'
+        )
+        assert calls == ['youtube']
+    finally:
+        download_control.clear_source_skip('queued-skip')
 
 
 def test_a_known_long_track_is_not_retried_or_switched(tmp_path, monkeypatch):

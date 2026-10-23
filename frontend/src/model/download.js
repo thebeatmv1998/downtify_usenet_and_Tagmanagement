@@ -457,6 +457,13 @@ export function useDownloadManager() {
     return res.data || {}
   }
 
+  /** Ask the running worker of one song to abandon its current source. */
+  async function skipSource(song) {
+    const songId = jobSongKey(song)
+    if (!songId) return
+    await API.skipQueueSource(songId)
+  }
+
   async function clearCompleted() {
     await API.clearCompletedQueue()
     removeItems((item) => item.isDownloaded())
@@ -487,6 +494,7 @@ export function useDownloadManager() {
     remove,
     clearAll,
     stopAll,
+    skipSource,
     clearCompleted,
     loading,
   }

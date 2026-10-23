@@ -107,6 +107,13 @@
           {{ t('queue.retry') }}
         </UiButton>
         <UiIconButton
+          v-if="canSkipSource"
+          icon="skip-forward"
+          :label="t('queue.skipSource')"
+          size="sm"
+          @click="skipSource"
+        />
+        <UiIconButton
           icon="x"
           :label="t('queue.remove')"
           size="sm"
@@ -152,6 +159,7 @@ import UiIconButton from '../ui/UiIconButton.vue'
 import UiProgress from '../ui/UiProgress.vue'
 import { useDownloadManager } from '/src/model/download'
 import { useLibrary } from '/src/model/library'
+import { useUi } from '/src/model/ui'
 import { useTrackActions } from '/src/model/trackActions'
 // Display only: the job's `cover_url` is what its file gets.
 import { deezerImage } from '/src/lib/deezerImage'
@@ -168,10 +176,14 @@ const { t } = useI18n()
 const dm = useDownloadManager()
 const library = useLibrary()
 const actions = useTrackActions()
+const ui = useUi()
 const override = ref('')
 const overrideError = ref('')
 
 const song = computed(() => props.item.song)
+const canSkipSource = computed(
+  () => props.item.state === 'active' || props.item.state === 'queued'
+)
 const artists = computed(
   () =>
     (song.value.artists || []).join(', ') ||
@@ -183,6 +195,17 @@ function play() {
   const file = props.item.filename
   const track = library.tracksByFile.value.get(file) || normalizeTrack(file)
   actions.play([track], 0, null)
+}
+
+async function skipSource() {
+  try {
+    await dm.skipSource(song.value)
+    ui.toast(t('queue.skipRequested'), { kind: 'success' })
+  } catch (err) {
+    ui.toast(err?.response?.data?.detail || t('queue.skipFailed'), {
+      kind: 'error',
+    })
+  }
 }
 
 function youtubeId(url) {

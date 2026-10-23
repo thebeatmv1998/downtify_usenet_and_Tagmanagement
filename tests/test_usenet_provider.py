@@ -1112,6 +1112,102 @@ def test_old_cleanup_timer_cannot_remove_an_album_in_use(
     assert not album.exists()
 
 
+def test_album_reuse_key_merges_editions_and_discs():
+    base = {
+        'album_artist': 'Kendrick Lamar',
+        'album_name': 'good kid, m.A.A.d city',
+    }
+    variants = [
+        'Good Kid, M.A.A.d City (Deluxe Edition)',
+        'Good Kid, M.A.A.d City (Deluxe Edition) CD1',
+        'good kid, m.A.A.d city [Reissue]',
+        'good kid, m.A.A.d city (Remastered 2012)',
+    ]
+    key = usenet.album_reuse_key(base)
+    assert key
+    for album in variants:
+        assert usenet.album_reuse_key({**base, 'album_name': album}) == key
+    assert (
+        usenet.album_reuse_key({**base, 'album_name': 'To Pimp a Butterfly'})
+        != key
+    )
+
+
+def test_a_deluxe_song_reuses_the_standard_album_without_searching(
+    tmp_path, monkeypatch
+):
+    album, wanted, _other = _album_folder(tmp_path)
+    usenet._album_cache_put(
+        usenet.album_cache_key({
+            'album_artist': 'Artist',
+            'album_name': 'Album',
+        }),
+        album,
+    )
+    monkeypatch.setattr(
+        usenet,
+        '_search_indexers',
+        lambda *args: pytest.fail('must reuse the album'),
+    )
+    deluxe = {
+        **_SONG,
+        'album_name': 'Album (Deluxe Edition)',
+        'album_artist': 'Artist',
+    }
+    assert download_from_usenet(dict(deluxe), _settings(tmp_path)) == wanted
+
+
+def test_a_track_missing_from_the_cached_album_never_downloads_it_again(
+    tmp_path, monkeypatch
+):
+    album, _wanted, _other = _album_folder(tmp_path)
+    usenet._album_cache_put(usenet.album_cache_key(dict(_SONG)), album)
+    monkeypatch.setattr(
+        usenet,
+        '_search_indexers',
+        lambda *args: pytest.fail('must not search'),
+    )
+    song = {**_SONG, 'name': 'A song that is not on the album'}
+    assert download_from_usenet(dict(song), _settings(tmp_path)) is None
+    assert album.is_dir()
+
+
+def test_a_missing_track_after_a_fresh_album_fetch_is_not_downloaded_again(
+    tmp_path, monkeypatch
+):
+    album, _wanted, _other = _album_folder(tmp_path)
+    monkeypatch.setattr(usenet, '_existing_album_folder', lambda *args: None)
+    monkeypatch.setattr(
+        usenet, '_search_indexers', lambda *args: [_ALBUM_RELEASE]
+    )
+    monkeypatch.setattr(usenet, '_pick_track_in_album', lambda *args: None)
+    monkeypatch.setattr(usenet.time, 'sleep', lambda _seconds: None)
+    submitted: list[str] = []
+    monkeypatch.setattr(
+        SabnzbdClient,
+        'add_url',
+        lambda self, url, name: submitted.append(url) or 'nzo1',
+    )
+    monkeypatch.setattr(
+        SabnzbdClient, 'queue_slot', lambda self, nzo: {'nzo_id': nzo}
+    )
+    monkeypatch.setattr(
+        SabnzbdClient,
+        'history_slot',
+        lambda self, nzo: {
+            'status': 'Completed',
+            'storage': str(album),
+        },
+    )
+    settings = _settings(tmp_path, prefer_albums=True)
+    song = {**_SONG, 'name': 'A song that is not on the album'}
+    assert download_from_usenet(dict(song), settings) is None
+    # The cached release is reused on the next attempt instead of a new NZB.
+    assert download_from_usenet(dict(song), settings) is None
+    assert len(submitted) == 1
+    assert usenet._album_cache_get(usenet.album_cache_key(song)) == album
+
+
 def test_delete_all_history_removes_every_entry(monkeypatch):
     calls: list[dict] = []
 

@@ -257,6 +257,9 @@ export default {
     stopAll: '?sszes let?lt?s le?ll?t?sa',
     stopped: '{count} let?lt?s le?ll?tva.',
     stopFailed: 'Nem siker?lt le?ll?tani a let?lt?seket.',
+    skipSource: 'K?vetkez? forr?s',
+    skipRequested: 'V?lt?s a k?vetkez? hangforr?sra.',
+    skipFailed: 'A forr?s kihagy?sa nem siker?lt.',
     emptyTitle: 'A sor üres',
     emptyBody:
       'Keress zenét vagy illessz be egy linket — a letöltések itt jelennek meg.',

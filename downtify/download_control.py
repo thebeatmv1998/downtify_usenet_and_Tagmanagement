@@ -24,6 +24,50 @@ class DownloadCancelled(Exception):
     """Raised when Stop all downloads was pressed during a download."""
 
 
+class SourceSkipRequested(Exception):
+    """Raised when the user asks a running song to skip to the next source."""
+
+
+_SKIP_REQUESTS: dict[str, int] = {}
+
+
+def request_source_skip(key: str) -> bool:
+    """Ask the worker for *key* to abandon its current audio source."""
+
+    key = str(key or '').strip()
+    if not key:
+        return False
+    with _LOCK:
+        _SKIP_REQUESTS[key] = _SKIP_REQUESTS.get(key, 0) + 1
+    return True
+
+
+def source_skip_requested(key: str) -> bool:
+    key = str(key or '').strip()
+    if not key:
+        return False
+    with _LOCK:
+        return _SKIP_REQUESTS.get(key, 0) > 0
+
+
+def take_source_skip(key: str) -> bool:
+    """Consume a pending skip request for *key*, if any."""
+
+    key = str(key or '').strip()
+    if not key:
+        return False
+    with _LOCK:
+        return _SKIP_REQUESTS.pop(key, 0) > 0
+
+
+def clear_source_skip(key: str) -> None:
+    key = str(key or '').strip()
+    if not key:
+        return
+    with _LOCK:
+        _SKIP_REQUESTS.pop(key, None)
+
+
 def current_generation() -> int:
     with _LOCK:
         return _GENERATION

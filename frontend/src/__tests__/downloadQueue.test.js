@@ -12,6 +12,8 @@ const fixture = vi.hoisted(() => ({
     downloadBatch: vi.fn(),
     removeQueueItem: vi.fn(),
     clearQueue: vi.fn(),
+    stopAllDownloads: vi.fn(),
+    skipQueueSource: vi.fn(),
     clearCompletedQueue: vi.fn(),
     replaceAudio: vi.fn(),
   },
@@ -56,6 +58,8 @@ beforeEach(async () => {
   fixture.api.downloadBatch.mockResolvedValue({ data: {} })
   fixture.api.removeQueueItem.mockResolvedValue({})
   fixture.api.clearQueue.mockResolvedValue({})
+  fixture.api.stopAllDownloads.mockResolvedValue({ data: {} })
+  fixture.api.skipQueueSource.mockResolvedValue({ data: { skipped: true } })
   fixture.api.clearCompletedQueue.mockResolvedValue({})
   fixture.api.replaceAudio.mockResolvedValue({})
   model = await import('../model/download')
@@ -88,6 +92,11 @@ describe('queue reconciliation', () => {
     expect(tracker.getBySong(row.song).filename).toBe('finished.mp3')
     send({ ...row, status: 'queued', progress: 0 })
     expect(tracker.getBySong(row.song).state).toBe('queued')
+  })
+
+  it('asks the server to skip one song to its next source', async () => {
+    await manager.skipSource({ song_id: 'abc', name: 'Track' })
+    expect(fixture.api.skipQueueSource).toHaveBeenCalledWith('abc')
   })
 
   it('discards an old poll response after Stop all', async () => {

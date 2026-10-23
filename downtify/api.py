@@ -532,6 +532,7 @@ from .usenet_provider import (
 )
 from .usenet_provider import (
     album_cache_key,
+    album_reuse_key,
     cleanup_albums,
     clear_album_cache,
     download_from_usenet,
@@ -4686,14 +4687,23 @@ def _prefetch_usenet_albums(
     groups: list[tuple[list[str], list[dict[str, Any]]]] = []
     if album:
         keys = [
-            key for key in (album_cache_key(song) for song in songs) if key
+            key
+            for key in (
+                candidate
+                for song in songs
+                for candidate in (
+                    album_cache_key(song),
+                    album_reuse_key(song),
+                )
+            )
+            if key
         ]
         if keys:
             groups.append((sorted(set(keys)), songs))
     else:
         by_key: dict[str, list[dict[str, Any]]] = {}
         for song in songs:
-            key = album_cache_key(song)
+            key = album_reuse_key(song) or album_cache_key(song)
             if key:
                 by_key.setdefault(key, []).append(song)
         groups = [
@@ -4760,7 +4770,10 @@ def _cleanup_usenet_albums(songs: list[dict[str, Any]]) -> None:
 
     try:
         keys = {
-            album_cache_key(song) for song in songs if isinstance(song, dict)
+            key
+            for song in songs
+            if isinstance(song, dict)
+            for key in (album_cache_key(song), album_reuse_key(song))
         }
         keys.discard('')
         if keys:
@@ -7940,6 +7953,42 @@ def get_queue(request: Request) -> list[dict[str, Any]]:
         row['user_ids'] = sorted(_job_users(job))
         rows.append(row)
     return rows
+
+
+@router.post('/api/queue/skip-source')
+async def skip_source_endpoint(request: Request) -> dict:
+    """Move one song to the next configured audio source.
+
+    The worker checks this request at its next safe point (progress hook,
+    provider poll loop) and abandons only the current source; the normal
+    failover then continues with the next one.
+    """
+
+    payload = await _json_object(request)
+    song_id = str(payload.get('song_id') or '').strip()
+    if not song_id:
+        raise HTTPException(status_code=400, detail='song_id is required')
+    job = state.download_jobs.get(song_id)
+    if job is None or not _queue_job_visible(job, request):
+        raise HTTPException(status_code=404, detail='Queue item not found')
+    status = str(job.get('status') or '')
+    if status not in {'queued', 'downloading'}:
+        raise HTTPException(
+            status_code=409,
+            detail='Only a waiting or running song can skip its source',
+        )
+    download_control.request_source_skip(song_id)
+    await state.connections.broadcast_job(
+        _job_users(job),
+        {
+            'song': job.get('song') or {},
+            'progress': job.get('progress') or 0,
+            'message': 'Skipping to next source',
+            'provider': job.get('provider') or '',
+            'status': 'downloading',
+        },
+    )
+    return {'skipped': True}
 
 
 @router.post('/api/queue/stop')

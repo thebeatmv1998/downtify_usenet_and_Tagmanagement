@@ -149,6 +149,67 @@ def album_cache_key(song: dict[str, Any]) -> str:
     return _album_cache_key(song)
 
 
+_BRACKETED_RE = re.compile(r'[\(\[\{][^\)\]\}]*[\)\]\}]')
+_DISC_MARKER_RE = re.compile(r'\b(?:cd|disc|disk)\s*\d+\b', re.IGNORECASE)
+_EDITION_RE = re.compile(
+    r'\b(?:deluxe|reissue|remaster(?:ed)?|expanded|anniversary|'
+    r'bonus\s+tracks?|collector\'?s\s+edition|special\s+edition)\b',
+    re.IGNORECASE,
+)
+
+
+def _base_album_name(name: str) -> str:
+    """``Good Kid (Deluxe Edition) CD1`` → ``Good Kid``.
+
+    Edition/CD variants belong to the same release family: fetching one
+    of them must satisfy the others instead of downloading the album
+    again under every variant name.
+    """
+
+    text = _BRACKETED_RE.sub(' ', str(name or ''))
+    text = _DISC_MARKER_RE.sub(' ', text)
+    text = _EDITION_RE.sub(' ', text)
+    return ' '.join(text.split())
+
+
+def _album_reuse_key(song: dict[str, Any]) -> str:
+    """Artist + base album name, shared by deluxe/reissue/CD variants."""
+
+    artist = str(song.get('album_artist') or '').strip()
+    if not artist:
+        artist = ' '.join(
+            str(a).strip()
+            for a in (song.get('artists') or [])[:1]
+            if str(a).strip()
+        ).strip()
+    if not artist:
+        artist = str(song.get('artist') or '').strip()
+    album = _base_album_name(str(song.get('album_name') or ''))
+    if not artist or not album:
+        return ''
+    return _alnum_only(f'{artist} {album}').casefold()
+
+
+def album_reuse_key(song: dict[str, Any]) -> str:
+    """Public form of :func:`_album_reuse_key` for prefetch keys."""
+
+    return _album_reuse_key(song)
+
+
+def _album_cache_lookup(
+    song: dict[str, Any],
+) -> tuple[str, str, Optional[Path]]:
+    """``(exact_key, reuse_key, folder)`` for an already fetched album."""
+
+    album_key = _album_cache_key(song)
+    reuse_key = _album_reuse_key(song)
+    for key in (album_key, reuse_key):
+        folder = _album_cache_get(key)
+        if folder is not None:
+            return album_key, reuse_key, folder
+    return album_key, reuse_key, None
+
+
 def _check_cancel(cancelled: Optional[Callable[[], bool]]) -> None:
     if cancelled is not None and cancelled():
         raise DownloadCancelled()
@@ -1318,7 +1379,8 @@ def _existing_album_folder(
     complete_dir: Path, song: dict[str, Any]
 ) -> Optional[Path]:
     """Recover completed releases from disk even after a cache loss/restart."""
-    album = _alnum_only(str(song.get('album_name') or ''))
+    raw_album = str(song.get('album_name') or '')
+    album = _alnum_only(_base_album_name(raw_album)) or _alnum_only(raw_album)
     artists = song.get('artists') or []
     artist = _alnum_only(
         str(song.get('album_artist') or (artists[0] if artists else ''))
@@ -1332,10 +1394,11 @@ def _existing_album_folder(
         ):
             continue
         meta = read_audio_metadata(entry)
+        tag_album = str(meta.get('album') or '')
         text = _alnum_only(
             ' '.join([
                 str(entry.relative_to(complete_dir)),
-                str(meta.get('album') or ''),
+                _base_album_name(tag_album) or tag_album,
                 ' '.join(meta.get('artists') or []),
                 str(meta.get('album_artist') or ''),
             ])
@@ -1556,12 +1619,13 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
     sab = settings.get('sabnzbd')
     sab = sab if isinstance(sab, dict) else {}
     complete_dir = Path(str(sab.get('complete_dir') or '/usenet'))
-    album_key = _album_cache_key(song)
-    cache_keys = {key for key in [album_key, *(album_keys or [])] if key}
+    album_key, reuse_key, cached_album = _album_cache_lookup(song)
+    cache_keys = {
+        key for key in [album_key, reuse_key, *(album_keys or [])] if key
+    }
 
     # A previously downloaded album with this artist+album is still on
     # disk: extract the track from it instead of re-downloading anything.
-    cached_album = _album_cache_get(album_key)
     if cached_album is None:
         cached_album = _existing_album_folder(complete_dir, song)
         if cached_album is not None:
@@ -1581,7 +1645,16 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
                 cached_album.name,
             )
             return found
-        # Shared album files belong to the whole batch, not this one song.
+        # The album is already here but this song is not in it. Searching
+        # again would download the same album (often a different edition)
+        # for every missing track, so leave it to the next source instead.
+        logger.info(
+            'usenet: cached album has no matching track title={!r} '
+            'album={!r}; not downloading the album again',
+            song.get('name'),
+            cached_album.name,
+        )
+        return None
 
     semaphore = (
         contextlib.nullcontext() if album_only else _usenet_semaphore(settings)
@@ -1666,7 +1739,8 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
                     verify_downloaded_file_matches_spotify(found, spotify_row)
                 ):
                     return found
-                continue
+                # Already downloaded this release; do not fetch it again.
+                return None
             if nzb_state == 'wait' and nzb_event is not None:
                 while not nzb_event.wait(1.0):
                     _check_cancel(cancelled)
@@ -1683,6 +1757,7 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
                         )
                     ):
                         return found
+                    return None
                 continue
             claim_event = nzb_event if nzb_state == 'owner' else None
             claim_done = False
@@ -1690,19 +1765,22 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
             # Only one download per album: a parallel song of the same
             # album waits for the in-flight fetch and reuses its folder.
             owner_event: Optional[threading.Event] = None
-            if is_album and album_key:
+            event_key = reuse_key or album_key
+            if is_album and event_key:
                 with _ALBUM_CACHE_LOCK:
-                    event = _ALBUM_EVENTS.get(album_key)
+                    event = _ALBUM_EVENTS.get(event_key)
                     if event is None:
                         owner_event = threading.Event()
-                        _ALBUM_EVENTS[album_key] = owner_event
+                        _ALBUM_EVENTS[event_key] = owner_event
                 if owner_event is None:
                     report(40.0, 'waiting for album download')
                     while not event.wait(1.0):
                         _check_cancel(cancelled)
                         if _past_deadline(deadline):
                             break
-                    cached = _album_cache_get(album_key)
+                    cached = _album_cache_get(event_key)
+                    if cached is None:
+                        cached = _album_cache_get(album_key)
                     found = (
                         _pick_track_in_album(cached, spotify_row, settings)
                         if cached is not None
@@ -1719,6 +1797,10 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
                             song.get('name'),
                         )
                         return found
+                    if cached is not None:
+                        # Same album, different edition; never fetch it a
+                        # second time just because this track is missing.
+                        return None
                     continue
 
             try:
@@ -1824,6 +1906,10 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
                         nzo_id,
                         release_name,
                     )
+                    if is_album and claim_done:
+                        # The release is downloaded and cached; another
+                        # release would mean downloading the album again.
+                        return None
                     continue
 
                 if not verify_downloaded_file_matches_spotify(
@@ -1837,15 +1923,14 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
                         'library_from_tags': True,
                     }
                     logger.info(
-                        'usenet: tags mismatch after download {}; trying '
-                        'next candidate ({}/{}) file={!r}',
+                        'usenet: tags mismatch after download {}; file={!r}',
                         spotify_file_tag_mismatch_label(mismatch_row),
-                        attempt_idx,
-                        len(ranked),
                         _file_basename(found.name)[:120],
                     )
                     if not is_album:
                         _discard_mismatched_download(found)
+                    if is_album and claim_done:
+                        return None
                     continue
 
                 if is_album:

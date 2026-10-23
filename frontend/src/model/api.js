@@ -821,6 +821,10 @@ function stopAllDownloads() {
   return API.post('/api/queue/stop')
 }
 
+function skipQueueSource(songId) {
+  return API.post('/api/queue/skip-source', { song_id: songId })
+}
+
 function clearCompletedQueue() {
   return API.delete('/api/queue/completed')
 }
@@ -1025,6 +1029,7 @@ export default {
   removeQueueItem,
   clearQueue,
   stopAllDownloads,
+  skipQueueSource,
   clearCompletedQueue,
   getSettings,
   suggestDirs,

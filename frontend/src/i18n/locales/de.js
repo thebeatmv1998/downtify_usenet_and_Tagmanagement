@@ -284,6 +284,9 @@ export default {
     stopAll: 'Alle Downloads stoppen',
     stopped: '{count} Download(s) gestoppt.',
     stopFailed: 'Die Downloads konnten nicht gestoppt werden.',
+    skipSource: 'Zur n?chsten Quelle wechseln',
+    skipRequested: 'Wechselt zur n?chsten Audioquelle.',
+    skipFailed: 'Die Quelle konnte nicht ?bersprungen werden.',
     emptyTitle: 'Die Warteschlange ist leer',
     emptyBody:
       'Suche nach Musik oder füge einen Link ein - Downloads erscheinen hier.',

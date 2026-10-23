@@ -258,6 +258,9 @@ export default {
     stopAll: 'T?m indirmeleri durdur',
     stopped: '{count} indirme durduruldu.',
     stopFailed: '?ndirmeler durdurulamad?.',
+    skipSource: 'Sonraki kayna?a ge?',
+    skipRequested: 'Sonraki ses kayna??na ge?iliyor.',
+    skipFailed: 'Kaynak atlanamad?.',
     emptyTitle: 'Kuyrukta bir şey yok',
     emptyBody:
       'Müzik ara ya da bir bağlantı yapıştır — indirmeler burada görünür.',
