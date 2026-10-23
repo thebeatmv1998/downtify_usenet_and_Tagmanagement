@@ -400,7 +400,7 @@ class _FakeDownloader:
         self.download_dir = tmp_path
         self.calls: list[tuple[str, str]] = []
 
-    def download(self, song, progress_cb=None, subdir=None):
+    def download(self, song, progress_cb=None, subdir=None, **kwargs):
         self.calls.append((song['song_id'], subdir))
         (self.download_dir / f'{song["song_id"]}.mp3').write_bytes(b'x')
         return f'{song["song_id"]}.mp3'

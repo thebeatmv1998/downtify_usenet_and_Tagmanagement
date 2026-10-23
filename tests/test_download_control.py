@@ -117,3 +117,76 @@ def test_stop_endpoint_cancels_tasks_clears_jobs_and_closes_batches(
     assert task.cancelled is True
     assert api.state.download_jobs == {}
     assert batches.finished == [(1, 3, 0, 'incomplete')]
+
+
+def test_stop_endpoint_deletes_sab_jobs_even_without_visible_jobs(monkeypatch):
+    from types import SimpleNamespace
+
+    from downtify.usenet_provider import SabnzbdClient
+
+    calls = []
+
+    async def broadcast(message):
+        calls.append(message)
+
+    monkeypatch.setattr(
+        api.state,
+        'downloader',
+        SimpleNamespace(
+            usenet_settings={
+                'enabled': True,
+                'sabnzbd': {
+                    'base_url': 'http://sab.example',
+                    'api_key': 'test',
+                },
+            }
+        ),
+    )
+    monkeypatch.setattr(api.state, 'download_jobs', {})
+    monkeypatch.setattr(api.state, 'download_tasks', set())
+    monkeypatch.setattr(api.state, 'playlist_batch_store', None)
+    monkeypatch.setattr(api.state.connections, 'broadcast', broadcast)
+    monkeypatch.setattr(
+        SabnzbdClient,
+        'cancel_category_queue',
+        lambda self: {
+            'removed': 3,
+            'errors': [],
+        },
+    )
+
+    result = asyncio.run(api.stop_all_downloads_endpoint())
+    assert result['sabnzbd']['removed'] == 3
+    assert calls == [{'type': 'queue_stopped'}]
+
+
+def test_old_worker_cannot_repopulate_queue_after_stop(monkeypatch):
+    from types import SimpleNamespace
+
+    messages = []
+
+    def download(song, progress, **kwargs):
+        download_control.stop_all()
+        api.state.download_jobs.clear()
+        progress(50, 'old progress', 'usenet')
+        return 'old.mp3'
+
+    async def broadcast(users, message):
+        messages.append(message)
+
+    monkeypatch.setattr(
+        api.state, 'downloader', SimpleNamespace(download=download)
+    )
+    monkeypatch.setattr(api.state, 'download_jobs', {})
+    monkeypatch.setattr(api.state, 'download_semaphore', None)
+    monkeypatch.setattr(api.state, 'loop', None)
+    monkeypatch.setattr(api.state.connections, 'broadcast_job', broadcast)
+
+    with pytest.raises(download_control.DownloadCancelled):
+        asyncio.run(
+            api._run_download({'song_id': 'old', 'name': 'Old'}, 'old')
+        )
+
+    assert api.state.download_jobs == {}
+    assert len(messages) == 1  # Only the initial downloading event.
+    assert messages[0]['progress'] == 0

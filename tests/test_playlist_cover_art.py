@@ -204,7 +204,9 @@ def test_check_playlist_downloads_cover_when_enabled(monkeypatch, tmp_path):
     monkeypatch.setattr(
         dl,
         'download',
-        lambda song, cb, subdir=None: _write_track_file(dl, song, subdir),
+        lambda song, cb, subdir=None, **kwargs: _write_track_file(
+            dl, song, subdir
+        ),
     )
 
     async def _scenario():
@@ -243,7 +245,9 @@ def test_check_playlist_skips_cover_when_disabled(monkeypatch, tmp_path):
     monkeypatch.setattr(
         dl,
         'download',
-        lambda song, cb, subdir=None: _write_track_file(dl, song, subdir),
+        lambda song, cb, subdir=None, **kwargs: _write_track_file(
+            dl, song, subdir
+        ),
     )
 
     async def _scenario():
@@ -466,7 +470,7 @@ def test_check_playlist_saves_the_cover_before_the_first_track(
     cover_path = tmp_path / PLAYLIST_NAME / f'{PLAYLIST_NAME}.jpg'
     cover_seen: list[bool] = []
 
-    def _download(song, cb, subdir=None):
+    def _download(song, cb, subdir=None, **kwargs):
         cover_seen.append(cover_path.is_file())
         return _write_track_file(dl, song, subdir)
 

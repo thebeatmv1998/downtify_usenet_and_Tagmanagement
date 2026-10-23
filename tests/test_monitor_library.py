@@ -27,7 +27,7 @@ class _Downloader:
         self.overwrite_existing_files = overwrite
         self.downloaded: list[str] = []
 
-    def download(self, song, cb, subdir=None):
+    def download(self, song, cb, subdir=None, **kwargs):
         self.downloaded.append(song['song_id'])
         name = f'{subdir}/{song["name"]}.mp3'
         path = self.download_dir / name

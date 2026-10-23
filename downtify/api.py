@@ -4013,7 +4013,14 @@ async def _run_download_locked(
             def progress(
                 pct: float, message: str, provider: Optional[str] = None
             ) -> None:
+                if (
+                    cancel_generation is not None
+                    and download_control.is_cancelled(cancel_generation)
+                ):
+                    return
                 j = state.download_jobs.get(song_id)
+                if j is not job:
+                    return
                 if j:
                     j['progress'] = pct
                     j['message'] = message
@@ -4043,6 +4050,10 @@ async def _run_download_locked(
                     cancel_generation=cancel_generation,
                 ),
             )
+            if cancel_generation is not None and download_control.is_cancelled(
+                cancel_generation
+            ):
+                raise download_control.DownloadCancelled()
             job['status'] = 'done'
             job['filename'] = filename
             job['progress'] = 100
@@ -7852,6 +7863,20 @@ async def stop_all_downloads_endpoint() -> dict:
         if job.get('status') in {'queued', 'downloading'}
     )
     state.download_jobs.clear()
+    usenet = getattr(state.downloader, 'usenet_settings', {}) or {}
+    sab_result = {'removed': 0, 'errors': []}
+    if usenet.get('enabled'):
+        client = UsenetSabnzbdClient(usenet)
+        if client.configured():
+            try:
+                sab_result = await asyncio.to_thread(
+                    client.cancel_category_queue
+                )
+            except Exception as exc:
+                logger.exception(
+                    'Stop all: SABnzbd queue could not be cleared'
+                )
+                sab_result['errors'].append(str(exc))
     batches = 0
     if state.playlist_batch_store is not None:
         open_batches = await asyncio.to_thread(
@@ -7868,9 +7893,10 @@ async def stop_all_downloads_endpoint() -> dict:
                 status='incomplete',
             )
             batches += 1
-    await state.connections.broadcast({'type': 'queue_reload'})
+    await state.connections.broadcast({'type': 'queue_stopped'})
     return {
         'stopped': active,
+        'sabnzbd': sab_result,
         'tasks': len(tasks),
         'batches': batches,
         'generation': generation,

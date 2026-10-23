@@ -335,6 +335,10 @@ async function stopAll() {
   stopping.value = true
   try {
     const data = await dm.stopAll()
+    if (data.sabnzbd?.errors?.length) {
+      ui.toast(`SABnzbd: ${data.sabnzbd.errors.join('; ')}`, { kind: 'error' })
+      return
+    }
     ui.toast(t('queue.stopped', { count: data.stopped || 0 }), {
       kind: 'success',
     })

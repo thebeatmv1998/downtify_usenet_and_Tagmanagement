@@ -91,6 +91,11 @@ Combined with a lower **Parallel downloads** value, this is the main tool for av
 
 ## Stopping every download
 
+The stop also clears SABnzbd's queue in the configured Downtify category
+(including older jobs with no visible queue row). Use a dedicated SABnzbd
+category for Downtify; other categories are left alone. SABnzbd deletion
+errors are shown instead of reporting an unconditional success.
+
 **Queue → Stop all downloads** (admins) aborts every job the server knows about, including batches that never appear as a row in the queue because the page was closed or another account started them. Tracks that are mid-transfer stop at the next checkpoint, waiting tracks are dropped, and unfinished playlist batches are marked incomplete. A Usenet job already handed to SABnzbd is removed from its queue, and an slskd transfer is cancelled, so neither keeps downloading in the background. Files that finished before the stop stay exactly where they are, and downloads started afterwards run normally — no restart needed.
 
 ## Pause between sync lookups

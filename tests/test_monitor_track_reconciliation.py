@@ -28,7 +28,7 @@ class _FakeDownloader:
         self.fail = fail
         self.calls: list[str] = []
 
-    def download(self, song, progress_cb=None, subdir=None):
+    def download(self, song, progress_cb=None, subdir=None, **kwargs):
         if self.fail:
             raise RuntimeError('should not be called')
         self.calls.append(song['song_id'])

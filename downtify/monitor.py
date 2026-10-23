@@ -12,7 +12,7 @@ from typing import Any, Callable, Optional
 
 from loguru import logger
 
-from . import m3u, providers, spotify, usenet_provider
+from . import download_control, m3u, providers, spotify, usenet_provider
 from .cover_cache import CoverArtCache
 from .download_control import DownloadCancelled
 from .downloader import (
@@ -861,7 +861,7 @@ async def _fill_from_spotify_track(song: dict[str, Any]) -> None:
         song['explicit'] = True
 
 
-async def check_playlist(
+async def check_playlist(  # noqa: PLR0914
     playlist: MonitoredPlaylist,
     db: PlaylistMonitorDB,
     downloader: Downloader,
@@ -883,6 +883,7 @@ async def check_playlist(
         playlist.spotify_id,
     )
 
+    generation = download_control.current_generation()
     from_spotify = playlist.source == SOURCE_SPOTIFY
     fetch_tracks = (
         spotify.playlist_tracks_from_id
@@ -961,6 +962,8 @@ async def check_playlist(
 
     downloaded = 0
     for index, song in enumerate(new_tracks):
+        if download_control.is_cancelled(generation):
+            break
         track_id = song['song_id']
 
         # YouTube Music rows already carry their own video's metadata.
@@ -974,6 +977,7 @@ async def check_playlist(
                     s,
                     _progress_cb(s, playlist.name, broadcast, loop),
                     subdir=pl_subdir,
+                    cancel_generation=generation,
                 ),
             )
             await asyncio.to_thread(
@@ -1296,8 +1300,11 @@ def _progress_cb(
     loop: asyncio.AbstractEventLoop,
 ) -> ProgressCallback:
     """Build a downloader progress callback that broadcasts over the WS."""
+    generation = download_control.current_generation()
 
     def _cb(pct: float, message: str, provider: Optional[str] = None) -> None:
+        if download_control.is_cancelled(generation):
+            return
         asyncio.run_coroutine_threadsafe(
             broadcast({
                 'song': song,
@@ -1380,6 +1387,7 @@ async def check_artist(  # noqa: PLR0914
     releases, and taking it at face value would download the whole back
     catalog on the next sweep.
     """
+    generation = download_control.current_generation()
     logger.info(
         'Checking monitored artist "{}" ({})',
         playlist.name,
@@ -1451,6 +1459,8 @@ async def check_artist(  # noqa: PLR0914
 
     downloaded = 0
     for album in new_albums:
+        if download_control.is_cancelled(generation):
+            return downloaded
         album_id = album['album_id']
         try:
             tracks = await asyncio.to_thread(
@@ -1489,6 +1499,7 @@ async def check_artist(  # noqa: PLR0914
                         s,
                         _progress_cb(s, playlist.name, broadcast, loop),
                         subdir=album_subdir,
+                        cancel_generation=generation,
                     ),
                 )
                 await asyncio.to_thread(

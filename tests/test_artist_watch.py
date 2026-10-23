@@ -45,7 +45,7 @@ class _FakeDownloader:
         self.usenet_album_flags: list[bool] = []
         self.subdirs: list[object] = []
 
-    def download(self, song, progress_cb=None, subdir=None):
+    def download(self, song, progress_cb=None, subdir=None, **kwargs):
         if song['song_id'] in self.fail_song_ids:
             raise RuntimeError('boom')
         self.calls.append(song['song_id'])

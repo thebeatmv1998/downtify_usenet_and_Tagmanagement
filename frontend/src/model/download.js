@@ -211,6 +211,7 @@ export function useProgressTracker() {
 
 // ── Server sync ──────────────────────────────────────────────────────
 let queuePollTimer = null
+let queueEpoch = 0
 
 function queueHasActiveItems() {
   return downloadQueue.value.some(
@@ -237,7 +238,9 @@ function ensureQueuePoll() {
 }
 
 export async function syncQueueFromServer() {
+  const epoch = queueEpoch
   const res = await API.getQueue()
+  if (epoch !== queueEpoch) return
   batchQueueChanges(() => {
     for (const job of res.data || []) {
       if (!job.song) continue
@@ -251,6 +254,12 @@ export async function syncQueueFromServer() {
 
 API.onMessage((data) => {
   if (!data) return
+  if (data.type === 'queue_stopped') {
+    queueEpoch += 1
+    stopQueuePoll()
+    removeItems(() => true)
+    return
+  }
   if (data.type === 'queue_reload') {
     syncQueueFromServer().catch(() => {})
     return
@@ -437,6 +446,8 @@ export function useDownloadManager() {
   /** Stop every server-side download, including invisible batches. */
   async function stopAll() {
     const res = await API.stopAllDownloads()
+    queueEpoch += 1
+    stopQueuePoll()
     removeItems(() => true)
     return res.data || {}
   }

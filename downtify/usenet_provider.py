@@ -1024,6 +1024,45 @@ class SabnzbdClient:
                 'usenet: history cancel failed nzo={} err={}', nzo_id, exc
             )
 
+    def cancel_category_queue(self) -> dict[str, Any]:
+        """Stop queued jobs in our configured category, including old jobs."""
+        data = self._api({'mode': 'queue', 'start': 0, 'limit': 10000})
+        if data.get('status') is False or not isinstance(
+            data.get('queue'), dict
+        ):
+            raise RuntimeError(
+                str(data.get('error') or 'Cannot read SABnzbd queue')
+            )
+        slots = (data.get('queue') or {}).get('slots') or []
+        result: dict[str, Any] = {'removed': 0, 'errors': []}
+        for slot in slots:
+            if str(slot.get('cat') or '') != self.category:
+                continue
+            nzo_id = str(slot.get('nzo_id') or '')
+            if not nzo_id:
+                continue
+            try:
+                response = self._api({
+                    'mode': 'queue',
+                    'name': 'delete',
+                    'value': nzo_id,
+                    'del_files': '1',
+                })
+                if response.get('status') is False:
+                    raise RuntimeError(
+                        str(
+                            response.get('error')
+                            or 'SABnzbd rejected deletion'
+                        )
+                    )
+                result['removed'] += 1
+            except Exception as exc:
+                logger.warning(
+                    'Stop all: SABnzbd deletion failed for {}: {}', nzo_id, exc
+                )
+                result['errors'].append(str(exc))
+        return result
+
     def delete_all_history(self) -> int:
         """Delete every history entry and its files (manual cleanup)."""
         data = self._api({'mode': 'history'})
@@ -1543,6 +1582,7 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
                 continue
             if nzb_state == 'wait' and nzb_event is not None:
                 while not nzb_event.wait(1.0):
+                    _check_cancel(cancelled)
                     if _past_deadline(deadline):
                         break
                 cached = _nzb_folder(nzb_url)
@@ -1574,6 +1614,7 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
                 if owner_event is None:
                     report(40.0, 'waiting for album download')
                     while not event.wait(1.0):
+                        _check_cancel(cancelled)
                         if _past_deadline(deadline):
                             break
                     cached = _album_cache_get(album_key)
@@ -1599,6 +1640,7 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
 
             try:
                 nzo_id: Optional[str] = None
+                _check_cancel(cancelled)
                 try:
                     nzo_id = client.add_url(nzb_url, release_name)
                 except Exception as exc:
@@ -1643,12 +1685,12 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
                         deadline=deadline,
                         cancelled=cancelled,
                     )
+                    _check_cancel(cancelled)
                 except DownloadCancelled:
                     # Stop the SABnzbd job we just submitted instead of
                     # leaving it to download in the background.
                     client.cancel_job(nzo_id)
                     raise
-                _check_cancel(cancelled)
                 if slot is None:
                     continue
 

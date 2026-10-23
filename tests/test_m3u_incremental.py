@@ -307,7 +307,7 @@ def test_check_playlist_writes_m3u_before_slow_track_finishes(
     # threading primitive rather than an asyncio one.
     release_slow = threading.Event()
 
-    def fake_download(song, cb, subdir=None):
+    def fake_download(song, cb, subdir=None, **kwargs):
         if song['song_id'] == 'b':
             release_slow.wait(timeout=5)
         return _write_track_file(dl, song, subdir)
@@ -369,7 +369,7 @@ def test_check_playlist_m3u_grows_with_each_completed_track(
     release_b = threading.Event()
     release_c = threading.Event()
 
-    def fake_download(song, cb, subdir=None):
+    def fake_download(song, cb, subdir=None, **kwargs):
         if song['song_id'] == 'b':
             release_b.wait(timeout=5)
         elif song['song_id'] == 'c':
@@ -463,7 +463,9 @@ def test_check_playlist_reuses_files_from_earlier_sweeps_in_the_m3u(
     monkeypatch.setattr(
         dl,
         'download',
-        lambda song, cb, subdir=None: _write_track_file(dl, song, subdir),
+        lambda song, cb, subdir=None, **kwargs: _write_track_file(
+            dl, song, subdir
+        ),
     )
 
     async def fake_broadcast(_msg):
@@ -502,7 +504,9 @@ def test_check_playlist_skips_m3u_when_generation_disabled(
     monkeypatch.setattr(
         dl,
         'download',
-        lambda song, cb, subdir=None: _write_track_file(dl, song, subdir),
+        lambda song, cb, subdir=None, **kwargs: _write_track_file(
+            dl, song, subdir
+        ),
     )
 
     async def fake_broadcast(_msg):

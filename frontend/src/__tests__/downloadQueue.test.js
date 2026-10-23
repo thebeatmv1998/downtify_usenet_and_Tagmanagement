@@ -70,6 +70,17 @@ afterEach(() => {
 })
 
 describe('queue reconciliation', () => {
+  it('discards an old poll response after Stop all', async () => {
+    send(job('visible'))
+    let resolve
+    fixture.api.getQueue.mockImplementationOnce(() => new Promise((r) => { resolve = r }))
+    const pending = model.syncQueueFromServer()
+    send({ type: 'queue_stopped' })
+    resolve({ data: [job('visible'), job('hidden')] })
+    await pending
+    expect(tracker.downloadQueue.value).toHaveLength(0)
+  })
+
   it('publishes a changed batch once and preserves reactive item identities', async () => {
     fixture.jobs = Array.from({ length: 300 }, (_, i) => job(`csv:${i}`))
     const before = tracker.queueVersion.value

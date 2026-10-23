@@ -406,6 +406,44 @@ def test_sabnzbd_cancel_job_clears_queue_and_history(tmp_path):
     assert all(call['value'] == 'nzo1' for call in calls)
 
 
+def test_stop_category_removes_old_jobs_but_not_other_categories(tmp_path):
+    client = SabnzbdClient(_settings(tmp_path))
+    calls = []
+
+    def request(params):
+        calls.append(params)
+        if params.get('name') == 'delete':
+            return {'status': True}
+        return {
+            'queue': {
+                'slots': [
+                    {'nzo_id': 'old-music-job', 'cat': 'music'},
+                    {'nzo_id': 'sonarr-job', 'cat': 'tv'},
+                ]
+            }
+        }
+
+    client._api = request
+    assert client.cancel_category_queue() == {'removed': 1, 'errors': []}
+    assert calls[1]['value'] == 'old-music-job'
+    assert len(calls) == 2
+
+
+def test_stop_category_reports_sabnzbd_rejection(tmp_path):
+    client = SabnzbdClient(_settings(tmp_path))
+
+    def request(params):
+        if params.get('name') == 'delete':
+            return {'status': False, 'error': 'Access denied'}
+        return {'queue': {'slots': [{'nzo_id': 'job', 'cat': 'music'}]}}
+
+    client._api = request
+    assert client.cancel_category_queue() == {
+        'removed': 0,
+        'errors': ['Access denied'],
+    }
+
+
 def test_newznab_client_falls_back_to_prowlarr_endpoint(monkeypatch):
     calls: list[str] = []
 
