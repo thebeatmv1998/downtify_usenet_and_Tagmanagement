@@ -456,6 +456,7 @@ async function download(songs) {
     }))
     const count = await dm.fromSongs(withOrder, {
       playlistUrl: isPlaylist ? url.value : '',
+      album: details.value.kind === 'album',
     })
     selected.value = new Set()
     ui.toast(t('toast.queuedTracks', { count, name: details.value.name }), {

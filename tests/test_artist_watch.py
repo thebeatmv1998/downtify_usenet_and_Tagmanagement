@@ -43,12 +43,14 @@ class _FakeDownloader:
         self.fail_song_ids = fail_song_ids
         self.calls: list[str] = []
         self.usenet_album_flags: list[bool] = []
+        self.subdirs: list[object] = []
 
     def download(self, song, progress_cb=None, subdir=None):
         if song['song_id'] in self.fail_song_ids:
             raise RuntimeError('boom')
         self.calls.append(song['song_id'])
         self.usenet_album_flags.append(bool(song.get('_usenet_prefer_album')))
+        self.subdirs.append(subdir)
         return f'{song["song_id"]}.mp3'
 
 
@@ -139,10 +141,19 @@ def test_artist_watch_marks_usenet_album_downloads(monkeypatch, tmp_path):
     db = _db(tmp_path)
     pl = _add_artist(db)
     dl = _FakeDownloader(tmp_path)
+    cleaned: list[tuple] = []
+    monkeypatch.setattr(
+        monitor.usenet_provider,
+        'cleanup_albums',
+        lambda keys, complete, **kw: cleaned.append((keys, complete)),
+    )
 
     _run_check(pl, db, dl)
 
     assert dl.usenet_album_flags == [True, True]
+    assert dl.subdirs == ['Test Artist/First Album'] * 2
+    assert len(cleaned) == 1
+    assert cleaned[0][0] == {'testartistfirstalbum'}
 
 
 def test_second_sweep_downloads_nothing_new(monkeypatch, tmp_path):

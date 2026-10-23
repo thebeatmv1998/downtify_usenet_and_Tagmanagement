@@ -12,7 +12,7 @@ from typing import Any, Callable, Optional
 
 from loguru import logger
 
-from . import m3u, providers, spotify
+from . import m3u, providers, spotify, usenet_provider
 from .cover_cache import CoverArtCache
 from .downloader import (
     DOWNLOAD_EXECUTOR,
@@ -1308,7 +1308,49 @@ def _progress_cb(
     return _cb
 
 
-async def check_artist(
+def _album_subdir_for_release(
+    tracks: list[dict[str, Any]],
+) -> Optional[str]:
+    """``Artist/Album`` for an artist-watch release, when known."""
+
+    first = tracks[0] if tracks else {}
+    artist = str(first.get('album_artist') or '').strip()
+    if not artist:
+        artists = [
+            str(a).strip()
+            for a in (first.get('artists') or [])
+            if str(a).strip()
+        ]
+        artist = artists[0] if artists else str(first.get('artist') or '')
+    album = str(first.get('album_name') or '').strip()
+    if not artist.strip() or not album:
+        return None
+    return (
+        f'{m3u.sanitize_playlist_name(artist)}/'
+        f'{m3u.sanitize_playlist_name(album)}'
+    )
+
+
+def _cleanup_usenet_album(
+    tracks: list[dict[str, Any]], settings: Optional[dict[str, Any]]
+) -> None:
+    """Delete the SABnzbd folder once an artist album is fully processed."""
+
+    try:
+        usenet = (settings or {}).get('usenet') or {}
+        sab = usenet.get('sabnzbd') if isinstance(usenet, dict) else {}
+        complete_dir = Path(str((sab or {}).get('complete_dir') or '/usenet'))
+        keys = {usenet_provider.album_cache_key(song) for song in tracks}
+        keys.discard('')
+        if keys:
+            usenet_provider.cleanup_albums(keys, complete_dir)
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Could not clean up the Usenet album folder'
+        )
+
+
+async def check_artist(  # noqa: PLR0914
     playlist: MonitoredPlaylist,
     db: PlaylistMonitorDB,
     downloader: Downloader,
@@ -1418,6 +1460,12 @@ async def check_artist(
             )
             continue
 
+        template = str(getattr(downloader, 'output_template', '') or '')
+        album_subdir = (
+            None
+            if '/' in template or '\\' in template
+            else _album_subdir_for_release(tracks)
+        )
         complete = True
         for song in tracks:
             track_id = song.get('song_id')
@@ -1434,7 +1482,9 @@ async def check_artist(
                 filename = await loop.run_in_executor(
                     DOWNLOAD_EXECUTOR,
                     lambda s=prepared: downloader.download(
-                        s, _progress_cb(s, playlist.name, broadcast, loop)
+                        s,
+                        _progress_cb(s, playlist.name, broadcast, loop),
+                        subdir=album_subdir,
                     ),
                 )
                 await asyncio.to_thread(
@@ -1466,6 +1516,7 @@ async def check_artist(
         # being silently skipped forever. Tracks that already succeeded
         # are cheap to skip via `known_tracks`.
         if complete:
+            _cleanup_usenet_album(tracks, settings)
             await asyncio.to_thread(
                 db.mark_album_seen, playlist.id, album_id, album.get('name')
             )

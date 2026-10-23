@@ -1054,7 +1054,7 @@ async function downloadAlbum() {
   if (!a?.tracks?.length) return
   downloadingAlbum.value = true
   try {
-    const count = await dm.fromSongs(a.tracks)
+    const count = await dm.fromSongs(a.tracks, { album: true })
     ui.toast(t('toast.queuedTracks', { count, name: a.name }), {
       kind: 'success',
       action: {

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { isYouTubePlaylistURL, normalizeSpotifyURL } from '../model/url.js'
+import {
+  isAlbumLink,
+  isYouTubePlaylistURL,
+  normalizeSpotifyURL,
+} from '../model/url.js'
 
 describe('isYouTubePlaylistURL', () => {
   it('accepts a YouTube Music playlist link with a share param', () => {
@@ -46,6 +50,34 @@ describe('isYouTubePlaylistURL', () => {
     ).toBe(false)
     expect(isYouTubePlaylistURL('')).toBe(false)
     expect(isYouTubePlaylistURL(null)).toBe(false)
+  })
+})
+
+describe('isAlbumLink', () => {
+  it('accepts album links from every source', () => {
+    expect(isAlbumLink('https://music.youtube.com/browse/MPREb_abc123')).toBe(
+      true
+    )
+    expect(
+      isAlbumLink('https://music.youtube.com/playlist?list=OLAK5uy_album')
+    ).toBe(true)
+    expect(
+      isAlbumLink(
+        'https://open.spotify.com/intl-de/album/2dZMT4gpOWtIYtvdSLT4pr'
+      )
+    ).toBe(true)
+    expect(isAlbumLink('https://www.deezer.com/de/album/12345')).toBe(true)
+  })
+
+  it('rejects playlists, tracks and non-music links', () => {
+    expect(
+      isAlbumLink('https://music.youtube.com/playlist?list=PLabc123')
+    ).toBe(false)
+    expect(isAlbumLink('https://music.youtube.com/watch?v=5CMuZrTy6jw')).toBe(
+      false
+    )
+    expect(isAlbumLink('https://open.spotify.com/track/abc123')).toBe(false)
+    expect(isAlbumLink('')).toBe(false)
   })
 })
 

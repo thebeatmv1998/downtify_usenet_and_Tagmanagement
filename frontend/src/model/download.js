@@ -1,7 +1,11 @@
 // Download queue: mirrors the backend's jobs (`GET /api/queue`) and the
 // progress events it pushes over the WebSocket.
 import { reactive, ref } from 'vue'
-import { isYouTubePlaylistURL, normalizeSpotifyURL } from '/src/model/url'
+import {
+  isAlbumLink,
+  isYouTubePlaylistURL,
+  normalizeSpotifyURL,
+} from '/src/model/url'
 
 import API from '/src/model/api'
 import { useSettingsManager } from '/src/model/settings'
@@ -299,7 +303,13 @@ export function useDownloadManager() {
    */
   async function fromSongs(
     list,
-    { playlistUrl = '', playlistName = '', coverUrl = '', m3u } = {}
+    {
+      playlistUrl = '',
+      playlistName = '',
+      coverUrl = '',
+      m3u,
+      album = false,
+    } = {}
   ) {
     const hints = playlistUrl ? { downtify_playlist_url: playlistUrl } : {}
     const songs = list.map((song, i) => ({
@@ -317,6 +327,7 @@ export function useDownloadManager() {
       playlist_name: playlistName,
       cover_url: coverUrl,
       generate_m3u: m3u ?? generateM3u(),
+      album,
     })
     await syncQueueFromServer().catch(() => {})
     return songs.length
@@ -331,6 +342,7 @@ export function useDownloadManager() {
       if (Array.isArray(data)) {
         return await fromSongs(data, {
           playlistUrl: isPlaylistLink(url) ? url : '',
+          album: isAlbumLink(url),
         })
       }
       queue(data)

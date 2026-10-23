@@ -808,6 +808,31 @@ def test_clear_album_cache_removes_only_folders_under_complete_dir(
     assert usenet._album_cache_get('outside') is None
 
 
+def test_cleanup_albums_removes_the_cached_folder(tmp_path, monkeypatch):
+    complete = tmp_path / 'usenet'
+    album = complete / 'Artist - Album'
+    album.mkdir(parents=True)
+    usenet.configure_album_cache(tmp_path / 'albums.json')
+    key = usenet.album_cache_key(dict(_SONG))
+    usenet._album_cache_put(key, album)
+
+    class _NowTimer:
+        daemon = False
+
+        def __init__(self, _interval, fn, args=()):
+            self.fn = fn
+            self.args = args
+
+        def start(self):
+            self.fn(*self.args)
+
+    monkeypatch.setattr(usenet.threading, 'Timer', _NowTimer)
+
+    assert usenet.cleanup_albums([key], complete) == 1
+    assert not album.exists()
+    assert usenet._album_cache_get(key) is None
+
+
 def test_delete_all_history_removes_every_entry(monkeypatch):
     calls: list[dict] = []
 

@@ -14,6 +14,18 @@ export function normalizeSpotifyURL(str) {
 // Same rules as the backend's providers.parse_youtube_url: an album's
 // OLAK5uy_ audio playlist is an album, an RD... radio mix has no fixed
 // track list, and a watch?v= link is the song playing inside a playlist.
+// An album/EP/single link. Albums are downloaded as a batch, but they
+// must be tagged as an album so Usenet fetches one release for the whole
+// record instead of one track release per song.
+export function isAlbumLink(str) {
+  const url = normalizeSpotifyURL(str || '')
+  if (/open\.spotify\.com\/album\//.test(url)) return true
+  if (/deezer\.com\/(?:[a-z]{2}\/)?album\//.test(url)) return true
+  if (!/(?:youtube\.com|youtu\.be)\//.test(url)) return false
+  if (/\/browse\/MPREb_[\w-]+/.test(url)) return true
+  return /[?&]list=OLAK5uy_[\w-]+/.test(url)
+}
+
 export function isYouTubePlaylistURL(str) {
   const url = str || ''
   if (!/(?:youtube\.com|youtu\.be)\//.test(url)) return false

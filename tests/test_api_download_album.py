@@ -111,6 +111,108 @@ def test_download_album_endpoint_keeps_shared_album_metadata(monkeypatch):
     assert all(s['album_name'] == 'Monetine' for s in seen_songs)
 
 
+def test_same_album_songs_get_one_album_artist():
+    songs = [
+        {'album_name': 'Album', 'artists': ['Artist']},
+        {'album_name': 'Album', 'artists': ['Artist']},
+    ]
+    api._fill_album_artists(songs)
+    assert [song['album_artist'] for song in songs] == ['Artist', 'Artist']
+
+    mixed = [
+        {'album_name': 'Hits', 'artists': ['One']},
+        {'album_name': 'Hits', 'artists': ['Two']},
+    ]
+    api._fill_album_artists(mixed)
+    assert all('album_artist' not in song for song in mixed)
+
+
+def test_album_batch_marks_songs_for_one_usenet_release(monkeypatch):
+    registered: list[dict] = []
+
+    def _register(song, **_kwargs):
+        registered.append(dict(song))
+        return song['song_id']
+
+    async def _broadcast(_message):
+        return None
+
+    class _Task:
+        def add_done_callback(self, _callback):
+            return None
+
+    def _spawn(coro, **_kwargs):
+        coro.close()
+        return _Task()
+
+    monkeypatch.setattr(api, '_register_job', _register)
+    monkeypatch.setattr(api, 'spawn_task', _spawn)
+    monkeypatch.setattr(api.state.connections, 'broadcast', _broadcast)
+    songs = [
+        {
+            'song_id': '1',
+            'album_name': 'Album',
+            'album_artist': 'Artist',
+            'artists': ['Artist'],
+        }
+    ]
+
+    asyncio.run(
+        api._submit_playlist_batch(songs, '', generate_m3u=False, album=True)
+    )
+
+    assert registered[0]['_usenet_prefer_album'] is True
+    assert api._album_subdir_for_songs(songs) == 'Artist/Album'
+
+
+def test_playlist_batch_reuses_an_album_only_when_it_recurs(monkeypatch):
+    registered: list[dict] = []
+
+    def _register(song, **_kwargs):
+        registered.append(dict(song))
+        return song['song_id']
+
+    async def _broadcast(_message):
+        return None
+
+    class _Task:
+        def add_done_callback(self, _callback):
+            return None
+
+    def _spawn(coro, **_kwargs):
+        coro.close()
+        return _Task()
+
+    monkeypatch.setattr(api, '_register_job', _register)
+    monkeypatch.setattr(api, 'spawn_task', _spawn)
+    monkeypatch.setattr(api.state.connections, 'broadcast', _broadcast)
+    songs = [
+        {
+            'song_id': 'a1',
+            'album_name': 'Album A',
+            'album_artist': 'Artist',
+        },
+        {
+            'song_id': 'a2',
+            'album_name': 'Album A',
+            'album_artist': 'Artist',
+        },
+        {
+            'song_id': 'b1',
+            'album_name': 'Album B',
+            'album_artist': 'Artist',
+        },
+    ]
+
+    asyncio.run(
+        api._submit_playlist_batch(songs, '', generate_m3u=False, album=False)
+    )
+
+    assert registered[0]['_usenet_prefer_album'] is True
+    assert registered[1]['_usenet_prefer_album'] is True
+    assert '_usenet_prefer_album' not in registered[2]
+
+
 def test_download_album_endpoint_skips_songs_without_id(monkeypatch):
     monkeypatch.setattr(
         api, '_songs_for_album_download', lambda url: [{'name': 'no id'}]

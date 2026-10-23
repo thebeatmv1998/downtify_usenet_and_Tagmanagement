@@ -54,13 +54,18 @@ and — unless disabled — removes the job and its files from SABnzbd's history
 
 Album releases are downloaded **once**. The album folder is kept so every
 other track of the same release is matched from it and marked successful
-without another NZB; this is forced for album and artist-discography downloads
-and can be enabled for playlists with **Prefer album releases**. The cache uses
-the album artist, so a featured track does not trigger a second copy.
+without another NZB; this is forced for album, artist-discography and repeated
+album tracks in a playlist, and can be enabled for everything else with
+**Prefer album releases**. The cache uses the album artist, so a featured track
+does not trigger a second copy. Once a batch or artist sweep has copied all of
+its tracks, the SABnzbd release folder is deleted automatically.
+
+Album batches are filed under `Artist/Album` when neither the output template
+nor the organize-by-artist/album switches already define a folder layout.
 
 **Settings → Usenet → Clean up SABnzbd now** deletes every finished SABnzbd job
-plus any cached album folders immediately, including folders whose history entry
-is already gone.
+plus any remaining cached release folders immediately, including folders whose
+history entry is already gone.
 
 ## YouTube bot check ("Sign in to confirm you're not a bot")
 

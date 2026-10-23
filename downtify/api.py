@@ -529,6 +529,8 @@ from .usenet_provider import (
     SabnzbdClient as UsenetSabnzbdClient,
 )
 from .usenet_provider import (
+    album_cache_key,
+    cleanup_albums,
     clear_album_cache,
     reset_usenet_parallelism,
 )
@@ -4184,6 +4186,10 @@ async def download_endpoint(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+    if not pl_ctx.get('playlist_name'):
+        # A lone track does not need its SABnzbd release folder kept for
+        # a later song; a playlist/album batch cleans up after itself.
+        _cleanup_usenet_albums([song])
     return filename
 
 
@@ -4416,7 +4422,134 @@ async def _fetch_playlist_cover(
         )
 
 
-async def _process_batch(
+def _fill_album_artists(songs: list[dict[str, Any]]) -> None:
+    """Give same-album songs one album artist when some rows lack it.
+
+    Playlist rows only carry the track artist; without this, two songs of
+    one album can look like different albums to the Usenet cache and to
+    the library grouping.
+    """
+
+    by_album: dict[str, list[dict[str, Any]]] = {}
+    for song in songs:
+        if not isinstance(song, dict):
+            continue
+        album = str(song.get('album_name') or '').strip()
+        if album:
+            by_album.setdefault(album.casefold(), []).append(song)
+    for group in by_album.values():
+        if len(group) < 2:
+            continue
+        artist = next(
+            (
+                str(song.get('album_artist') or '').strip()
+                for song in group
+                if str(song.get('album_artist') or '').strip()
+            ),
+            '',
+        )
+        if not artist:
+            firsts: set[str] = set()
+            for song in group:
+                artists = [
+                    str(a).strip()
+                    for a in (song.get('artists') or [])
+                    if str(a).strip()
+                ]
+                first = (
+                    artists[0]
+                    if artists
+                    else str(song.get('artist') or '').strip()
+                )
+                if first:
+                    firsts.add(first)
+            # Only infer when the group clearly belongs to one artist;
+            # a various-artists compilation stays without one.
+            artist = next(iter(firsts)) if len(firsts) == 1 else ''
+        if not artist:
+            continue
+        for song in group:
+            if not str(song.get('album_artist') or '').strip():
+                song['album_artist'] = artist
+
+
+def _album_identity(
+    songs: list[dict[str, Any]],
+) -> Optional[tuple[str, str]]:
+    """``(album artist, album)`` from the first song that knows both."""
+
+    for song in songs:
+        if not isinstance(song, dict):
+            continue
+        album = str(song.get('album_name') or '').strip()
+        artist = str(song.get('album_artist') or '').strip()
+        if not artist:
+            artists = [
+                str(a).strip()
+                for a in (song.get('artists') or [])
+                if str(a).strip()
+            ]
+            artist = (
+                artists[0]
+                if artists
+                else str(song.get('artist') or '').strip()
+            )
+        if album and artist:
+            return artist, album
+    return None
+
+
+def _album_subdir_for_songs(
+    songs: list[dict[str, Any]],
+) -> Optional[str]:
+    """``Artist/Album`` for an album batch, or ``None`` when unknown.
+
+    Only used when the global organize-by-artist/album switches are off;
+    the downloader gives those settings precedence. An explicit album
+    download should not end up flat just because the library is flat.
+    """
+
+    identity = _album_identity(songs)
+    if identity is None:
+        return None
+    artist, album = identity
+    return (
+        f'{m3u.sanitize_playlist_name(artist)}/'
+        f'{m3u.sanitize_playlist_name(album)}'
+    )
+
+
+def _output_template_has_folders() -> bool:
+    """Whether the output template already builds its own subfolders."""
+
+    template = str(getattr(state.downloader, 'output_template', '') or '')
+    return '/' in template or '\\' in template
+
+
+def _usenet_complete_dir() -> Path:
+    downloader = state.downloader
+    cfg = getattr(downloader, 'usenet_settings', {}) if downloader else {}
+    sab = cfg.get('sabnzbd') if isinstance(cfg, dict) else {}
+    return Path(str((sab or {}).get('complete_dir') or '/usenet'))
+
+
+def _cleanup_usenet_albums(songs: list[dict[str, Any]]) -> None:
+    """Remove SABnzbd album folders once their batch has copied every track."""
+
+    try:
+        keys = {
+            album_cache_key(song) for song in songs if isinstance(song, dict)
+        }
+        keys.discard('')
+        if keys:
+            cleanup_albums(keys, _usenet_complete_dir())
+    except Exception:
+        logger.opt(exception=True).debug(
+            'Could not clean up Usenet album folders'
+        )
+
+
+async def _process_batch(  # noqa: PLR0914
     songs: list[dict[str, Any]],
     job_ids: list[str],
     playlist_url: str,
@@ -4426,12 +4559,14 @@ async def _process_batch(
     batch_id: Optional[int] = None,
     cover_url: Optional[str] = None,
     user_id: int = 0,
+    album: bool = False,
 ) -> None:
     # Resolve the playlist name up-front so all tracks land in a single,
-    # per-playlist sub-folder. Loose batches (e.g. albums or unrelated
-    # tracks) keep the legacy flat layout under download_dir. A caller
-    # without a Spotify/YouTube Music/Deezer playlist_url (e.g. a CSV
-    # library import) can instead pass playlist_name directly.
+    # per-playlist sub-folder. An album batch uses <Artist>/<Album> when
+    # the global organize switches are off; unrelated tracks keep the
+    # legacy flat layout. A caller without a Spotify/YouTube Music/Deezer
+    # playlist_url (e.g. a CSV library import) can instead pass
+    # playlist_name directly.
     playlist_subdir: Optional[str] = None
     spotify_playlist_id: Optional[str] = None
     spotify_track_count = 0
@@ -4464,6 +4599,38 @@ async def _process_batch(
             )
     elif playlist_name:
         playlist_subdir = m3u.sanitize_playlist_name(playlist_name)
+
+    if album:
+        identity = _album_identity(songs)
+        if identity is not None:
+            common_artist, common_album = identity
+            for song in songs:
+                if not isinstance(song, dict):
+                    continue
+                if not str(song.get('album_artist') or '').strip():
+                    song['album_artist'] = common_artist
+                if not str(song.get('album_name') or '').strip():
+                    song['album_name'] = common_album
+    _fill_album_artists(songs)
+    album_counts: dict[str, int] = {}
+    for song in songs:
+        if not isinstance(song, dict):
+            continue
+        key = album_cache_key(song)
+        if key:
+            album_counts[key] = album_counts.get(key, 0) + 1
+    for song in songs:
+        if not isinstance(song, dict):
+            continue
+        key = album_cache_key(song)
+        if album or (key and album_counts.get(key, 0) > 1):
+            song['_usenet_prefer_album'] = True
+    album_subdir = (
+        _album_subdir_for_songs(songs)
+        if album and not _output_template_has_folders()
+        else None
+    )
+    batch_subdir = playlist_subdir or album_subdir
 
     if batch_id is not None and playlist_name and state.playlist_batch_store:
         await asyncio.to_thread(
@@ -4514,7 +4681,7 @@ async def _process_batch(
             filename = await _run_download(
                 song,
                 song_id,
-                subdir=playlist_subdir,
+                subdir=batch_subdir,
                 delay_seconds=delay_seconds,
                 playlist_name=playlist_name,
                 spotify_playlist_id=spotify_playlist_id,
@@ -4546,6 +4713,10 @@ async def _process_batch(
         ],
         return_exceptions=False,
     )
+
+    # Every track has been copied and tagged; SABnzbd album folders
+    # used by this batch are no longer needed.
+    _cleanup_usenet_albums(songs)
 
     if wants_m3u:
         await _write_batch_m3u(
@@ -5357,14 +5528,34 @@ async def _submit_playlist_batch(
     playlist_name: Optional[str] = None,
     cover_url: Optional[str] = None,
     user_id: int = 0,
+    album: bool = False,
 ) -> dict[str, Any]:
+    # An explicit album batch fetches one release for the whole record.
+    # In a mixed playlist, a song that shares its album with another song
+    # in the same batch is worth an album release too; a lone track from
+    # an album still uses a track release.
+    album_counts: dict[str, int] = {}
+    for song in songs:
+        if not isinstance(song, dict):
+            continue
+        key = album_cache_key(song)
+        if key:
+            album_counts[key] = album_counts.get(key, 0) + 1
+
     valid_songs: list[dict[str, Any]] = []
     job_ids: list[str] = []
     for song in songs:
         if not isinstance(song, dict):
             continue
-        song_id = _register_job(song, status='queued', user_id=user_id)
-        valid_songs.append(song)
+        key = album_cache_key(song)
+        prefer_album = album or bool(key and album_counts.get(key, 0) > 1)
+        prepared_song = (
+            {**song, '_usenet_prefer_album': True} if prefer_album else song
+        )
+        song_id = _register_job(
+            prepared_song, status='queued', user_id=user_id
+        )
+        valid_songs.append(prepared_song)
         job_ids.append(song_id)
 
     if not valid_songs:
@@ -5384,6 +5575,7 @@ async def _submit_playlist_batch(
             batch_id=batch_id,
             cover_url=cover_url,
             user_id=user_id,
+            album=album,
         ),
         name='playlist-batch',
     )
@@ -5421,6 +5613,7 @@ async def download_batch_endpoint(request: Request) -> dict[str, Any]:
     # directly instead of us deriving them from playlist_url.
     playlist_name = str(payload.get('playlist_name') or '') or None
     cover_url = str(payload.get('cover_url') or '') or None
+    album = bool(payload.get('album'))
     first_song = next((s for s in songs if isinstance(s, dict)), {})
     await log_activity(
         request,
@@ -5459,6 +5652,7 @@ async def download_batch_endpoint(request: Request) -> dict[str, Any]:
         playlist_name=playlist_name,
         cover_url=cover_url,
         user_id=request_user_id(request),
+        album=album,
     )
 
 
@@ -5611,6 +5805,11 @@ async def download_album_endpoint(
     )
 
     user_id = request_user_id(request)
+    album_subdir = (
+        None
+        if _output_template_has_folders()
+        else _album_subdir_for_songs(songs)
+    )
 
     async def _one(song: dict[str, Any]) -> tuple[str, Optional[str]]:
         song_id = str(song.get('song_id') or '')
@@ -5623,7 +5822,11 @@ async def download_album_endpoint(
         job_id = _register_job(song, status='downloading', user_id=user_id)
         try:
             filename = await _run_download(
-                song, job_id, delay_seconds=delay_seconds, user_id=user_id
+                song,
+                job_id,
+                subdir=album_subdir,
+                delay_seconds=delay_seconds,
+                user_id=user_id,
             )
         except Exception:
             logger.exception('Album track download failed for {}', song_id)
@@ -5631,6 +5834,7 @@ async def download_album_endpoint(
         return song_id, filename
 
     results = await asyncio.gather(*(_one(song) for song in songs))
+    _cleanup_usenet_albums(songs)
     return {
         song_id: filename
         for song_id, filename in results

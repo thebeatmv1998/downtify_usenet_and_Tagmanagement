@@ -115,6 +115,12 @@ def _album_cache_key(song: dict[str, Any]) -> str:
     return _alnum_only(f'{artist} {album}').casefold()
 
 
+def album_cache_key(song: dict[str, Any]) -> str:
+    """Public form of :func:`_album_cache_key` for batch cleanup."""
+
+    return _album_cache_key(song)
+
+
 def _prefer_albums(song: dict[str, Any], settings: dict[str, Any]) -> bool:
     """Album releases when the user prefers them or the caller needs an album.
 
@@ -165,6 +171,64 @@ def clear_album_cache(
         except OSError:
             logger.info('usenet: could not remove cached album {}', folder)
     return removed
+
+
+def cleanup_albums(
+    keys: list[str] | set[str],
+    complete_dir: Path,
+    *,
+    delay: float = 5.0,
+) -> int:
+    """Drop cached album entries and delete their SABnzbd folders.
+
+    Called once a batch or an album download has copied every track it
+    needed. The cache entry is removed immediately so it is not reused;
+    the folder itself is removed after *delay* seconds, which lets the
+    last copy/tag operation finish.
+    """
+
+    if not keys:
+        return 0
+    folders: list[Path] = []
+    with _ALBUM_CACHE_LOCK:
+        for key in keys:
+            raw = _ALBUM_FOLDERS.pop(key, None)
+            if raw:
+                folders.append(Path(raw))
+    _album_cache_save()
+    if not folders:
+        return 0
+    try:
+        root = complete_dir.resolve()
+    except OSError:
+        return 0
+    scheduled = 0
+    for folder in folders:
+        try:
+            resolved = folder.resolve()
+            if resolved == root or root not in resolved.parents:
+                continue
+            timer = threading.Timer(
+                max(0.0, delay), _remove_cached_folder, args=(folder, root)
+            )
+            timer.daemon = True
+            timer.start()
+            scheduled += 1
+        except OSError:
+            logger.info('usenet: could not schedule album cleanup {}', folder)
+    return scheduled
+
+
+def _remove_cached_folder(folder: Path, root: Path) -> None:
+    try:
+        resolved = folder.resolve()
+        if resolved == root or root not in resolved.parents:
+            return
+        if folder.is_dir():
+            shutil.rmtree(folder, ignore_errors=True)
+            logger.info('usenet: removed cached album folder {}', folder)
+    except OSError:
+        logger.info('usenet: could not remove cached album {}', folder)
 
 
 def _album_cache_get(key: str) -> Optional[Path]:
@@ -960,6 +1024,22 @@ def _find_completed_file(
     return best
 
 
+def _album_storage_folder(complete_dir: Path, storage: str) -> Optional[Path]:
+    """SABnzbd's finished folder for a release, under our mount."""
+
+    if storage:
+        normalized = str(storage).replace('\\', '/').rstrip('/')
+        direct = Path(normalized)
+        if direct.is_dir():
+            return direct
+        base = Path(normalized).name
+        if base:
+            candidate = complete_dir / base
+            if candidate.is_dir():
+                return candidate
+    return None
+
+
 def _find_album_track(
     complete_dir: Path,
     storage: str,
@@ -977,14 +1057,7 @@ def _find_album_track(
     if direct is not None and direct.is_file():
         return direct
 
-    folder: Optional[Path] = None
-    if storage:
-        normalized = str(storage).replace('\\', '/').rstrip('/')
-        base = Path(normalized).name
-        if base:
-            candidate = complete_dir / base
-            if candidate.is_dir():
-                folder = candidate
+    folder = _album_storage_folder(complete_dir, storage)
     if folder is None and complete_dir.is_dir():
         folder = complete_dir
     if folder is None:
@@ -1434,9 +1507,13 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
                     continue
 
                 if is_album and album_key:
-                    # Keep the album folder for the album's other songs;
-                    # the manual cleanup button removes it on demand.
-                    _album_cache_put(album_key, found.parent)
+                    # Keep the whole release folder (including SABnzbd's
+                    # nfo/cover files) for the album's other songs; the
+                    # batch/cleanup button removes it afterwards.
+                    release_folder = _album_storage_folder(
+                        complete_dir, str(slot.get('storage') or '')
+                    )
+                    _album_cache_put(album_key, release_folder or found.parent)
                 elif bool(settings.get('cleanup', True)):
                     _schedule_cleanup(client, nzo_id)
                 logger.info(
