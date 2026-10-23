@@ -45,6 +45,8 @@ from .content_advisory import (
 from .cookies import CookiesStore, check_cookies_file
 from .file_naming import sanitize_file_name
 from .itunes import fetch_genre as _fetch_itunes_genre
+from .library_catalog import song_key
+from .library_metadata import read_audio_metadata
 from .library_paths import library_stored_path, slskd_dir_from_downloader
 from .m3u import sanitize_playlist_name
 from .providers import (
@@ -551,6 +553,9 @@ class Downloader:
         self.organize_by_artist = organize_by_artist
         self.organize_by_album = organize_by_album
         self.overwrite_existing_files = overwrite_existing_files
+        self._library_tag_cache: dict[
+            Path, tuple[int, int, dict[str, Any]]
+        ] = {}
         self.download_cover_art = download_cover_art
         # ``0``: overlong tracks are taken, like unknown durations.
         self.max_track_duration_seconds = max_track_duration_seconds
@@ -1025,15 +1030,64 @@ class Downloader:
         matches, case-insensitively. That catches the same song saved by
         a single-track download (library root), by another playlist's
         folder, or under a previous organize-by-artist/album layout.
-        Matching is by rendered filename, not by track id: the files carry
-        no id to compare against.
+        Falls back to artist/title tags when an import, rename or changed
+        template gives the same song a different filename.
         """
 
         exact = self.existing_filename_for(song, subdir)
         if exact is not None:
             return exact
         wanted = [p.casefold() for p in self._format_output_parts(song)]
-        return self._scan_library(wanted[-1], wanted[:-1])
+        named = self._scan_library(wanted[-1], wanted[:-1])
+        if named is not None:
+            return named
+        artists = song.get('artists') or [song.get('artist') or '']
+        key = song_key(
+            str(artists[0]), str(song.get('name') or song.get('title') or '')
+        )
+        if not all(key.split('|')):
+            return None
+        # Track IDs and rendered paths can change between Spotify/YouTube,
+        # imports, tag edits and output-layout changes. Tags are the identity.
+        roots = [(self.download_dir, '')]
+        slskd = slskd_dir_from_downloader(self)
+        if slskd is not None and slskd != self.download_dir:
+            roots.append((slskd, 'slskd/'))
+        for root, prefix in roots:
+            if not root.is_dir():
+                continue
+            for entry in root.rglob('*'):
+                if (
+                    not entry.is_file()
+                    or entry.suffix.lower().lstrip('.')
+                    not in _AUDIO_EXTENSIONS
+                ):
+                    continue
+                try:
+                    stat = entry.stat()
+                except OSError:
+                    continue
+                cached = self._library_tag_cache.get(entry)
+                if cached is not None and cached[:2] == (
+                    stat.st_mtime_ns,
+                    stat.st_size,
+                ):
+                    meta = cached[2]
+                else:
+                    meta = read_audio_metadata(entry)
+                    self._library_tag_cache[entry] = (
+                        stat.st_mtime_ns,
+                        stat.st_size,
+                        meta,
+                    )
+                names = meta.get('artists') or []
+                if (
+                    names
+                    and song_key(str(names[0]), str(meta.get('title') or ''))
+                    == key
+                ):
+                    return f'{prefix}{entry.relative_to(root).as_posix()}'
+        return None
 
     def _scan_library(self, stem: str, parents: list[str]) -> Optional[str]:
         root_dir = self.download_dir

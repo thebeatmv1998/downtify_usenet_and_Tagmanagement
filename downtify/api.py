@@ -4642,7 +4642,12 @@ def _prefetch_usenet_albums(
     for keys, group in groups:
         try:
             if all(
-                downloader.existing_filename_for(song, subdir=subdir)
+                resolve_existing_download(
+                    downloader,
+                    song,
+                    subdir=subdir,
+                    track_index=state.track_index,
+                )
                 for song in group
             ):
                 continue

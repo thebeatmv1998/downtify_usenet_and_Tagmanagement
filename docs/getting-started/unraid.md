@@ -82,6 +82,12 @@ download workers have released their source folders. Cleanup requests made by
 individual album batches are deferred without dropping their cache entries.
 Old folder/history cleanup timers also wait while downloads are using releases.
 
+Existing-song detection before both album prefetch and track downloads checks
+Spotify IDs, expected paths, whole-library filenames, then normalized artist/title
+tags across the download library and configured Soulseek source folder. This
+also recognizes renamed imports, older album layouts and different audio formats;
+another artist or a distinct live recording is not treated as the same song.
+
 ## YouTube bot check ("Sign in to confirm you're not a bot")
 
 YouTube aggressively gates datacenter IPs. If downloads or metadata lookups fail:

@@ -297,6 +297,10 @@ def resolve_existing_download(
                 track_index.forget(tid)
 
     local = downloader.existing_filename_for(song, subdir=subdir)
+    if not local and callable(
+        getattr(downloader, 'find_existing_download', None)
+    ):
+        local = downloader.find_existing_download(song, subdir=subdir)
     if local and locate_library_file(local, download_dir, slskd_dir):
         if track_index is not None:
             full = locate_library_file(local, download_dir, slskd_dir)

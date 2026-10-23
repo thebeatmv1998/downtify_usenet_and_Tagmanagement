@@ -151,12 +151,18 @@ def test_prefetch_only_fetches_repeated_albums_once(monkeypatch):
     assert calls[0][2]['album_keys'] == ['artistalbuma']
 
 
-def test_prefetch_skips_an_album_that_is_already_present(monkeypatch):
+def test_prefetch_skips_an_album_that_is_already_present(
+    monkeypatch, tmp_path
+):
     calls: list[tuple] = []
+    existing = tmp_path / 'Artist/Album/01 - Song.mp3'
+    existing.parent.mkdir(parents=True)
+    existing.write_bytes(b'audio')
 
     class _Downloader:
         usenet_settings = {'enabled': True}
         audio_providers = ['usenet']
+        download_dir = tmp_path
 
         def existing_filename_for(self, _song, subdir=None):
             return 'Artist/Album/01 - Song.mp3'
