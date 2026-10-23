@@ -470,9 +470,12 @@ def test_discography_endpoint_creates_and_starts_an_artist_watch(
     monkeypatch.setattr(
         api, '_youtube_artist_for_name', lambda name: (CHANNEL_ID, name)
     )
-    monkeypatch.setattr(
-        api, '_start_initial_check', lambda pl, _db: started.append(pl.id)
-    )
+
+    async def queue_artist(pl, _db):
+        started.append(pl.id)
+        return {'albums': 2, 'count': 4}
+
+    monkeypatch.setattr(api, '_queue_artist_discography', queue_artist)
     monkeypatch.setattr(api, 'request_user_id', lambda _request: 1)
 
     out = asyncio.run(
@@ -524,9 +527,12 @@ def test_discography_endpoint_restores_the_full_back_catalogue(
         'artist_info_from_channel_id',
         lambda _channel: {'name': 'Test Artist'},
     )
-    monkeypatch.setattr(
-        api, '_start_initial_check', lambda pl, _db: started.append(pl.id)
-    )
+
+    async def queue_artist(pl, _db):
+        started.append(pl.id)
+        return {'albums': 2, 'count': 4}
+
+    monkeypatch.setattr(api, '_queue_artist_discography', queue_artist)
     monkeypatch.setattr(api, 'request_user_id', lambda _request: 1)
 
     out = asyncio.run(
@@ -545,6 +551,65 @@ def test_discography_endpoint_restores_the_full_back_catalogue(
 
 
 # ── monitor_loop dispatch ───────────────────────────────────────────────────
+
+
+def test_explicit_discography_queues_seen_albums_and_runs_album_batches(
+    monkeypatch, tmp_path
+):
+    db = _db(tmp_path)
+    watch = _add_artist(db)
+    db.mark_album_seen(watch.id, 'OLD', 'Old')
+    _patch_provider(
+        monkeypatch,
+        [_album('OLD', 'Old'), _album('NEW', 'New')],
+        {
+            'OLD': [_track('old-track', 'Old track', 'Old', 1)],
+            'NEW': [_track('new-track', 'New track', 'New', 1)],
+        },
+    )
+    monkeypatch.setattr(api.state, 'download_jobs', {})
+    monkeypatch.setattr(api.state.connections, 'broadcast', _noop_broadcast)
+    calls = []
+    tasks = []
+
+    async def process(songs, ids, url, generate_m3u, **kwargs):
+        calls.append((songs, kwargs))
+        for job_id in ids:
+            api.state.download_jobs[job_id].update(
+                status='done', filename=f'{job_id}.mp3'
+            )
+
+    def spawn(coro, **kwargs):
+        task = asyncio.create_task(coro)
+        tasks.append(task)
+        return task
+
+    monkeypatch.setattr(api, '_process_batch', process)
+    monkeypatch.setattr(api, 'spawn_download_task', spawn)
+
+    async def scenario():
+        result = await api._queue_artist_discography(watch, db)
+        assert result == {'albums': 2, 'count': 2}
+        assert len(api.state.download_jobs) == 2
+        await asyncio.gather(*tasks)
+
+    asyncio.run(scenario())
+    assert len(calls) == 2
+    assert all(kwargs['album'] is True for _, kwargs in calls)
+    assert all(songs[0]['_usenet_prefer_album'] for songs, _ in calls)
+    assert watch.id not in monitor._checks_running
+
+
+def test_explicit_empty_discography_reports_error_not_success(
+    monkeypatch, tmp_path
+):
+    db = _db(tmp_path)
+    watch = _add_artist(db)
+    _patch_provider(monkeypatch, [], {})
+    with pytest.raises(HTTPException) as error:
+        asyncio.run(api._queue_artist_discography(watch, db))
+    assert error.value.status_code == 502
+    assert watch.id not in monitor._checks_running
 
 
 def test_monitor_loop_uses_check_artist_for_artist_watches(

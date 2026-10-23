@@ -473,6 +473,7 @@ from .monitor import (
     LibraryStores,
     MonitoredPlaylist,
     PlaylistMonitorDB,
+    _checks_running,
     check_watch,
     download_playlist_cover,
     fetch_playlist,
@@ -9581,17 +9582,124 @@ def _start_initial_check(
     spawn_task(_initial_check(), name='monitor-initial-check')
 
 
+async def _queue_artist_discography(
+    playlist: MonitoredPlaylist, db: PlaylistMonitorDB
+) -> dict[str, int]:
+    """Explicit downloads use real album batches, not monitor seen flags."""
+    generation = download_control.current_generation()
+    if playlist.id in _checks_running:
+        raise HTTPException(
+            status_code=409, detail='Artist download is already running'
+        )
+    _checks_running.add(playlist.id)
+    try:
+        albums = await asyncio.to_thread(
+            providers.artist_albums_from_channel_id, playlist.spotify_id
+        )
+        batches = []
+        for album in albums:
+            if download_control.is_cancelled(generation):
+                raise HTTPException(
+                    status_code=409, detail='Artist download was stopped'
+                )
+            album_id = album.get('album_id')
+            if not album_id:
+                continue
+            tracks = await asyncio.to_thread(
+                providers.album_tracks_from_browse_id, album_id
+            )
+            songs = [
+                {
+                    **song,
+                    'album_name': song.get('album_name')
+                    or album.get('name')
+                    or '',
+                    'album_artist': song.get('album_artist') or playlist.name,
+                    '_usenet_prefer_album': True,
+                }
+                for song in tracks
+                if isinstance(song, dict) and song.get('song_id')
+            ]
+            if songs:
+                batches.append((album_id, album.get('name') or '', songs))
+        if download_control.is_cancelled(generation):
+            raise HTTPException(
+                status_code=409, detail='Artist download was stopped'
+            )
+        if not batches:
+            raise HTTPException(
+                status_code=502, detail='No downloadable artist releases found'
+            )
+        queued = []
+        for album_id, album_name, songs in batches:
+            ids = [
+                _register_job(song, status='queued', user_id=playlist.user_id)
+                for song in songs
+            ]
+            queued.append((album_id, album_name, songs, ids))
+        await state.connections.broadcast({'type': 'queue_reload'})
+
+        async def run() -> None:
+            try:
+                for album_id, album_name, songs, ids in queued:
+                    if download_control.is_cancelled(generation):
+                        return
+                    await _process_batch(
+                        songs,
+                        ids,
+                        '',
+                        False,
+                        user_id=playlist.user_id,
+                        album=True,
+                    )
+                    for song, job_id in zip(songs, ids):
+                        job = state.download_jobs.get(job_id) or {}
+                        if job.get('status') == 'done' and job.get('filename'):
+                            await asyncio.to_thread(
+                                db.mark_track_downloaded,
+                                playlist.id,
+                                song['song_id'],
+                                job['filename'],
+                            )
+                    if all(
+                        (state.download_jobs.get(job_id) or {}).get('status')
+                        == 'done'
+                        for job_id in ids
+                    ):
+                        await asyncio.to_thread(
+                            db.mark_album_seen,
+                            playlist.id,
+                            album_id,
+                            album_name,
+                        )
+            except Exception:
+                logger.exception(
+                    'Explicit artist download failed for {}', playlist.name
+                )
+            finally:
+                _checks_running.discard(playlist.id)
+
+        task = spawn_download_task(run(), name='artist-discography-download')
+        task.add_done_callback(
+            lambda _task: _checks_running.discard(playlist.id)
+        )
+        return {
+            'albums': len(queued),
+            'count': sum(len(row[2]) for row in queued),
+        }
+    except BaseException:
+        _checks_running.discard(playlist.id)
+        raise
+
+
 @router.post('/api/artists/discography/download')
 async def download_artist_discography_endpoint(
     request: Request,
 ) -> dict[str, Any]:
     """Start downloading an artist's complete discography.
 
-    Uses the artist-watch machinery: a new watch gets every release type
-    and the full back catalogue, an existing one is switched back to the
-    full catalogue and checked right away. The first pass runs in the
-    background, so the response is immediate and progress is visible on
-    the Monitor page.
+    Resolve the full catalogue and queue real album batches, regardless
+    of the monitor's seen flags. Keep a watch for future releases.
     """
 
     if state.downloader is None:
@@ -9665,10 +9773,11 @@ async def download_artist_discography_endpoint(
                 or playlist
             )
 
-    _start_initial_check(playlist, db)
+    queued = await _queue_artist_discography(playlist, db)
     return {
         'created': created,
         'started': True,
+        **queued,
         'watch': playlist.to_dict(),
     }
 

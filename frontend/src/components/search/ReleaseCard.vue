@@ -132,7 +132,7 @@ async function download() {
 }
 
 // An artist search result: one click starts the whole discography as a
-// background artist watch. Only a YouTube Music result carries a channel
+// set of album download batches. Only a YouTube Music result carries a channel
 // id; a Spotify/Deezer artist is resolved by name on the backend.
 async function downloadDiscography() {
   if (discographyStarted.value) return

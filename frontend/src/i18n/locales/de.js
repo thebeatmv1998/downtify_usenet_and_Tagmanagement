@@ -538,9 +538,9 @@ export default {
     findMore: 'Mehr finden',
     downloadDiscography: 'Komplette Diskografie herunterladen',
     discographyStarted:
-      'Die komplette Diskografie von {name} wird im Hintergrund heruntergeladen. Verwalten unter „Monitor“.',
+      'Die Diskografie von {name} steht jetzt albumweise in der Download-Queue.',
     discographyChecking:
-      '{name} wird im Hintergrund auf fehlende Veröffentlichungen geprüft.',
+      'Die Diskografie von {name} steht jetzt albumweise in der Download-Queue.',
     discographyFailed:
       'Der Diskografie-Download konnte nicht gestartet werden.',
     relatedArtists: 'Fans hören auch',

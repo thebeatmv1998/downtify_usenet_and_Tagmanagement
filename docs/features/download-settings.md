@@ -91,6 +91,13 @@ Combined with a lower **Parallel downloads** value, this is the main tool for av
 
 ## Stopping every download
 
+**Download full discography** on an artist or search result queues the full
+catalogue as visible album batches. Albums run sequentially, with an album-first
+Usenet lookup for each; existing files are skipped by the regular downloader.
+Monitor history does not suppress an explicitly requested discography. A watch
+is also retained for future releases. Empty catalogues report an error rather
+than only adding a monitor entry and claiming the download started.
+
 The stop also clears SABnzbd's queue in the configured Downtify category
 (including older jobs with no visible queue row). Use a dedicated SABnzbd
 category for Downtify; other categories are left alone. SABnzbd deletion

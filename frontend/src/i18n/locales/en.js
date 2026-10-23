@@ -542,9 +542,9 @@ export default {
     findMore: 'Find more',
     downloadDiscography: 'Download full discography',
     discographyStarted:
-      'Downloading the complete discography of {name} in the background. Manage it under Monitor.',
+      'The discography of {name} is now queued album by album. See Download Queue.',
     discographyChecking:
-      'Checking {name} for missing releases in the background.',
+      'The discography of {name} is now queued album by album. See Download Queue.',
     discographyFailed: 'Could not start the discography download.',
     relatedArtists: 'Fans also like',
     topSongsLink: 'See more popular songs',
