@@ -52,13 +52,15 @@ DrunkenSlug, …) and hand the resulting NZB to SABnzbd:
 After a successful download, Downtify copies the file into your library, tags it,
 and — unless disabled — removes the job and its files from SABnzbd's history.
 
-Album releases are downloaded **once**. The album folder is kept so every
-other track of the same release is matched from it and marked successful
-without another NZB; this is forced for album, artist-discography and repeated
+An album batch first looks for an album release. If one exists it is fetched
+**once**, outside the per-track parallel limit, and every song is matched from
+its folder; if no album release exists, the songs fall back to their normal
+per-track search. This is forced for album, artist-discography and repeated
 album tracks in a playlist, and can be enabled for everything else with
 **Prefer album releases**. The cache uses the album artist, so a featured track
-does not trigger a second copy. Once a batch or artist sweep has copied all of
-its tracks, the SABnzbd release folder is deleted automatically.
+does not trigger a second copy, and a URL-level claim prevents the same NZB
+from being handed to SABnzbd twice. Once a batch or artist sweep has copied all
+of its tracks, the SABnzbd release folder is deleted automatically.
 
 Album batches are filed under `Artist/Album` when neither the output template
 nor the organize-by-artist/album switches already define a folder layout.

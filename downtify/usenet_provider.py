@@ -17,6 +17,7 @@ fires (process exit) just leaves the history entry behind — harmless.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import re
 import shutil
@@ -60,6 +61,11 @@ _ALBUM_CACHE_LOCK = threading.Lock()
 # In-flight album downloads: waiters reuse the folder instead of queueing
 # the same NZB again while the first fetch is still running.
 _ALBUM_EVENTS: dict[str, threading.Event] = {}
+# Hard guarantee at the NZB level: one URL is handed to SABnzbd once,
+# no matter how many songs/album keys selected it.
+_NZB_LOCK = threading.Lock()
+_NZB_CLAIMS: dict[str, threading.Event] = {}
+_NZB_FOLDERS: dict[str, str] = {}
 
 
 def configure_album_cache(path: Optional[Path]) -> None:
@@ -152,6 +158,8 @@ def clear_album_cache(
         folders = list(_ALBUM_FOLDERS.values())
         _ALBUM_FOLDERS.clear()
     _album_cache_save()
+    with _NZB_LOCK:
+        _NZB_FOLDERS.clear()
     if not delete_folders or complete_dir is None:
         return 0
     try:
@@ -208,6 +216,7 @@ def cleanup_albums(
             resolved = folder.resolve()
             if resolved == root or root not in resolved.parents:
                 continue
+            _forget_nzb_folders(folder)
             timer = threading.Timer(
                 max(0.0, delay), _remove_cached_folder, args=(folder, root)
             )
@@ -229,6 +238,77 @@ def _remove_cached_folder(folder: Path, root: Path) -> None:
             logger.info('usenet: removed cached album folder {}', folder)
     except OSError:
         logger.info('usenet: could not remove cached album {}', folder)
+
+
+def _claim_nzb(
+    url: str,
+) -> tuple[str, Optional[Path], Optional[threading.Event]]:
+    """``(state, folder, event)``: cached, wait, or owner for *url*."""
+
+    if not url:
+        return 'owner', None, None
+    with _NZB_LOCK:
+        raw = _NZB_FOLDERS.get(url)
+        if raw:
+            folder = Path(raw)
+            if folder.is_dir():
+                return 'cached', folder, None
+            _NZB_FOLDERS.pop(url, None)
+        event = _NZB_CLAIMS.get(url)
+        if event is not None:
+            return 'wait', None, event
+        event = threading.Event()
+        _NZB_CLAIMS[url] = event
+        return 'owner', None, event
+
+
+def _finish_nzb_claim(
+    url: str,
+    event: Optional[threading.Event],
+    folder: Optional[Path] = None,
+) -> None:
+    if not url:
+        if event is not None:
+            event.set()
+        return
+    with _NZB_LOCK:
+        if folder is not None:
+            _NZB_FOLDERS[url] = str(folder)
+        if event is not None and _NZB_CLAIMS.get(url) is event:
+            _NZB_CLAIMS.pop(url, None)
+    if event is not None:
+        event.set()
+
+
+def _nzb_folder(url: str) -> Optional[Path]:
+    with _NZB_LOCK:
+        raw = _NZB_FOLDERS.get(url)
+    return Path(raw) if raw else None
+
+
+def _forget_nzb_folders(folder: Path) -> None:
+    raw = str(folder)
+    with _NZB_LOCK:
+        for url, stored in list(_NZB_FOLDERS.items()):
+            if stored == raw:
+                _NZB_FOLDERS.pop(url, None)
+
+
+def _folder_has_audio(folder: Path) -> bool:
+    try:
+        entries = folder.rglob('*')
+    except OSError:
+        return False
+    for entry in entries:
+        try:
+            if (
+                entry.is_file()
+                and entry.suffix.lower().lstrip('.') in _AUDIO_EXTENSIONS
+            ):
+                return True
+        except OSError:
+            continue
+    return False
 
 
 def _album_cache_get(key: str) -> Optional[Path]:
@@ -1225,18 +1305,28 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
     song: dict[str, Any],
     settings: dict[str, Any],
     progress_cb: Optional[ProgressCallback] = None,
+    *,
+    album_only: bool = False,
+    album_keys: Optional[list[str]] = None,
 ) -> Optional[Path]:
     """Search Newznab indexers and download the best release via SABnzbd.
 
     Mirrors :func:`downtify.slskd_provider.download_from_slskd`: returns the
     path of the finished audio file, or ``None`` when nothing usable was
     found (the downloader then tries the next audio provider).
+
+    ``album_only`` is the batch prefetch: only album releases are
+    considered, the per-track parallel semaphore is bypassed, and the
+    finished release folder is cached under every supplied ``album_keys``
+    entry. It returns the folder (or the first track path) for the caller.
     """
     if not bool(settings.get('enabled')):
         logger.info(
             'usenet: disabled in settings title={!r}', song.get('name')
         )
         return None
+    if album_only:
+        song = {**song, '_usenet_prefer_album': True}
 
     timeout = _int_setting(
         settings, 'timeout_seconds', 20, minimum=5, maximum=120
@@ -1260,7 +1350,8 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
         return None
 
     spotify_row = snapshot_spotify_metadata(song)
-    if _prefer_albums(song, settings):
+    prefer_albums = album_only or _prefer_albums(song, settings)
+    if prefer_albums:
         # snapshot_spotify_metadata keeps only the public metadata; carry
         # the album-download intent through to ranking.
         spotify_row['_usenet_prefer_album'] = True
@@ -1298,11 +1389,14 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
     sab = sab if isinstance(sab, dict) else {}
     complete_dir = Path(str(sab.get('complete_dir') or '/usenet'))
     album_key = _album_cache_key(song)
+    cache_keys = {key for key in [album_key, *(album_keys or [])] if key}
 
     # A previously downloaded album with this artist+album is still on
     # disk: extract the track from it instead of re-downloading anything.
     cached_album = _album_cache_get(album_key)
     if cached_album is not None:
+        if album_only:
+            return cached_album
         report(30.0, 'using downloaded album')
         found = _pick_track_in_album(cached_album, spotify_row, settings)
         if found is not None and verify_downloaded_file_matches_spotify(
@@ -1317,9 +1411,11 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
         if found is not None:
             _discard_mismatched_download(found)
 
-    with _usenet_semaphore(settings):  # noqa: PLR1702
+    semaphore = (
+        contextlib.nullcontext() if album_only else _usenet_semaphore(settings)
+    )
+    with semaphore:  # noqa: PLR1702
         deadline = _usenet_deadline(settings)
-        prefer_albums = _prefer_albums(spotify_row, settings)
         report(5.0, 'searching')
         ranked: list[dict[str, Any]] = []
         seen_urls: set[str] = set()
@@ -1354,6 +1450,10 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
                     len(releases),
                     min_score,
                 )
+        if album_only:
+            ranked = [
+                row for row in ranked if row.get('match_kind') == 'album'
+            ]
         _sort_ranked(ranked, prefer_albums)
 
         if not ranked:
@@ -1378,6 +1478,43 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
             release_name = str(release.get('title') or '')[:120]
             nzb_url = str(release.get('nzb_url') or '')
             is_album = release.get('match_kind') == 'album'
+            if album_only and not is_album:
+                continue
+
+            # Hard URL-level guard: one NZB is handed to SABnzbd once,
+            # even if songs with different album keys selected it.
+            nzb_state, nzb_cached, nzb_event = _claim_nzb(nzb_url)
+            if nzb_state == 'cached' and nzb_cached is not None:
+                if album_only:
+                    return nzb_cached
+                found = _pick_track_in_album(nzb_cached, spotify_row, settings)
+                if found is not None and (
+                    verify_downloaded_file_matches_spotify(found, spotify_row)
+                ):
+                    return found
+                if found is not None:
+                    _discard_mismatched_download(found)
+                continue
+            if nzb_state == 'wait' and nzb_event is not None:
+                while not nzb_event.wait(1.0):
+                    if _past_deadline(deadline):
+                        break
+                cached = _nzb_folder(nzb_url)
+                if cached is not None:
+                    if album_only:
+                        return cached
+                    found = _pick_track_in_album(cached, spotify_row, settings)
+                    if found is not None and (
+                        verify_downloaded_file_matches_spotify(
+                            found, spotify_row
+                        )
+                    ):
+                        return found
+                    if found is not None:
+                        _discard_mismatched_download(found)
+                continue
+            claim_event = nzb_event if nzb_state == 'owner' else None
+            claim_done = False
 
             # Only one download per album: a parallel song of the same
             # album waits for the in-flight fetch and reuses its folder.
@@ -1461,6 +1598,20 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
                 if slot is None:
                     continue
 
+                if album_only:
+                    release_folder = _album_storage_folder(
+                        complete_dir, str(slot.get('storage') or '')
+                    )
+                    if release_folder is not None and _folder_has_audio(
+                        release_folder
+                    ):
+                        for key in cache_keys:
+                            _album_cache_put(key, release_folder)
+                        _finish_nzb_claim(nzb_url, claim_event, release_folder)
+                        claim_done = True
+                        return release_folder
+                    continue
+
                 if is_album:
                     found = _find_album_track(
                         complete_dir,
@@ -1506,14 +1657,20 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
                     _discard_mismatched_download(found)
                     continue
 
-                if is_album and album_key:
+                if is_album:
                     # Keep the whole release folder (including SABnzbd's
                     # nfo/cover files) for the album's other songs; the
                     # batch/cleanup button removes it afterwards.
-                    release_folder = _album_storage_folder(
-                        complete_dir, str(slot.get('storage') or '')
+                    release_folder = (
+                        _album_storage_folder(
+                            complete_dir, str(slot.get('storage') or '')
+                        )
+                        or found.parent
                     )
-                    _album_cache_put(album_key, release_folder or found.parent)
+                    for key in cache_keys:
+                        _album_cache_put(key, release_folder)
+                    _finish_nzb_claim(nzb_url, claim_event, release_folder)
+                    claim_done = True
                 elif bool(settings.get('cleanup', True)):
                     _schedule_cleanup(client, nzo_id)
                 logger.info(
@@ -1526,6 +1683,8 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
                 )
                 return found
             finally:
+                if claim_event is not None and not claim_done:
+                    _finish_nzb_claim(nzb_url, claim_event)
                 if owner_event is not None:
                     owner_event.set()
                     with _ALBUM_CACHE_LOCK:

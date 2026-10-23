@@ -111,6 +111,78 @@ def test_download_album_endpoint_keeps_shared_album_metadata(monkeypatch):
     assert all(s['album_name'] == 'Monetine' for s in seen_songs)
 
 
+def test_prefetch_only_fetches_repeated_albums_once(monkeypatch):
+    calls: list[tuple] = []
+
+    class _Downloader:
+        usenet_settings = {'enabled': True}
+        audio_providers = ['usenet']
+
+        def existing_filename_for(self, _song, subdir=None):
+            return None
+
+    def _download(song, settings, **kwargs):
+        calls.append((song, settings, kwargs))
+
+    monkeypatch.setattr(api.state, 'downloader', _Downloader())
+    monkeypatch.setattr(api, 'download_from_usenet', _download)
+    songs = [
+        {
+            'song_id': 'a1',
+            'album_name': 'Album A',
+            'album_artist': 'Artist',
+        },
+        {
+            'song_id': 'a2',
+            'album_name': 'Album A',
+            'album_artist': 'Artist',
+        },
+        {
+            'song_id': 'b1',
+            'album_name': 'Album B',
+            'album_artist': 'Artist',
+        },
+    ]
+
+    api._prefetch_usenet_albums(songs, False, None)
+
+    assert len(calls) == 1
+    assert calls[0][2]['album_only'] is True
+    assert calls[0][2]['album_keys'] == ['artistalbuma']
+
+
+def test_prefetch_skips_an_album_that_is_already_present(monkeypatch):
+    calls: list[tuple] = []
+
+    class _Downloader:
+        usenet_settings = {'enabled': True}
+        audio_providers = ['usenet']
+
+        def existing_filename_for(self, _song, subdir=None):
+            return 'Artist/Album/01 - Song.mp3'
+
+    monkeypatch.setattr(api.state, 'downloader', _Downloader())
+    monkeypatch.setattr(
+        api, 'download_from_usenet', lambda *a, **k: calls.append((a, k))
+    )
+    songs = [
+        {
+            'song_id': 'a1',
+            'album_name': 'Album A',
+            'album_artist': 'Artist',
+        },
+        {
+            'song_id': 'a2',
+            'album_name': 'Album A',
+            'album_artist': 'Artist',
+        },
+    ]
+
+    api._prefetch_usenet_albums(songs, True, None)
+
+    assert calls == []
+
+
 def test_same_album_songs_get_one_album_artist():
     songs = [
         {'album_name': 'Album', 'artists': ['Artist']},

@@ -700,8 +700,84 @@ def test_download_prefers_album_and_extracts_track(tmp_path, monkeypatch):
 @pytest.fixture(autouse=True)
 def _reset_album_cache():
     usenet.configure_album_cache(None)
+    usenet._NZB_FOLDERS.clear()
+    usenet._NZB_CLAIMS.clear()
     yield
     usenet.configure_album_cache(None)
+    usenet._NZB_FOLDERS.clear()
+    usenet._NZB_CLAIMS.clear()
+
+
+def test_album_only_prefetch_caches_the_release_without_picking_a_track(
+    tmp_path, monkeypatch
+):
+    album, _wanted, _other = _album_folder(tmp_path)
+    settings = _settings(tmp_path, prefer_albums=False)
+
+    monkeypatch.setattr(
+        usenet,
+        '_search_indexers',
+        lambda indexers, query: [_ALBUM_RELEASE, _release()],
+    )
+    monkeypatch.setattr(
+        SabnzbdClient, 'add_url', lambda self, url, name: 'nzo-album'
+    )
+    monkeypatch.setattr(
+        SabnzbdClient,
+        'queue_slot',
+        lambda self, nzo: {'nzo_id': nzo, 'percentage': 100},
+    )
+    monkeypatch.setattr(
+        SabnzbdClient,
+        'history_slot',
+        lambda self, nzo: {
+            'nzo_id': nzo,
+            'status': 'Completed',
+            'storage': str(album),
+        },
+    )
+    monkeypatch.setattr(
+        SabnzbdClient, 'delete_history', lambda self, nzo: None
+    )
+    monkeypatch.setattr(
+        usenet,
+        '_usenet_semaphore',
+        lambda _settings: (_ for _ in ()).throw(
+            AssertionError('album prefetch must bypass the parallel limit')
+        ),
+    )
+
+    key = usenet.album_cache_key(dict(_SONG))
+    folder = download_from_usenet(
+        dict(_SONG),
+        settings,
+        album_only=True,
+        album_keys=[key, 'other-key'],
+    )
+
+    assert folder == album
+    assert usenet._album_cache_get(key) == album
+    assert usenet._album_cache_get('other-key') == album
+    assert usenet._nzb_folder(_ALBUM_RELEASE['nzb_url']) == album
+
+
+def test_nzb_claim_allows_only_one_owner(tmp_path):
+    state, folder, event = usenet._claim_nzb('https://idx/album.nzb')
+    assert (state, folder) == ('owner', None)
+    assert event is not None
+
+    state, folder, waiting = usenet._claim_nzb('https://idx/album.nzb')
+    assert state == 'wait'
+    assert folder is None
+    assert waiting is event
+
+    usenet._finish_nzb_claim('https://idx/album.nzb', event, tmp_path)
+    state, folder, _ = usenet._claim_nzb('https://idx/album.nzb')
+    assert state == 'cached'
+    assert folder == tmp_path
+
+    usenet._forget_nzb_folders(tmp_path)
+    assert usenet._claim_nzb('https://idx/album.nzb')[0] == 'owner'
 
 
 def test_album_downloaded_once_and_reused_for_more_songs(

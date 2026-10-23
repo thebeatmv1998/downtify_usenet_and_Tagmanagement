@@ -532,6 +532,7 @@ from .usenet_provider import (
     album_cache_key,
     cleanup_albums,
     clear_album_cache,
+    download_from_usenet,
     reset_usenet_parallelism,
 )
 
@@ -4533,6 +4534,93 @@ def _usenet_complete_dir() -> Path:
     return Path(str((sab or {}).get('complete_dir') or '/usenet'))
 
 
+def _prefetch_usenet_albums(
+    songs: list[dict[str, Any]],
+    album: bool,
+    subdir: Optional[str],
+) -> None:
+    """Fetch each album release once, before any per-song download.
+
+    Only album releases are tried. If Usenet has no album release the
+    per-song downloads run as before; if it does, the songs reuse the
+    cached folder and never search themselves.
+    """
+
+    downloader = state.downloader
+    if downloader is None:
+        return
+    usenet = getattr(downloader, 'usenet_settings', {}) or {}
+    providers = list(getattr(downloader, 'audio_providers', ()) or ())
+    if not (
+        isinstance(usenet, dict)
+        and usenet.get('enabled')
+        and 'usenet' in providers
+    ):
+        return
+    youtube_at = [
+        index
+        for index, provider in enumerate(providers)
+        if provider in {'youtube-music', 'youtube'}
+    ]
+    if youtube_at and providers.index('usenet') > min(youtube_at):
+        # Usenet is only a fallback after YouTube here; do not fetch an
+        # album from it behind the user's source order.
+        return
+
+    groups: list[tuple[list[str], list[dict[str, Any]]]] = []
+    if album:
+        keys = [
+            key for key in (album_cache_key(song) for song in songs) if key
+        ]
+        if keys:
+            groups.append((sorted(set(keys)), songs))
+    else:
+        by_key: dict[str, list[dict[str, Any]]] = {}
+        for song in songs:
+            key = album_cache_key(song)
+            if key:
+                by_key.setdefault(key, []).append(song)
+        groups = [
+            ([key], group) for key, group in by_key.items() if len(group) > 1
+        ]
+
+    for keys, group in groups:
+        try:
+            if all(
+                downloader.existing_filename_for(song, subdir=subdir)
+                for song in group
+            ):
+                continue
+        except Exception:
+            logger.opt(exception=True).debug(
+                'Could not check existing album tracks'
+            )
+        # A title track's own title equals the album title, which makes
+        # it look like a track release to the scorer. Use another track
+        # of the album for the prefetch when there is one.
+        representative = next(
+            (
+                song
+                for song in group
+                if str(song.get('name') or '').casefold()
+                != str(song.get('album_name') or '').casefold()
+            ),
+            group[0],
+        )
+        try:
+            download_from_usenet(
+                representative,
+                usenet,
+                album_only=True,
+                album_keys=keys,
+            )
+        except Exception:
+            logger.opt(exception=True).warning(
+                'Usenet album prefetch failed for {!r}',
+                representative.get('album_name'),
+            )
+
+
 def _cleanup_usenet_albums(songs: list[dict[str, Any]]) -> None:
     """Remove SABnzbd album folders once their batch has copied every track."""
 
@@ -4631,6 +4719,14 @@ async def _process_batch(  # noqa: PLR0914
         else None
     )
     batch_subdir = playlist_subdir or album_subdir
+
+    # Album releases are fetched once, before the per-song downloads.
+    # This is one download and deliberately bypasses the per-track
+    # parallel limit; if no album release exists, songs fall back to
+    # their normal per-track search.
+    await asyncio.to_thread(
+        _prefetch_usenet_albums, songs, album, batch_subdir
+    )
 
     if batch_id is not None and playlist_name and state.playlist_batch_store:
         await asyncio.to_thread(
@@ -5833,6 +5929,7 @@ async def download_album_endpoint(
             return song_id, None
         return song_id, filename
 
+    await asyncio.to_thread(_prefetch_usenet_albums, songs, True, album_subdir)
     results = await asyncio.gather(*(_one(song) for song in songs))
     _cleanup_usenet_albums(songs)
     return {
