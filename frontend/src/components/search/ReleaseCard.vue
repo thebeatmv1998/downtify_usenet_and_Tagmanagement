@@ -32,6 +32,26 @@
         stroke-width="2.2"
       />
     </button>
+    <button
+      v-else-if="round && auth.isAdmin.value"
+      type="button"
+      class="tile-play absolute top-2.5 right-2.5 flex size-10 items-center justify-center rounded-full shadow-float transition-transform hover:scale-105"
+      :class="
+        discographyStarted
+          ? 'bg-surface text-accent'
+          : 'bg-accent text-on-accent'
+      "
+      :aria-label="t('search.downloadDiscography', { name: release.name })"
+      :title="t('search.downloadDiscography', { name: release.name })"
+      :disabled="discographyStarted"
+      @click.stop="downloadDiscography"
+    >
+      <AppIcon
+        :name="discographyStarted ? 'check' : 'download'"
+        :size="17"
+        stroke-width="2.2"
+      />
+    </button>
     <RouterLink
       :to="linkTo"
       class="flex min-w-0 flex-col gap-0.5"
@@ -52,6 +72,8 @@ import CoverArt from '../ui/CoverArt.vue'
 // Display only (a Deezer cover at its medium size); the download below
 // resolves the release's own link, never this image.
 import { deezerImage } from '/src/lib/deezerImage'
+import API from '/src/model/api'
+import { useAuth } from '/src/model/auth'
 import { useDownloadManager } from '/src/model/download'
 import { useUi } from '/src/model/ui'
 import { useI18n } from '/src/i18n'
@@ -64,9 +86,11 @@ const props = defineProps({
   to: { type: [String, Object], default: null },
 })
 const { t } = useI18n()
+const auth = useAuth()
 const dm = useDownloadManager()
 const ui = useUi()
 const queued = ref(false)
+const discographyStarted = ref(false)
 
 const linkTo = computed(
   () =>
@@ -101,6 +125,35 @@ async function download() {
     })
   } catch (err) {
     queued.value = false
+    ui.toast(err?.response?.data?.detail || t('toast.actionFailed'), {
+      kind: 'error',
+    })
+  }
+}
+
+// An artist search result: one click starts the whole discography as a
+// background artist watch. Only a YouTube Music result carries a channel
+// id; a Spotify/Deezer artist is resolved by name on the backend.
+async function downloadDiscography() {
+  if (discographyStarted.value) return
+  discographyStarted.value = true
+  try {
+    const isYoutube = /youtube\.com/.test(String(props.release.url || ''))
+    const res = await API.downloadArtistDiscography(
+      props.release.name,
+      isYoutube ? String(props.release.artist_id || '') : ''
+    )
+    ui.toast(
+      t(
+        res.data?.created
+          ? 'artist.discographyStarted'
+          : 'artist.discographyChecking',
+        { name: props.release.name }
+      ),
+      { kind: 'success' }
+    )
+  } catch (err) {
+    discographyStarted.value = false
     ui.toast(err?.response?.data?.detail || t('toast.actionFailed'), {
       kind: 'error',
     })

@@ -128,6 +128,7 @@ export default {
     songs: 'Titel',
     albums: 'Alben',
     artists: 'Künstler',
+    downloadDiscography: 'Komplette Diskografie von {name} herunterladen',
     artist: 'Künstler',
     showAllSongs: 'Alle {count} Titel anzeigen',
     recent: 'Letzte Suchen',

@@ -120,6 +120,7 @@ export default {
     songs: 'Şarkılar',
     albums: 'Albümler',
     artists: 'Sanatçılar',
+    downloadDiscography: 'Download full discography of {name}',
     artist: 'Sanatçı',
     showAllSongs: '{count} şarkının tümünü göster',
     recent: 'Son aramalar',

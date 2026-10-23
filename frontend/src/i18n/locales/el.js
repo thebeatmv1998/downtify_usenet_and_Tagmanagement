@@ -119,6 +119,7 @@ export default {
     songs: 'Τραγούδια',
     albums: 'Άλμπουμ',
     artists: 'Καλλιτέχνες',
+    downloadDiscography: 'Download full discography of {name}',
     artist: 'Καλλιτέχνης',
     showAllSongs: 'Εμφάνιση και των {count} τραγουδιών',
     recent: 'Πρόσφατες αναζητήσεις',

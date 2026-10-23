@@ -116,6 +116,7 @@ export default {
     songs: 'Dalok',
     albums: 'Albumok',
     artists: 'Előadók',
+    downloadDiscography: 'Download full discography of {name}',
     artist: 'Előadó',
     showAllSongs: 'Mind a(z) {count} dal megjelenítése',
     recent: 'Legutóbbi keresések',

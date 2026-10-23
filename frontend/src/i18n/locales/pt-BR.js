@@ -119,6 +119,7 @@ export default {
     songs: 'Músicas',
     albums: 'Álbuns',
     artists: 'Artistas',
+    downloadDiscography: 'Download full discography of {name}',
     artist: 'Artista',
     showAllSongs: 'Mostrar todas as {count} músicas',
     recent: 'Buscas recentes',

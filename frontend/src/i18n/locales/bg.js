@@ -116,6 +116,7 @@ export default {
     songs: 'Песни',
     albums: 'Албуми',
     artists: 'Изпълнители',
+    downloadDiscography: 'Download full discography of {name}',
     artist: 'Изпълнител',
     showAllSongs: 'Покажи всички {count} песни',
     recent: 'Скорошни търсения',

@@ -127,6 +127,7 @@ export default {
     songs: '곡',
     albums: '앨범',
     artists: '아티스트',
+    downloadDiscography: 'Download full discography of {name}',
     artist: '아티스트',
     showAllSongs: '곡 {count}개 모두 보기',
     recent: '최근 검색어',
