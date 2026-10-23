@@ -354,6 +354,7 @@ from . import (
     cover_sources,
     deezer,
     discogs,
+    download_control,
     duplicates,
     integration_check,
     library_import,
@@ -1244,6 +1245,7 @@ class AppState:
     # Fire-and-forget work owned by the process (import batches, monitor
     # loops, playlist refresh). Cancelled in :func:`shutdown_resources`.
     background_tasks: set[asyncio.Task[Any]] = set()
+    download_tasks: set[asyncio.Task[Any]] = set()
     # Library stores in /data/downtify_library.db (opened at startup).
     track_index: Optional[TrackIndex] = None
     navidrome_index: Optional[NavidromeIndex] = None
@@ -1294,6 +1296,17 @@ def spawn_task(coro: Any, *, name: Optional[str] = None) -> asyncio.Task[Any]:
     task = asyncio.create_task(coro, name=name)
     state.background_tasks.add(task)
     task.add_done_callback(state.background_tasks.discard)
+    return task
+
+
+def spawn_download_task(
+    coro: Any, *, name: Optional[str] = None
+) -> asyncio.Task[Any]:
+    """A batch task that Stop all downloads may cancel explicitly."""
+
+    task = spawn_task(coro, name=name)
+    state.download_tasks.add(task)
+    task.add_done_callback(state.download_tasks.discard)
     return task
 
 
@@ -3829,6 +3842,7 @@ async def _run_download(
     track_order: int = 0,
     refresh_playlists: bool = True,
     user_id: int = 0,
+    cancel_generation: Optional[int] = None,
 ) -> Optional[str]:
     """Run a single download to completion, updating jobs state and broadcasting WS events.
 
@@ -3856,6 +3870,14 @@ async def _run_download(
 
     if state.downloader is None:
         raise RuntimeError('Downloader not ready')
+
+    generation = (
+        cancel_generation
+        if cancel_generation is not None
+        else download_control.current_generation()
+    )
+    if download_control.is_cancelled(generation):
+        raise download_control.DownloadCancelled()
 
     loop = state.loop or asyncio.get_running_loop()
     job = state.download_jobs.get(song_id)
@@ -3896,6 +3918,7 @@ async def _run_download(
                 track_order=track_order,
                 refresh_playlists=refresh_playlists,
                 user_id=user_id,
+                cancel_generation=generation,
             )
     finally:
         if not lock.locked():
@@ -3915,6 +3938,7 @@ async def _run_download_locked(
     track_order: int = 0,
     refresh_playlists: bool = True,
     user_id: int = 0,
+    cancel_generation: Optional[int] = None,
 ) -> Optional[str]:
     """Single execution of a download job, for one owner of the lock.
 
@@ -3929,6 +3953,11 @@ async def _run_download_locked(
     sem = state.download_semaphore
     try:
         async with sem if sem is not None else contextlib.nullcontext():
+            if cancel_generation is not None and download_control.is_cancelled(
+                cancel_generation
+            ):
+                # Stop all was pressed while this job waited for a slot.
+                raise download_control.DownloadCancelled()
             if not getattr(state.downloader, 'overwrite_existing_files', True):
                 existing_hit = await asyncio.to_thread(
                     resolve_existing_download,
@@ -4008,7 +4037,10 @@ async def _run_download_locked(
             filename = await loop.run_in_executor(
                 DOWNLOAD_EXECUTOR,
                 lambda: state.downloader.download(
-                    song, progress, subdir=subdir
+                    song,
+                    progress,
+                    subdir=subdir,
+                    cancel_generation=cancel_generation,
                 ),
             )
             job['status'] = 'done'
@@ -4046,7 +4078,11 @@ async def _run_download_locked(
             if delay_seconds > 0:
                 await asyncio.sleep(delay_seconds)
     except Exception as exc:
-        if isinstance(exc, (NoAudioMatchError, TrackTooLongError)):
+        stopped = isinstance(exc, download_control.DownloadCancelled)
+        if stopped:
+            message = 'Stopped'
+            logger.info('Download stopped for {}', song_id)
+        elif isinstance(exc, (NoAudioMatchError, TrackTooLongError)):
             # An expected outcome, not a crash: no traceback in the log.
             logger.warning('{} ({})', exc, song_id)
             message = str(exc)
@@ -4055,15 +4091,18 @@ async def _run_download_locked(
             message = f'Error: {exc}'
         job['status'] = 'error'
         job['message'] = message
-        await state.connections.broadcast_job(
-            _job_users(job),
-            {
-                'song': song,
-                'progress': 0,
-                'message': message,
-                'status': 'error',
-            },
-        )
+        # A stop has already cleared the job from the server queue; a
+        # broadcast would put the row straight back into the client list.
+        if not stopped:
+            await state.connections.broadcast_job(
+                _job_users(job),
+                {
+                    'song': song,
+                    'progress': 0,
+                    'message': message,
+                    'status': 'error',
+                },
+            )
         raise
     return filename
 
@@ -4538,6 +4577,7 @@ def _prefetch_usenet_albums(
     songs: list[dict[str, Any]],
     album: bool,
     subdir: Optional[str],
+    cancel_generation: Optional[int] = None,
 ) -> None:
     """Fetch each album release once, before any per-song download.
 
@@ -4607,13 +4647,26 @@ def _prefetch_usenet_albums(
             ),
             group[0],
         )
+        generation = (
+            cancel_generation
+            if cancel_generation is not None
+            else download_control.current_generation()
+        )
+
+        def _cancelled() -> bool:
+            return download_control.is_cancelled(generation)
+
         try:
             download_from_usenet(
                 representative,
                 usenet,
                 album_only=True,
                 album_keys=keys,
+                cancelled=_cancelled,
             )
+        except download_control.DownloadCancelled:
+            logger.info('Usenet album prefetch stopped by Stop all downloads')
+            return
         except Exception:
             logger.opt(exception=True).warning(
                 'Usenet album prefetch failed for {!r}',
@@ -4720,12 +4773,18 @@ async def _process_batch(  # noqa: PLR0914
     )
     batch_subdir = playlist_subdir or album_subdir
 
+    generation = download_control.current_generation()
+
     # Album releases are fetched once, before the per-song downloads.
     # This is one download and deliberately bypasses the per-track
     # parallel limit; if no album release exists, songs fall back to
     # their normal per-track search.
     await asyncio.to_thread(
-        _prefetch_usenet_albums, songs, album, batch_subdir
+        _prefetch_usenet_albums,
+        songs,
+        album,
+        batch_subdir,
+        generation,
     )
 
     if batch_id is not None and playlist_name and state.playlist_batch_store:
@@ -4773,6 +4832,9 @@ async def _process_batch(  # noqa: PLR0914
     m3u_lock = asyncio.Lock()
 
     async def _bounded(index: int, song: dict[str, Any], song_id: str) -> None:
+        if download_control.is_cancelled(generation):
+            resolved[index] = None
+            return
         try:
             filename = await _run_download(
                 song,
@@ -4784,6 +4846,7 @@ async def _process_batch(  # noqa: PLR0914
                 track_order=int(song.get('downtify_track_order') or index),
                 refresh_playlists=False,
                 user_id=user_id,
+                cancel_generation=generation,
             )
         except Exception:
             filename = None
@@ -5661,7 +5724,7 @@ async def _submit_playlist_batch(
     # large playlist or CSV rebuild the queue once per track.
     await state.connections.broadcast({'type': 'queue_reload'})
 
-    task = spawn_task(
+    task = spawn_download_task(
         _process_batch(
             valid_songs,
             job_ids,
@@ -5820,7 +5883,7 @@ async def download_csv_endpoint(request: Request) -> dict[str, Any]:
     # in download_jobs; clients fetch them with GET /api/queue.
     await state.connections.broadcast({'type': 'queue_reload'})
 
-    task = spawn_task(
+    task = spawn_download_task(
         _process_batch(
             songs,
             job_ids,
@@ -5901,6 +5964,7 @@ async def download_album_endpoint(
     )
 
     user_id = request_user_id(request)
+    generation = download_control.current_generation()
     album_subdir = (
         None
         if _output_template_has_folders()
@@ -5923,13 +5987,20 @@ async def download_album_endpoint(
                 subdir=album_subdir,
                 delay_seconds=delay_seconds,
                 user_id=user_id,
+                cancel_generation=generation,
             )
         except Exception:
             logger.exception('Album track download failed for {}', song_id)
             return song_id, None
         return song_id, filename
 
-    await asyncio.to_thread(_prefetch_usenet_albums, songs, True, album_subdir)
+    await asyncio.to_thread(
+        _prefetch_usenet_albums,
+        songs,
+        True,
+        album_subdir,
+        generation,
+    )
     results = await asyncio.gather(*(_one(song) for song in songs))
     _cleanup_usenet_albums(songs)
     return {
@@ -7760,6 +7831,50 @@ def get_queue(request: Request) -> list[dict[str, Any]]:
         row['user_ids'] = sorted(_job_users(job))
         rows.append(row)
     return rows
+
+
+@router.post('/api/queue/stop')
+async def stop_all_downloads_endpoint() -> dict:
+    """Stop every download, visible or not, and clear the queue.
+
+    In-flight worker threads check the bumped download generation and
+    abort at their next safe point; batch tasks are cancelled explicitly.
+    Jobs started after this return use the new generation and run normally.
+    """
+
+    generation = download_control.stop_all()
+    tasks = [task for task in state.download_tasks if not task.done()]
+    for task in tasks:
+        task.cancel()
+    active = sum(
+        1
+        for job in state.download_jobs.values()
+        if job.get('status') in {'queued', 'downloading'}
+    )
+    state.download_jobs.clear()
+    batches = 0
+    if state.playlist_batch_store is not None:
+        open_batches = await asyncio.to_thread(
+            state.playlist_batch_store.list_open_batches
+        )
+        for batch in open_batches:
+            if batch.get('status') != 'in_progress':
+                continue
+            await asyncio.to_thread(
+                state.playlist_batch_store.finish_batch,
+                int(batch['id']),
+                int(batch.get('succeeded_count') or 0),
+                int(batch.get('failed_count') or 0),
+                status='incomplete',
+            )
+            batches += 1
+    await state.connections.broadcast({'type': 'queue_reload'})
+    return {
+        'stopped': active,
+        'tasks': len(tasks),
+        'batches': batches,
+        'generation': generation,
+    }
 
 
 @router.delete('/api/queue')

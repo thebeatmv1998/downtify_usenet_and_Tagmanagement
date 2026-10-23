@@ -1044,6 +1044,7 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_m('POST'), r'^/api/playlist/m3u$', ADMIN),
         (_m('POST', 'DELETE'), r'^/api/playlists/', ADMIN),
         (_m('DELETE'), r'^/api/queue', ADMIN),
+        (_m('POST'), r'^/api/queue/stop$', ADMIN),
         (_m('POST'), r'^/api/likes/clear$', ADMIN),
         (_m('DELETE'), r'^/api/discover/listens$', ADMIN),
         (_m('POST', 'PATCH', 'DELETE'), r'^/api/podcasts/', ADMIN),

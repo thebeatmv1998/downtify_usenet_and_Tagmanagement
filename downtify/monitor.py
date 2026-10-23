@@ -14,6 +14,7 @@ from loguru import logger
 
 from . import m3u, providers, spotify, usenet_provider
 from .cover_cache import CoverArtCache
+from .download_control import DownloadCancelled
 from .downloader import (
     DOWNLOAD_EXECUTOR,
     Downloader,
@@ -1008,6 +1009,9 @@ async def check_playlist(
                 )
             if delay_seconds > 0 and index != len(new_tracks) - 1:
                 await asyncio.sleep(delay_seconds)
+        except DownloadCancelled:
+            logger.info('Playlist sweep stopped by Stop all downloads')
+            break
         except Exception:
             logger.exception('Failed to auto-download track {}', track_id)
 
@@ -1503,6 +1507,9 @@ async def check_artist(  # noqa: PLR0914
                     )
                 if delay_seconds > 0:
                     await asyncio.sleep(delay_seconds)
+            except DownloadCancelled:
+                logger.info('Artist sweep stopped by Stop all downloads')
+                return downloaded
             except Exception:
                 complete = False
                 logger.exception(

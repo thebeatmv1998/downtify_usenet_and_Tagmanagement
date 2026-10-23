@@ -370,6 +370,42 @@ def test_wait_for_sabnzbd_stops_when_deadline_passed(tmp_path, monkeypatch):
     )
 
 
+def test_cancel_removes_the_sabnzbd_job_it_queued(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        usenet, '_search_indexers', lambda indexers, query: [_release()]
+    )
+    _mock_sabnzbd(
+        monkeypatch,
+        {'nzo_id': 'nzo1', 'status': 'Completed', 'storage': ''},
+        queued=[],
+    )
+    cancelled: list[str] = []
+
+    def _wait(*args, **kwargs):
+        raise usenet.DownloadCancelled()
+
+    monkeypatch.setattr(usenet, '_wait_for_sabnzbd', _wait)
+    monkeypatch.setattr(
+        SabnzbdClient, 'cancel_job', lambda self, nzo: cancelled.append(nzo)
+    )
+
+    with pytest.raises(usenet.DownloadCancelled):
+        download_from_usenet(dict(_SONG), _settings(tmp_path))
+    assert cancelled == ['nzo1']
+
+
+def test_sabnzbd_cancel_job_clears_queue_and_history(tmp_path):
+    client = SabnzbdClient(_settings(tmp_path))
+    calls: list[dict[str, Any]] = []
+    client._api = lambda params: calls.append(params) or {}  # type: ignore[method-assign]
+
+    client.cancel_job('nzo1')
+
+    assert [call['mode'] for call in calls] == ['queue', 'history']
+    assert all(call['name'] == 'delete' for call in calls)
+    assert all(call['value'] == 'nzo1' for call in calls)
+
+
 def test_newznab_client_falls_back_to_prowlarr_endpoint(monkeypatch):
     calls: list[str] = []
 

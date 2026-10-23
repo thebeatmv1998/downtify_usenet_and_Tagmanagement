@@ -14,6 +14,7 @@ from urllib.parse import quote
 import httpx
 from loguru import logger
 
+from .download_control import DownloadCancelled, sleep_interruptible
 from .library_metadata import read_audio_metadata
 from .track_tag_match import (
     MIX_VARIANT_REMOTE_SKIP_KEYWORDS,
@@ -28,6 +29,12 @@ from .track_tag_match import (
 )
 
 ProgressCallback = Callable[[float, str], None]
+
+
+def _check_cancel(cancelled: Optional[Callable[[], bool]]) -> None:
+    if cancelled is not None and cancelled():
+        raise DownloadCancelled()
+
 
 _SLSKD_SEM: Optional[threading.Semaphore] = None
 _SLSKD_SEM_LIMIT = 0
@@ -237,6 +244,23 @@ class SlskdClient:
     def delete_search(self, search_id: str) -> None:
         try:
             self._request('DELETE', f'/api/v0/searches/{search_id}')
+        except Exception:
+            pass
+
+    def cancel_transfer(self, username: str, filename: str) -> None:
+        """Cancel a queued/running download we started (Stop all)."""
+
+        if not username or not filename:
+            return
+        row = self.find_transfer(username, filename)
+        transfer_id = (row or {}).get('id')
+        if transfer_id in {None, ''}:
+            return
+        try:
+            self._request(
+                'DELETE',
+                f'/api/v0/transfers/downloads/{quote(username)}/{transfer_id}',
+            )
         except Exception:
             pass
 
@@ -1124,6 +1148,7 @@ def _wait_for_slskd_file(
     expected_size: int = 0,
     progress_cb: Optional[ProgressCallback] = None,
     deadline: Optional[float] = None,
+    cancelled: Optional[Callable[[], bool]] = None,
 ) -> Optional[Path]:
     """Wait for slskd to finish, then return the file path on disk (if found)."""
     interval = _int_setting(
@@ -1145,6 +1170,7 @@ def _wait_for_slskd_file(
     last_reported_pct = -1.0
 
     for attempt in range(max(1, attempts)):
+        _check_cancel(cancelled)
         if deadline is not None and _past_deadline(deadline):
             logger.info(
                 'slskd: download timeout while waiting for file title={!r} '
@@ -1217,7 +1243,8 @@ def _wait_for_slskd_file(
                 last_reported_pct = pct
                 progress_cb(pct, message, 'slskd')
 
-        time.sleep(max(1, interval))
+        if sleep_interruptible(max(1, interval), cancelled):
+            raise DownloadCancelled()
 
     return _find_on_disk_for_song(
         roots,
@@ -1232,9 +1259,12 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
     song: dict[str, Any],
     settings: dict[str, Any],
     progress_cb: Optional[ProgressCallback] = None,
+    *,
+    cancelled: Optional[Callable[[], bool]] = None,
 ) -> Optional[Path]:
     if not bool(settings.get('enabled')):
         return None
+    _check_cancel(cancelled)
     client = SlskdClient(settings)
     if not client.configured():
         logger.info(
@@ -1296,6 +1326,7 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
         min_score = _match_min_score(settings)
 
         for query in queries:
+            _check_cancel(cancelled)
             if _past_deadline(deadline):
                 logger.info(
                     'slskd: download timeout during search title={!r}',
@@ -1433,6 +1464,7 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
             roots.append(output_dir)
 
         for attempt_idx, file_row in enumerate(files, start=1):
+            _check_cancel(cancelled)
             if _past_deadline(deadline):
                 logger.info(
                     'slskd: download timeout before trying candidate {} title={!r}',
@@ -1461,17 +1493,23 @@ def download_from_slskd(  # noqa: PLR0914  # search, rank, enqueue, poll, finali
 
             report(36.0, f'queued ({attempt_idx}/{len(files)})')
 
-            found = _wait_for_slskd_file(
-                client,
-                song,
-                username,
-                filename,
-                settings,
-                roots,
-                expected_size=queued_size,
-                progress_cb=progress_cb,
-                deadline=deadline,
-            )
+            try:
+                found = _wait_for_slskd_file(
+                    client,
+                    song,
+                    username,
+                    filename,
+                    settings,
+                    roots,
+                    expected_size=queued_size,
+                    progress_cb=progress_cb,
+                    deadline=deadline,
+                    cancelled=cancelled,
+                )
+            except DownloadCancelled:
+                # Drop the transfer we queued, so slskd stops pulling it.
+                client.cancel_transfer(username, filename)
+                raise
             if found is None:
                 found = _resolve_downloaded_file(
                     roots,

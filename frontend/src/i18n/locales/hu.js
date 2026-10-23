@@ -254,6 +254,9 @@ export default {
     retryFailed: 'Sikertelenek újra ({count})',
     clearDone: 'Készek törlése ({count})',
     clearAll: 'Sor ürítése',
+    stopAll: '?sszes let?lt?s le?ll?t?sa',
+    stopped: '{count} let?lt?s le?ll?tva.',
+    stopFailed: 'Nem siker?lt le?ll?tani a let?lt?seket.',
     emptyTitle: 'A sor üres',
     emptyBody:
       'Keress zenét vagy illessz be egy linket — a letöltések itt jelennek meg.',
@@ -1651,6 +1654,9 @@ export default {
     clearQueueTitle: 'Üríted a sort?',
     clearQueueBody:
       'A várakozó és kész elemek lekerülnek a listáról. A letöltött fájlok megmaradnak.',
+    stopAllTitle: 'Le?ll?tod az ?sszes let?lt?st?',
+    stopAllBody:
+      'Minden fut? ?s v?rakoz? let?lt?s le?ll, a l?thatatlan k?tegelt feladatokkal egy?tt. A m?r let?lt?tt f?jlok megmaradnak.',
     stopWatchingTitle: 'Leállítod „{name}” figyelését?',
     stopWatchingBody: 'A letöltött számok a könyvtáradban maradnak.',
     removeEpisodeTitle: 'Eltávolítod „{name}” letöltését?',

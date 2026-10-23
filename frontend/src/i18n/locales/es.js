@@ -254,6 +254,9 @@ export default {
     retryFailed: 'Reintentar fallidas ({count})',
     clearDone: 'Limpiar completadas ({count})',
     clearAll: 'Vaciar cola',
+    stopAll: 'Detener todas las descargas',
+    stopped: '{count} descarga(s) detenida(s).',
+    stopFailed: 'No se pudieron detener las descargas.',
     emptyTitle: 'La cola está vacía',
     emptyBody: 'Busca música o pega un enlace — las descargas aparecen aquí.',
     emptyAction: 'Buscar música',
@@ -1653,6 +1656,9 @@ export default {
     clearQueueTitle: '¿Vaciar la cola?',
     clearQueueBody:
       'Los elementos en espera y completados se quitan de la lista. Los archivos descargados se conservan.',
+    stopAllTitle: '?Detener todas las descargas?',
+    stopAllBody:
+      'Se detienen todas las descargas en curso y en cola, incluidas las tareas por lotes invisibles. Los archivos ya descargados se conservan.',
     stopWatchingTitle: '¿Dejar de vigilar «{name}»?',
     stopWatchingBody: 'Las canciones descargadas siguen en tu biblioteca.',
     removeEpisodeTitle: '¿Quitar la descarga de «{name}»?',

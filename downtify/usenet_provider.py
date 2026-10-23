@@ -31,6 +31,7 @@ from typing import Any, Callable, Optional
 import httpx
 from loguru import logger
 
+from .download_control import DownloadCancelled, sleep_interruptible
 from .library_metadata import read_audio_metadata
 from .slskd_provider import (
     _alnum_only,
@@ -125,6 +126,11 @@ def album_cache_key(song: dict[str, Any]) -> str:
     """Public form of :func:`_album_cache_key` for batch cleanup."""
 
     return _album_cache_key(song)
+
+
+def _check_cancel(cancelled: Optional[Callable[[], bool]]) -> None:
+    if cancelled is not None and cancelled():
+        raise DownloadCancelled()
 
 
 def _prefer_albums(song: dict[str, Any], settings: dict[str, Any]) -> bool:
@@ -985,6 +991,39 @@ class SabnzbdClient:
                 'usenet: history cleanup failed nzo={} err={}', nzo_id, exc
             )
 
+    def cancel_job(self, nzo_id: str) -> None:
+        """Remove a job we queued from SABnzbd, queue or history.
+
+        Used by Stop all downloads. ``abort`` stops the transfer itself;
+        if it already finished, the history entry and its files go.
+        Only the job IDs we submitted are ever touched.
+        """
+
+        if not nzo_id:
+            return
+        try:
+            self._api({
+                'mode': 'queue',
+                'name': 'delete',
+                'value': nzo_id,
+                'del_files': '1',
+            })
+        except Exception as exc:
+            logger.info(
+                'usenet: queue cancel failed nzo={} err={}', nzo_id, exc
+            )
+        try:
+            self._api({
+                'mode': 'history',
+                'name': 'delete',
+                'value': nzo_id,
+                'del_files': '1',
+            })
+        except Exception as exc:
+            logger.info(
+                'usenet: history cancel failed nzo={} err={}', nzo_id, exc
+            )
+
     def delete_all_history(self) -> int:
         """Delete every history entry and its files (manual cleanup)."""
         data = self._api({'mode': 'history'})
@@ -1227,6 +1266,7 @@ def _wait_for_sabnzbd(
     *,
     progress_cb: Optional[ProgressCallback] = None,
     deadline: float = 0.0,
+    cancelled: Optional[Callable[[], bool]] = None,
 ) -> Optional[dict[str, Any]]:
     """Poll queue/history until the job completes; returns the history slot."""
     interval = _int_setting(
@@ -1236,6 +1276,7 @@ def _wait_for_sabnzbd(
         settings, 'poll_max_attempts', 180, minimum=1, maximum=1000
     )
     for attempt in range(max(1, attempts)):
+        _check_cancel(cancelled)
         if _past_deadline(deadline):
             logger.info('usenet: download timed out nzo={}', nzo_id)
             return None
@@ -1269,7 +1310,8 @@ def _wait_for_sabnzbd(
                 logger.opt(exception=True).debug(
                     'usenet progress callback error'
                 )
-        time.sleep(max(1, interval))
+        if sleep_interruptible(max(1, interval), cancelled):
+            raise DownloadCancelled()
     logger.info('usenet: download timed out nzo={}', nzo_id)
     return None
 
@@ -1308,6 +1350,7 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
     *,
     album_only: bool = False,
     album_keys: Optional[list[str]] = None,
+    cancelled: Optional[Callable[[], bool]] = None,
 ) -> Optional[Path]:
     """Search Newznab indexers and download the best release via SABnzbd.
 
@@ -1327,6 +1370,7 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
         return None
     if album_only:
         song = {**song, '_usenet_prefer_album': True}
+    _check_cancel(cancelled)
 
     timeout = _int_setting(
         settings, 'timeout_seconds', 20, minimum=5, maximum=120
@@ -1420,6 +1464,7 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
         ranked: list[dict[str, Any]] = []
         seen_urls: set[str] = set()
         for query in queries:
+            _check_cancel(cancelled)
             if _past_deadline(deadline):
                 logger.info(
                     'usenet: search timed out title={!r}', song.get('name')
@@ -1467,6 +1512,7 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
         report(36.0, f'queued ({len(ranked)} candidates)')
 
         for attempt_idx, release in enumerate(ranked, start=1):
+            _check_cancel(cancelled)
             if _past_deadline(deadline):
                 logger.info(
                     'usenet: download timed out title={!r} tried={}/{}',
@@ -1588,13 +1634,21 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
                 if nzo_id is None:
                     continue
 
-                slot = _wait_for_sabnzbd(
-                    client,
-                    nzo_id,
-                    settings,
-                    progress_cb=progress_cb,
-                    deadline=deadline,
-                )
+                try:
+                    slot = _wait_for_sabnzbd(
+                        client,
+                        nzo_id,
+                        settings,
+                        progress_cb=progress_cb,
+                        deadline=deadline,
+                        cancelled=cancelled,
+                    )
+                except DownloadCancelled:
+                    # Stop the SABnzbd job we just submitted instead of
+                    # leaving it to download in the background.
+                    client.cancel_job(nzo_id)
+                    raise
+                _check_cancel(cancelled)
                 if slot is None:
                     continue
 

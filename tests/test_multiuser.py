@@ -431,7 +431,7 @@ def _slow_downloader(tmp_path, entered, release, calls):
     downloads = tmp_path / 'downloads'
     downloads.mkdir()
 
-    def slow_download(song, progress_cb, subdir=None):
+    def slow_download(song, progress_cb, subdir=None, **kwargs):
         calls.append(song.get('song_id'))
         entered.set()
         assert release.wait(timeout=10)

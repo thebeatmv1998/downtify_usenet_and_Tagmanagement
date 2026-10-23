@@ -281,6 +281,9 @@ export default {
     retryFailed: 'Fehlgeschlagene erneut versuchen ({count})',
     clearDone: 'Abgeschlossene entfernen ({count})',
     clearAll: 'Warteschlange leeren',
+    stopAll: 'Alle Downloads stoppen',
+    stopped: '{count} Download(s) gestoppt.',
+    stopFailed: 'Die Downloads konnten nicht gestoppt werden.',
     emptyTitle: 'Die Warteschlange ist leer',
     emptyBody:
       'Suche nach Musik oder füge einen Link ein - Downloads erscheinen hier.',
@@ -1696,6 +1699,9 @@ export default {
     clearQueueTitle: 'Warteschlange leeren?',
     clearQueueBody:
       'Wartende und abgeschlossene Elemente werden aus der Liste entfernt. Heruntergeladene Dateien bleiben erhalten.',
+    stopAllTitle: 'Alle Downloads stoppen?',
+    stopAllBody:
+      'Jeder laufende und wartende Download wird gestoppt, auch unsichtbare Batch-Jobs. Bereits geladene Dateien bleiben erhalten.',
     stopWatchingTitle: 'Überwachung von „{name}“ beenden?',
     stopWatchingBody: 'Heruntergeladene Titel bleiben in deiner Bibliothek.',
     removeEpisodeTitle: 'Download von „{name}“ entfernen?',

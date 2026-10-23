@@ -250,6 +250,9 @@ export default {
     retryFailed: 'Retry failed ({count})',
     clearDone: 'Clear done ({count})',
     clearAll: 'Clear queue',
+    stopAll: 'Stop all downloads',
+    stopped: '{count} download(s) stopped.',
+    stopFailed: 'Could not stop the downloads.',
     emptyTitle: 'Nothing in the queue',
     emptyBody: 'Search for music or paste a link — downloads show up here.',
     emptyAction: 'Find music',
@@ -1615,6 +1618,9 @@ export default {
     clearQueueTitle: 'Clear the queue?',
     clearQueueBody:
       'Waiting and finished items are removed from the list. Downloaded files stay.',
+    stopAllTitle: 'Stop all downloads?',
+    stopAllBody:
+      'Every running and queued download is stopped, including invisible batch jobs. Files already downloaded stay.',
     stopWatchingTitle: 'Stop watching “{name}”?',
     stopWatchingBody: 'Downloaded tracks stay in your library.',
     removeEpisodeTitle: 'Remove the download of “{name}”?',

@@ -27,7 +27,7 @@ class _StubDownloader:
     def __init__(self, *, fail=False):
         self.fail = fail
 
-    def download(self, song, progress_cb, subdir=None):
+    def download(self, song, progress_cb, subdir=None, **kwargs):
         if self.fail:
             raise RuntimeError('network error')
         return f'{song["song_id"]}.mp3'
@@ -231,7 +231,7 @@ def test_check_playlist_skips_delay_after_last_track(monkeypatch):
         organize_by_album = False
 
         @staticmethod
-        def download(song, cb, subdir=None):
+        def download(song, cb, subdir=None, **kwargs):
             return f'{song["song_id"]}.mp3'
 
     sleeps = []
@@ -283,7 +283,7 @@ def test_check_playlist_no_delay_when_setting_is_zero(monkeypatch):
         organize_by_album = False
 
         @staticmethod
-        def download(song, cb, subdir=None):
+        def download(song, cb, subdir=None, **kwargs):
             return f'{song["song_id"]}.mp3'
 
     sleeps = []
@@ -332,7 +332,7 @@ class _OrderedM3uDownloader:
         self.events = events
         self.fail_song_ids = fail_song_ids
 
-    def download(self, song, cb, subdir=None):
+    def download(self, song, cb, subdir=None, **kwargs):
         if song['song_id'] in self.fail_song_ids:
             self.events.append(f'fail:{song["song_id"]}')
             raise RuntimeError('boom')

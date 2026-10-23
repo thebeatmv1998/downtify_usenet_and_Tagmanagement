@@ -262,6 +262,9 @@ export default {
     retryFailed: 'Relancer les échecs ({count})',
     clearDone: 'Retirer les terminés ({count})',
     clearAll: 'Vider la file',
+    stopAll: 'Arr?ter tous les t?l?chargements',
+    stopped: '{count} t?l?chargement(s) arr?t?(s).',
+    stopFailed: "Impossible d'arr?ter les t?l?chargements.",
     emptyTitle: 'La file est vide',
     emptyBody:
       'Cherchez de la musique ou collez un lien — les téléchargements apparaissent ici.',
@@ -1667,6 +1670,9 @@ export default {
     clearQueueTitle: 'Vider la file ?',
     clearQueueBody:
       'Les éléments en attente et terminés sont retirés de la liste. Les fichiers téléchargés restent.',
+    stopAllTitle: 'Arr?ter tous les t?l?chargements ?',
+    stopAllBody:
+      'Tous les t?l?chargements en cours et en attente sont arr?t?s, y compris les t?ches par lots invisibles. Les fichiers d?j? t?l?charg?s sont conserv?s.',
     stopWatchingTitle: 'Arrêter de surveiller « {name} » ?',
     stopWatchingBody: 'Les titres téléchargés restent dans votre bibliothèque.',
     removeEpisodeTitle: 'Retirer le téléchargement de « {name} » ?',

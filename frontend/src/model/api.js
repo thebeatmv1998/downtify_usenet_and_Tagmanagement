@@ -817,6 +817,10 @@ function clearQueue() {
   return API.delete('/api/queue')
 }
 
+function stopAllDownloads() {
+  return API.post('/api/queue/stop')
+}
+
 function clearCompletedQueue() {
   return API.delete('/api/queue/completed')
 }
@@ -1020,6 +1024,7 @@ export default {
   getQueue,
   removeQueueItem,
   clearQueue,
+  stopAllDownloads,
   clearCompletedQueue,
   getSettings,
   suggestDirs,

@@ -54,7 +54,7 @@ def test_run_download_uses_the_dedicated_executor(monkeypatch):
 
     class _Downloader:
         @staticmethod
-        def download(song, progress, subdir=None):
+        def download(song, progress, subdir=None, **kwargs):
             seen.append(threading.current_thread().name)
             return 'Artist - Song.mp3'
 
@@ -157,7 +157,7 @@ def test_run_download_announces_downloading_only_inside_the_slot(
         overwrite_existing_files = True
 
         @staticmethod
-        def download(song, progress, subdir=None):
+        def download(song, progress, subdir=None, **kwargs):
             entered.set()
             if not release.wait(timeout=5):
                 raise RuntimeError('download was not released')

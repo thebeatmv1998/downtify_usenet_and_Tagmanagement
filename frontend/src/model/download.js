@@ -434,6 +434,13 @@ export function useDownloadManager() {
     removeItems(() => true)
   }
 
+  /** Stop every server-side download, including invisible batches. */
+  async function stopAll() {
+    const res = await API.stopAllDownloads()
+    removeItems(() => true)
+    return res.data || {}
+  }
+
   async function clearCompleted() {
     await API.clearCompletedQueue()
     removeItems((item) => item.isDownloaded())
@@ -463,6 +470,7 @@ export function useDownloadManager() {
     retryAllFailed,
     remove,
     clearAll,
+    stopAll,
     clearCompleted,
     loading,
   }

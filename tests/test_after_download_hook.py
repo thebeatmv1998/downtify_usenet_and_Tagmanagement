@@ -34,7 +34,7 @@ def downloader(tmp_path, monkeypatch):
     monkeypatch.setattr(
         Downloader,
         '_fetch_and_tag',
-        lambda self, *a: 'AC-DC - Thunderstruck.mp3',
+        lambda self, *a, **k: 'AC-DC - Thunderstruck.mp3',
     )
     return dl
 
@@ -128,7 +128,7 @@ def test_a_new_file_found_under_the_lock_calls_the_hook(tmp_path, monkeypatch):
         Downloader, 'find_existing_download', lambda self, song, subdir: None
     )
     monkeypatch.setattr(
-        Downloader, '_fetch_and_tag', lambda self, *a: 'new.mp3'
+        Downloader, '_fetch_and_tag', lambda self, *a, **k: 'new.mp3'
     )
     heard: list[str] = []
     dl.on_downloaded = lambda song, filename: heard.append(filename)
@@ -149,13 +149,20 @@ def test_a_file_a_provider_downloaded_calls_the_hook(tmp_path, monkeypatch):
     monkeypatch.setattr(
         Downloader,
         '_resolve_source',
-        lambda self, song, cb: (None, None, 'slskd', Path('x.flac')),
+        lambda self, song, cb, cancelled=None: (
+            None,
+            None,
+            'slskd',
+            Path('x.flac'),
+        ),
     )
     monkeypatch.setattr(
         downloader_mod, 'enrich_from_match', lambda song, match: song
     )
     monkeypatch.setattr(
-        Downloader, '_finalize_local_source', lambda self, *a: 'slskd/x.flac'
+        Downloader,
+        '_finalize_local_source',
+        lambda self, *a, **k: 'slskd/x.flac',
     )
     heard: list[str] = []
     dl.on_downloaded = lambda song, filename: heard.append(filename)
@@ -164,7 +171,7 @@ def test_a_file_a_provider_downloaded_calls_the_hook(tmp_path, monkeypatch):
 
 
 def test_a_download_that_fails_never_calls_the_hook(downloader, monkeypatch):
-    def fail(self, *a):
+    def fail(self, *a, **k):
         raise RuntimeError('yt-dlp said no')
 
     monkeypatch.setattr(Downloader, '_fetch_and_tag', fail)
@@ -298,7 +305,9 @@ def test_the_whole_way_a_finished_download_seeds_its_artist(
     monkeypatch.setattr(
         downloader_mod, 'enrich_from_match', lambda song, match: song
     )
-    monkeypatch.setattr(Downloader, '_fetch_and_tag', lambda self, *a: 'f.mp3')
+    monkeypatch.setattr(
+        Downloader, '_fetch_and_tag', lambda self, *a, **k: 'f.mp3'
+    )
     dl.on_downloaded = api.enrich_artist_after_download
 
     dl.download(SONG)

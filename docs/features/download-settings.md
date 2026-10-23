@@ -89,6 +89,10 @@ This applies to playlist, album and batch downloads, CSV [library imports](libra
 
 Combined with a lower **Parallel downloads** value, this is the main tool for avoiding YouTube rate-limiting when downloading a large playlist or an imported library unattended.
 
+## Stopping every download
+
+**Queue → Stop all downloads** (admins) aborts every job the server knows about, including batches that never appear as a row in the queue because the page was closed or another account started them. Tracks that are mid-transfer stop at the next checkpoint, waiting tracks are dropped, and unfinished playlist batches are marked incomplete. A Usenet job already handed to SABnzbd is removed from its queue, and an slskd transfer is cancelled, so neither keeps downloading in the background. Files that finished before the stop stay exactly where they are, and downloads started afterwards run normally — no restart needed.
+
 ## Pause between sync lookups
 
 The same idea, for **[Existing music folders](external-library.md)** rather than downloads. Sync looks up lyrics, missing covers and genre in batches of **[Parallel downloads](#parallel-downloads)** tracks at a time, then waits this many seconds before the next batch. Default **0** (lookups keep running concurrently, still capped by Parallel downloads). Use a few seconds on a large collection so LRCLIB, cover sources and iTunes aren't hit all at once.

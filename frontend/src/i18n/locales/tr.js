@@ -255,6 +255,9 @@ export default {
     retryFailed: 'Başarısızları yeniden dene ({count})',
     clearDone: 'Tamamlananları temizle ({count})',
     clearAll: 'Kuyruğu temizle',
+    stopAll: 'T?m indirmeleri durdur',
+    stopped: '{count} indirme durduruldu.',
+    stopFailed: '?ndirmeler durdurulamad?.',
     emptyTitle: 'Kuyrukta bir şey yok',
     emptyBody:
       'Müzik ara ya da bir bağlantı yapıştır — indirmeler burada görünür.',
@@ -1643,6 +1646,9 @@ export default {
     clearQueueTitle: 'Kuyruk temizlensin mi?',
     clearQueueBody:
       'Bekleyen ve tamamlanan öğeler listeden kaldırılır. İndirilen dosyalar kalır.',
+    stopAllTitle: 'T?m indirmeler durdurulsun mu?',
+    stopAllBody:
+      '?al??an ve s?rada bekleyen t?m indirmeler, g?r?nmeyen toplu i?ler dahil durdurulur. Zaten indirilen dosyalar kal?r.',
     stopWatchingTitle: '“{name}” izlemesi bırakılsın mı?',
     stopWatchingBody: 'İndirilen parçalar kitaplığında kalır.',
     removeEpisodeTitle: '"{name}" indirmesi kaldırılsın mı?',

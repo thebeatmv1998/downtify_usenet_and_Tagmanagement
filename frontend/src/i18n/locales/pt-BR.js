@@ -253,6 +253,9 @@ export default {
     retryFailed: 'Repetir falhas ({count})',
     clearDone: 'Limpar concluídos ({count})',
     clearAll: 'Limpar fila',
+    stopAll: 'Parar todos os downloads',
+    stopped: '{count} download(s) interrompido(s).',
+    stopFailed: 'N?o foi poss?vel parar os downloads.',
     emptyTitle: 'Nada na fila',
     emptyBody: 'Busque músicas ou cole um link — os downloads aparecem aqui.',
     emptyAction: 'Encontrar músicas',
@@ -1642,6 +1645,9 @@ export default {
     clearQueueTitle: 'Limpar a fila?',
     clearQueueBody:
       'Itens aguardando e concluídos saem da lista. Os arquivos baixados permanecem.',
+    stopAllTitle: 'Parar todos os downloads?',
+    stopAllBody:
+      'Todos os downloads em andamento e na fila s?o interrompidos, incluindo tarefas em lote invis?veis. Os arquivos j? baixados permanecem.',
     stopWatchingTitle: 'Parar de monitorar “{name}”?',
     stopWatchingBody: 'As faixas baixadas continuam na biblioteca.',
     removeEpisodeTitle: 'Remover o download de "{name}"?',

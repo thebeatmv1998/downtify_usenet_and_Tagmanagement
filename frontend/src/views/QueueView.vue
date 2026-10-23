@@ -20,6 +20,16 @@
         {{ t('queue.clearDone', { count: counts.done }) }}
       </UiButton>
       <UiButton
+        v-if="auth.isAdmin.value"
+        variant="danger"
+        icon="stop"
+        :loading="stopping"
+        :disabled="stopping"
+        @click="stopAll"
+      >
+        <span class="max-sm:sr-only">{{ t('queue.stopAll') }}</span>
+      </UiButton>
+      <UiButton
         v-if="queue.length"
         variant="danger"
         icon="trash"
@@ -154,6 +164,7 @@ import {
   useProgressTracker,
   syncQueueFromServer,
 } from '/src/model/download'
+import { useAuth } from '/src/model/auth'
 import { useLibrary } from '/src/model/library'
 import { useUi } from '/src/model/ui'
 import { queueRowEstimate } from '/src/lib/queueList'
@@ -166,6 +177,8 @@ const router = useRouter()
 const dm = useDownloadManager()
 const tracker = useProgressTracker()
 const library = useLibrary()
+const auth = useAuth()
+const stopping = ref(false)
 const ui = useUi()
 const listRoot = ref(null)
 const scrollMargin = ref(0)
@@ -309,5 +322,30 @@ async function clearAll() {
     danger: true,
   })
   if (ok) await dm.clearAll()
+}
+
+async function stopAll() {
+  const ok = await ui.confirm({
+    title: t('confirm.stopAllTitle'),
+    body: t('confirm.stopAllBody'),
+    confirmLabel: t('queue.stopAll'),
+    danger: true,
+  })
+  if (!ok) return
+  stopping.value = true
+  try {
+    const data = await dm.stopAll()
+    ui.toast(t('queue.stopped', { count: data.stopped || 0 }), {
+      kind: 'success',
+    })
+    library.refreshSoon(500)
+  } catch (err) {
+    ui.toast(
+      err?.response?.data?.detail || t('queue.stopFailed'),
+      { kind: 'error' }
+    )
+  } finally {
+    stopping.value = false
+  }
 }
 </script>

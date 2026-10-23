@@ -65,6 +65,7 @@ export const STROKE = {
   'check-circle':
     '<circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.8 2.7L16 9.8"/>',
   x: '<path d="M6 6l12 12M18 6 6 18"/>',
+  stop: '<rect x="6" y="6" width="12" height="12" rx="2"/>',
   retry:
     '<path d="M3 12a9 9 0 0 1 15.5-6.2L21 8M21 3v5h-5M21 12a9 9 0 0 1-15.5 6.2L3 16M3 21v-5h5"/>',
   link: '<path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/>',

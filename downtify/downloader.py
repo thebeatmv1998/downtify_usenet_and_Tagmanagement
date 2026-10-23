@@ -34,7 +34,7 @@ from mutagen.oggopus import OggOpus
 from mutagen.oggvorbis import OggVorbis
 from yt_dlp.postprocessor.ffmpeg import FFmpegExtractAudioPP
 
-from . import cover_sources
+from . import cover_sources, download_control
 from . import lyrics as lyrics_mod
 from . import spotify as spotify_mod
 from .content_advisory import (
@@ -726,9 +726,12 @@ class Downloader:
         provider: str,
         song: dict[str, Any],
         progress_cb: Optional[ProgressCallback],
+        cancelled: Optional[Callable[[], bool]] = None,
     ) -> Optional[Path]:
         """Search one lossless source; ``None`` when disabled or empty."""
 
+        if cancelled is not None and cancelled():
+            raise download_control.DownloadCancelled()
         if provider == 'slskd':
             if not self.slskd_settings.get('enabled'):
                 logger.info(
@@ -736,7 +739,10 @@ class Downloader:
                 )
                 return None
             local = download_from_slskd(
-                song, self.slskd_settings, progress_cb=progress_cb
+                song,
+                self.slskd_settings,
+                progress_cb=progress_cb,
+                cancelled=cancelled,
             )
         elif provider == 'usenet':
             if not self.usenet_settings.get('enabled'):
@@ -745,7 +751,10 @@ class Downloader:
                 )
                 return None
             local = download_from_usenet(
-                song, self.usenet_settings, progress_cb=progress_cb
+                song,
+                self.usenet_settings,
+                progress_cb=progress_cb,
+                cancelled=cancelled,
             )
         else:
             return None
@@ -761,6 +770,7 @@ class Downloader:
         self,
         song: dict[str, Any],
         progress_cb: Optional[ProgressCallback],
+        cancelled: Optional[Callable[[], bool]] = None,
     ) -> tuple[
         Optional[str], Optional[dict[str, Any]], Optional[str], Optional[Path]
     ]:
@@ -780,8 +790,12 @@ class Downloader:
         )
         youtube_searched = False
         for provider in self.audio_providers:
+            if cancelled is not None and cancelled():
+                raise download_control.DownloadCancelled()
             if provider in {'slskd', 'usenet'}:
-                local = self._try_local_source(provider, song, progress_cb)
+                local = self._try_local_source(
+                    provider, song, progress_cb, cancelled
+                )
                 if local is not None:
                     return None, None, provider, local
             elif provider == 'youtube-music':
@@ -1103,6 +1117,8 @@ class Downloader:
         song: dict[str, Any],
         progress_cb: Optional[ProgressCallback] = None,
         subdir: Optional[str] = None,
+        *,
+        cancel_generation: Optional[int] = None,
     ) -> str:
         """Download ``song`` and return the resulting file name.
 
@@ -1114,7 +1130,22 @@ class Downloader:
         With ``overwrite_existing_files`` off, a song already anywhere in
         the library is not downloaded again; the existing file's name is
         returned instead (see :meth:`find_existing_download`).
+
+        ``cancel_generation`` is the Stop all downloads generation this
+        call belongs to; a bump aborts the download at the next checkpoint.
         """
+
+        generation = (
+            cancel_generation
+            if cancel_generation is not None
+            else download_control.current_generation()
+        )
+
+        def cancelled() -> bool:
+            return download_control.is_cancelled(generation)
+
+        if cancelled():
+            raise download_control.DownloadCancelled()
 
         skip_existing = not self.overwrite_existing_files
         if skip_existing and self._can_resolve_path_early(song):
@@ -1151,6 +1182,8 @@ class Downloader:
                     local_provider, song, progress_cb
                 )
                 if local is not None:
+                    if cancelled():
+                        raise download_control.DownloadCancelled()
                     return self._downloaded(
                         song,
                         self._finalize_local_source(
@@ -1159,6 +1192,7 @@ class Downloader:
                             local_provider,
                             progress_cb,
                             subdir,
+                            cancelled=cancelled,
                         ),
                     )
 
@@ -1169,8 +1203,10 @@ class Downloader:
             # Playlist rows lack year/track number; the per-track embed has
             # them, and they can feed the output path and the slskd match.
             song = spotify_mod.enrich_track_from_spotify_if_sparse(song)
+            if cancelled():
+                raise download_control.DownloadCancelled()
             video_id, match, provider, local_source = self._resolve_source(
-                song, progress_cb
+                song, progress_cb, cancelled
             )
         elif not song.get('album_name') or not song.get('cover_url'):
             # We already have a target video, but the metadata is incomplete.
@@ -1202,11 +1238,18 @@ class Downloader:
         # above; re-check now that it is known.
         reject_overlong_song(song, self.max_track_duration_seconds)
 
+        if cancelled():
+            raise download_control.DownloadCancelled()
         if local_source is not None:
             return self._downloaded(
                 song,
                 self._finalize_local_source(
-                    song, local_source, provider, progress_cb, subdir
+                    song,
+                    local_source,
+                    provider,
+                    progress_cb,
+                    subdir,
+                    cancelled=cancelled,
                 ),
             )
 
@@ -1214,7 +1257,12 @@ class Downloader:
             return self._downloaded(
                 song,
                 self._fetch_and_tag(
-                    song, video_id, progress_cb, subdir, provider
+                    song,
+                    video_id,
+                    progress_cb,
+                    subdir,
+                    provider,
+                    cancelled=cancelled,
                 ),
             )
 
@@ -1224,13 +1272,20 @@ class Downloader:
         # in one playlist, or two playlists sharing a track — can't both
         # miss the check and fetch it twice.
         with self._target_lock(song):
+            if cancelled():
+                raise download_control.DownloadCancelled()
             existing = self.find_existing_download(song, subdir)
             if existing is not None:
                 return self._skip_existing(existing, progress_cb)
             return self._downloaded(
                 song,
                 self._fetch_and_tag(
-                    song, video_id, progress_cb, subdir, provider
+                    song,
+                    video_id,
+                    progress_cb,
+                    subdir,
+                    provider,
+                    cancelled=cancelled,
                 ),
             )
 
@@ -1315,6 +1370,8 @@ class Downloader:
         provider: Optional[str],
         progress_cb: Optional[ProgressCallback],
         subdir: Optional[str],
+        *,
+        cancelled: Optional[Callable[[], bool]] = None,
     ) -> str:
         """Tag a file a provider already downloaded (slskd) and return its
         library path.
@@ -1326,6 +1383,8 @@ class Downloader:
         format — slskd files are not transcoded.
         """
 
+        if cancelled is not None and cancelled():
+            raise download_control.DownloadCancelled()
         lookups = _MetadataLookups(self, song)
         try:
             if provider == 'slskd' and self.slskd_settings.get(
@@ -1346,12 +1405,17 @@ class Downloader:
                 suffix = source_path.suffix or f'.{self.audio_format}'
                 final_path = target_dir / f'{basename}{suffix}'
                 if source_path.resolve() != final_path.resolve():
+                    if cancelled is not None and cancelled():
+                        raise download_control.DownloadCancelled()
                     shutil.copy2(source_path, final_path)
                 stored = f'{rel_prefix}{final_path.name}'
                 in_place = False
             found = lookups.collect()
         finally:
             lookups.cancel()
+
+        if cancelled is not None and cancelled():
+            raise download_control.DownloadCancelled()
 
         # Never drop a cover.jpg into slskd's own folders.
         self._tag_file(
@@ -1366,7 +1430,9 @@ class Downloader:
 
     @staticmethod
     def _progress_hook(
-        progress_cb: Optional[ProgressCallback], provider: Optional[str]
+        progress_cb: Optional[ProgressCallback],
+        provider: Optional[str],
+        cancelled: Optional[Callable[[], bool]] = None,
     ) -> Callable[[dict[str, Any]], None]:
         """A yt-dlp progress hook forwarding to *progress_cb*.
 
@@ -1379,6 +1445,8 @@ class Downloader:
 
         def hook(data: dict[str, Any]) -> None:
             nonlocal last_reported_pct
+            if cancelled is not None and cancelled():
+                raise download_control.DownloadCancelled()
             if progress_cb is None:
                 return
             try:
@@ -1495,6 +1563,7 @@ class Downloader:
         progress_cb: Optional[ProgressCallback] = None,
         provider: Optional[str] = None,
         audio_format: Optional[str] = None,
+        cancelled: Optional[Callable[[], bool]] = None,
     ) -> Path:
         """Download YouTube video *video_id*'s audio as
         ``<target_dir>/<basename>.<audio_format>`` (default: the chosen
@@ -1503,7 +1572,7 @@ class Downloader:
 
         fmt = audio_format or self.audio_format
         out_template = str(target_dir / f'{basename}.%(ext)s')
-        hook = self._progress_hook(progress_cb, provider)
+        hook = self._progress_hook(progress_cb, provider, cancelled)
         ydl_opts, has_cookies = self._ydl_options(out_template, hook)
         url = f'https://music.youtube.com/watch?v={video_id}'
         try:
@@ -1515,11 +1584,15 @@ class Downloader:
                     when='post_process',
                 )
                 ydl.download([url])
+        except download_control.DownloadCancelled:
+            raise
         except Exception as exc:
             raise _translate_download_error(
                 exc, song, has_cookies=has_cookies
             ) from exc
 
+        if cancelled is not None and cancelled():
+            raise download_control.DownloadCancelled()
         final_path = target_dir / f'{basename}.{fmt}'
         if not final_path.exists():
             # yt-dlp sometimes uses the upstream extension for opus/m4a
@@ -1536,7 +1609,11 @@ class Downloader:
         progress_cb: Optional[ProgressCallback],
         subdir: Optional[str],
         provider: Optional[str] = None,
+        *,
+        cancelled: Optional[Callable[[], bool]] = None,
     ) -> str:
+        if cancelled is not None and cancelled():
+            raise download_control.DownloadCancelled()
         target_dir, rel_prefix, basename = self._target_location(song, subdir)
 
         # Genre, cover art and lyrics are looked up while yt-dlp downloads,
@@ -1550,12 +1627,15 @@ class Downloader:
                 song=song,
                 progress_cb=progress_cb,
                 provider=provider,
+                cancelled=cancelled,
             )
             found = lookups.collect()
         finally:
             # A failed download shouldn't wait on lookups nobody will use.
             lookups.cancel()
 
+        if cancelled is not None and cancelled():
+            raise download_control.DownloadCancelled()
         self._tag_file(final_path, target_dir, song, found)
         _report(progress_cb, 100.0, 'Done', provider)
         return f'{rel_prefix}{final_path.name}'

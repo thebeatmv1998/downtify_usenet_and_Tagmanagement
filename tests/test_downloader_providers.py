@@ -236,7 +236,7 @@ def test_audio_providers_are_normalized():
 def test_usenet_dispatch_enabled(tmp_path, monkeypatch, no_youtube):
     calls = []
 
-    def _usenet(song, settings, progress_cb=None):
+    def _usenet(song, settings, progress_cb=None, **kwargs):
         calls.append(song)
 
     monkeypatch.setattr(downloader_mod, 'download_from_usenet', _usenet)
@@ -305,7 +305,7 @@ def test_a_pinned_youtube_video_does_not_bypass_usenet_first(
 ):
     calls = []
 
-    def _usenet(song, settings, progress_cb=None):
+    def _usenet(song, settings, progress_cb=None, **kwargs):
         calls.append(song.get('name'))
 
     monkeypatch.setattr(downloader_mod, 'download_from_usenet', _usenet)
@@ -381,7 +381,7 @@ def test_pinned_youtube_id_is_ignored_when_youtube_disabled(
 
     calls: list[dict] = []
 
-    def _usenet(song, settings, progress_cb=None):
+    def _usenet(song, settings, progress_cb=None, **kwargs):
         calls.append(song)
         return source
 

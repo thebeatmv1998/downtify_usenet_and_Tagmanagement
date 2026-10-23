@@ -454,6 +454,42 @@ def test_find_transfer_matches_basename_not_full_path():
     assert row['state'] == 'Completed, Succeeded'
 
 
+def test_cancel_transfer_deletes_the_queued_download():
+    client = SlskdClient({
+        'base_url': 'https://slskd.example',
+        'api_key': 'key',
+        'timeout_seconds': 5,
+    })
+    client.list_download_transfers = lambda: [  # type: ignore[method-assign]
+        {
+            'username': 'peer1',
+            'directories': [
+                {
+                    'files': [
+                        {
+                            'id': 'file-7',
+                            'filename': 'Artist - Track.mp3',
+                            'state': 'InProgress',
+                        }
+                    ]
+                }
+            ],
+        }
+    ]
+    captured: dict[str, Any] = {}
+
+    def fake_request(method, path, *, json_body=None):
+        captured['method'] = method
+        captured['path'] = path
+        return {}
+
+    client._request = fake_request  # type: ignore[method-assign]
+    client.cancel_transfer('peer1', '@@music\\Artist - Track.mp3')
+
+    assert captured['method'] == 'DELETE'
+    assert captured['path'] == '/api/v0/transfers/downloads/peer1/file-7'
+
+
 def test_enqueue_download_uses_username_endpoint():
     client = SlskdClient({
         'base_url': 'https://slskd.example',
