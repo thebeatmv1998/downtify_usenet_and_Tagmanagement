@@ -256,6 +256,7 @@
           variant="secondary"
           icon="refresh"
           :loading="mergeLoading"
+          :disabled="mergeLoading || mergeBusy"
           @click="findSplitAlbums"
         >
           {{ t('upgrade.mergeFind') }}
@@ -269,6 +270,24 @@
         <span v-else-if="mergeSearched" class="text-[13px] text-muted">
           {{ t('upgrade.mergeNone') }}
         </span>
+      </div>
+      <div v-if="mergeLoading || mergeBusy" class="mt-3" aria-live="polite">
+        <div class="mb-2 flex justify-between text-[13px] text-muted">
+          <span>{{ t(`upgrade.mergeStage${mergeProgress.stage}`) }}</span>
+          <span v-if="mergeProgress.total">
+            {{ mergeProgress.completed }} / {{ mergeProgress.total }}
+          </span>
+        </div>
+        <UiProgress
+          :value="
+            mergeProgress.total
+              ? (100 * mergeProgress.completed) / mergeProgress.total
+              : 0
+          "
+          :indeterminate="!mergeProgress.total"
+          :aria-label="t(`upgrade.mergeStage${mergeProgress.stage}`)"
+          :height="6"
+        />
       </div>
       <p v-if="mergeSearched" class="mt-1.5 text-[13px] text-muted">
         {{
@@ -337,7 +356,7 @@
         <UiButton
           variant="primary"
           icon="wand"
-          :disabled="!mergeSelected.length || mergeBusy"
+          :disabled="!mergeSelected.length || mergeBusy || mergeLoading"
           :loading="mergeBusy"
           @click="applyMerge"
         >
@@ -401,7 +420,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import AppIcon from '/src/components/ui/AppIcon.vue'
 import UiBadge from '/src/components/ui/UiBadge.vue'
@@ -555,15 +574,55 @@ const mergeLookedUp = ref(0)
 const mergeResolved = ref(0)
 const mergeTracks = ref(0)
 const mergeElapsedMs = ref(0)
+const mergeProgress = ref({ stage: 'reading', completed: 0, total: 0 })
+let mergeProgressTimer
+let mergeOperationId = ''
+
+function stopMergeProgress() {
+  mergeOperationId = ''
+  clearTimeout(mergeProgressTimer)
+}
+
+function startMergeProgress(stage) {
+  stopMergeProgress()
+  const id =
+    globalThis.crypto?.randomUUID?.() ||
+    `${Date.now()}-${Math.random().toString(36).slice(2)}`
+  mergeOperationId = id
+  mergeProgress.value = { stage, completed: 0, total: 0 }
+  const poll = async () => {
+    try {
+      const res = await API.getAlbumMergeProgress(id)
+      if (mergeOperationId !== id) return
+      if (
+        ['reading', 'matching', 'grouping', 'merging', 'playlists'].includes(
+          res.data?.stage
+        )
+      ) {
+        mergeProgress.value = res.data
+      }
+    } catch {
+      // A temporary polling error must not interrupt the merge itself.
+    }
+    if (mergeOperationId === id) {
+      mergeProgressTimer = setTimeout(poll, 700)
+    }
+  }
+  mergeProgressTimer = setTimeout(poll, 300)
+  return id
+}
+
+onBeforeUnmount(stopMergeProgress)
 
 const describeError = (err) =>
   err?.response?.data?.detail || err?.message || 'failed'
 
 async function findSplitAlbums() {
+  if (mergeLoading.value || mergeBusy.value) return
   mergeLoading.value = true
   mergeNote.value = ''
   try {
-    const res = await API.findSplitAlbums()
+    const res = await API.findSplitAlbums(startMergeProgress('reading'))
     mergeCandidates.value = res.data?.candidates || []
     mergeSelected.value = mergeCandidates.value.map((_, index) => index)
     mergeLookedUp.value = res.data?.looked_up || 0
@@ -574,6 +633,7 @@ async function findSplitAlbums() {
   } catch (err) {
     mergeNote.value = describeError(err)
   } finally {
+    stopMergeProgress()
     mergeLoading.value = false
   }
 }
@@ -586,6 +646,7 @@ function toggleMerge(index, on) {
 }
 
 async function applyMerge() {
+  if (mergeLoading.value || mergeBusy.value) return
   const plans = mergeSelected.value
     .map((index) => mergeCandidates.value[index])
     .filter(Boolean)
@@ -593,7 +654,7 @@ async function applyMerge() {
   mergeBusy.value = true
   mergeNote.value = ''
   try {
-    const res = await API.mergeAlbums(plans)
+    const res = await API.mergeAlbums(plans, startMergeProgress('merging'))
     mergeNote.value = t('upgrade.mergeDone', {
       moved: res.data?.moved || 0,
       deleted: res.data?.deleted || 0,
@@ -606,6 +667,7 @@ async function applyMerge() {
   } catch (err) {
     mergeNote.value = describeError(err)
   } finally {
+    stopMergeProgress()
     mergeBusy.value = false
   }
 }

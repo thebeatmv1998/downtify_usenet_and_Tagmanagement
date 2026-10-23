@@ -422,7 +422,7 @@ export default {
       'Suche mit deinen ausgewählten Anbietern nach Songtexten für Titel ohne Lyrics und füge gefundene Texte ein.',
     metadata: 'Tags aktualisieren',
     metadataHint:
-      'Ergänze Album, Albumkünstler, Veröffentlichungsdatum und Titelnummer von Spotify. Nur für Titel, deren Spotify-Zuordnung Downtify noch kennt.',
+      'Ergänze oder korrigiere Album, Albumkünstler, Veröffentlichungsdatum, Titelnummer und Genre anhand von Spotify oder Apple Music.',
     tracksAffected: {
       one: '{count} Titel',
       other: '{count} Titel',
@@ -485,6 +485,11 @@ export default {
     album_coverHint:
       'Write a cover.jpg into an album folder that has audio but no cover image, using the artwork already embedded in its tracks.',
     mergeTitle: 'Merge split albums',
+    mergeStagereading: 'Bibliotheks-Tags werden gelesen…',
+    mergeStagematching: 'Singles werden Alben zugeordnet…',
+    mergeStagegrouping: 'Editionen und Qualität werden verglichen…',
+    mergeStagemerging: 'Titel werden verschoben und Duplikate entfernt…',
+    mergeStageplaylists: 'Playlists werden aktualisiert…',
     mergeHint:
       'Alben, die als einzelne Singles oder als Standard- und Deluxe-Edition vorliegen, werden in einem Ordner zusammengeführt. Die Edition mit den meisten Songs gewinnt; bei doppelten Songs bleibt die Datei mit der besten Qualität, die übrigen Kopien werden gelöscht.',
     mergeEditions: 'Editionen: {editions}',

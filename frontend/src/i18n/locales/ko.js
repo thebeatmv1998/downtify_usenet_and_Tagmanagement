@@ -483,6 +483,11 @@ export default {
     album_coverHint:
       'Write a cover.jpg into an album folder that has audio but no cover image, using the artwork already embedded in its tracks.',
     mergeTitle: 'Merge split albums',
+    mergeStagereading: 'Reading library tags…',
+    mergeStagematching: 'Matching singles to albums…',
+    mergeStagegrouping: 'Comparing editions and quality…',
+    mergeStagemerging: 'Moving tracks and removing duplicates…',
+    mergeStageplaylists: 'Updating playlists…',
     mergeHint:
       'Albums kept as separate singles or as standard and deluxe editions are merged into one folder. The edition with the most songs wins; duplicate songs keep the best-quality file and the other copies are deleted.',
     mergeEditions: 'Editions: {editions}',

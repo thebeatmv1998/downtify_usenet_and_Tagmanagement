@@ -993,7 +993,7 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
             ADMIN,
         ),
         (_ALL, r'^/api/library/playlist', ADMIN),
-        (_m('POST'), r'^/api/library/albums/merge', ADMIN),
+        (_ALL, r'^/api/library/albums/merge', ADMIN),
         (_ALL, r'^/api/library/(tags|duplicates)', ADMIN),
         (_ALL, r'^/(delete|delete/batch)$', ADMIN),
         (_ALL, r'^/(docs|redoc|openapi\.json)', ADMIN),

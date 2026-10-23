@@ -24,17 +24,19 @@ An upgrade rewrites **artwork, lyrics and tags** (and writes album folder covers
 |----------|--------------|----------------|
 | **Upgrade artwork** | Replaces a cover smaller than your target size | Spotify, Apple Music (iTunes), YouTube Music |
 | **Add missing lyrics** | Fills in lyrics for tracks that have none, embedded and as an `.lrc` sidecar | Your [lyrics providers](lyrics.md), in your order |
-| **Refresh tags** | Fills in or corrects album, album artist, release date and track number — including the album older single-track downloads are missing | Spotify, or Apple Music (iTunes) when no Spotify track is known |
+| **Refresh tags** | Fills in or corrects album, album artist, release date, track number and genre — including the album older single-track downloads are missing | Spotify; Apple Music (iTunes) for genre and tracks without a Spotify ID |
 | **Add album folder covers** | Writes a `cover.jpg`/`cover.png` into an album folder that has audio but no image of its own | The tracks' own embedded covers, then Spotify / Apple Music (iTunes) / YouTube Music |
 
 A track counts as behind when:
 
 - its embedded cover's short side is **smaller than the target size** (a track with no cover at all counts too);
 - it has **neither** embedded lyrics **nor** an `.lrc` sidecar (next to the file or in the lyrics folder from Settings);
-- any of **album**, **album artist**, **year** or **track number** is missing from its tags — or holds a placeholder like *Unknown album*, *unknown* or *unbekannt*, which carries no more information than an empty tag (*Various Artists* is a legitimate album artist and does **not** count);
+- any of **album**, **album artist**, **year**, **track number** or **genre** is missing from its tags — or holds a placeholder like *Unknown album*, *unknown* or *unbekannt*, which carries no more information than an empty tag (*Various Artists* is a legitimate album artist and does **not** count);
 - its **album folder** has tracks but no cover image (see [Album folder covers](#album-folder-covers)).
 
 **Refresh tags** re-reads tracks Downtify still has a Spotify track ID for from Spotify (see the [track index](library-catalog.md#what-gets-stored)). Everything else falls back to an Apple Music (iTunes) search, which matches on artist and title and cross-checks the duration before trusting a result. Tracks no source knows come back as *Nothing to do*.
+
+Genre is also fetched from Apple Music when Spotify has none, with results cached per artist/album. **Fill in missing tags** preserves an existing genre; **Verify and correct tags** can replace it. An unavailable genre never clears an existing value. If a recent scan skipped these tracks, choose **Always check every track** to include them again.
 
 ## Options
 
@@ -130,7 +132,7 @@ An album that was downloaded one single at a time often ends up filed under the 
 The edition with the most distinct songs wins. Every song is kept once: FLAC/ALAC beats lossy, then higher bitrate/sample rate wins, and the largest file breaks a tie. Duplicate copies are marked as such in the preview and deleted only after the kept copy has been moved into the album folder successfully. Copies whose lengths differ by more than five seconds are treated as different recordings (an extended mix or a live version), so both survive.
 
 1. Click **Find split albums**. Nothing is written. Standard/deluxe editions and duplicate copies are found from the local tags with no network request at all; only tracks that look like standalone singles are looked up, in parallel and cached. A repeated scan therefore costs almost nothing.
-2. Each candidate is listed with its editions, the resulting track count and how many duplicate files will be removed. Untick what you don't want.
+2. Each candidate is listed with its editions, the resulting track count and how many duplicate files will be removed. Untick what you don't want. During scanning and merging, a progress bar shows the current stage and completed work. Reading the library and refreshing playlists use an animated bar until their size is known.
 3. **Merge** rewrites album, album artist, year and track number (the winning edition's order, with bonus tracks appended), moves the kept files into one `Artist/Album/` folder (following your [file organization](file-organization.md) layout), deletes the losing duplicate copies, and refreshes the M3Us and Navidrome playlists that pointed at the old paths.
 
 A track the tag sources can't place with confidence is left where it is; the preview never guesses. The preview reports how many tracks a source matched and how long the scan took. If a source was rate-limited (Apple Music refuses a burst of requests), the count is low and a note tells you to try again shortly. Deezer is asked before Apple Music because it answers faster, and every successful answer is cached for the life of the process.

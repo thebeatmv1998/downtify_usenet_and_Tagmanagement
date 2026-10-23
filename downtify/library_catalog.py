@@ -560,6 +560,7 @@ def song_from_entry(entry: dict[str, Any]) -> dict[str, Any]:
         'album_name': str(entry.get('album') or ''),
         'album_artist': str(entry.get('album_artist') or ''),
         'year': str(entry.get('year') or ''),
+        'genre': str(entry.get('genre') or ''),
         'track_number': int(entry.get('track_number') or 0),
         'duration': float(entry.get('duration') or 0.0),
         # A file already marked explicit stays so when its tags are

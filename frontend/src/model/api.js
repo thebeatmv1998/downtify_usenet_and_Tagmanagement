@@ -748,12 +748,26 @@ function writePlaylistM3u(payload) {
 }
 
 // ── Album merge + playlist rebuild (Library Upgrade extras) ──────────
-function findSplitAlbums() {
-  return API.post('/api/library/albums/merge/preview')
+function findSplitAlbums(operationId) {
+  return API.post('/api/library/albums/merge/preview', null, {
+    params: { operation_id: operationId },
+  })
 }
 
-function mergeAlbums(plans) {
-  return API.post('/api/library/albums/merge', { plans })
+function mergeAlbums(plans, operationId) {
+  return API.post(
+    '/api/library/albums/merge',
+    { plans },
+    {
+      params: { operation_id: operationId },
+    }
+  )
+}
+
+function getAlbumMergeProgress(operationId) {
+  return API.get(
+    `/api/library/albums/merge/progress/${encodeURIComponent(operationId)}`
+  )
 }
 
 function rebuildLibraryPlaylists() {
@@ -986,6 +1000,7 @@ export default {
   writePlaylistM3u,
   findSplitAlbums,
   mergeAlbums,
+  getAlbumMergeProgress,
   rebuildLibraryPlaylists,
   getTrackTags,
   writeTrackTags,

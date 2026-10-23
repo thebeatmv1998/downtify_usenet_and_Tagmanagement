@@ -213,6 +213,14 @@ class MergePlan:
 
 #: Resolver signature: ``(song, spotify_id) -> remote song dict or None``.
 Resolver = Callable[[dict[str, Any], str], Optional[dict[str, Any]]]
+Progress = Callable[[str, int, int], None]
+
+
+def _progress(
+    callback: Optional[Progress], stage: str, completed: int, total: int
+) -> None:
+    if callback is not None:
+        callback(stage, completed, total)
 
 
 def clear_resolution_cache() -> None:
@@ -512,6 +520,7 @@ def detect_split_albums(  # noqa: PLR0914
     resolver: Optional[Resolver] = None,
     lookup_limit: int = LOOKUP_LIMIT,
     stats: Optional[dict[str, Any]] = None,
+    on_progress: Optional[Progress] = None,
 ) -> list[MergePlan]:
     """Albums that belong together, as merge plans.
 
@@ -523,6 +532,7 @@ def detect_split_albums(  # noqa: PLR0914
 
     started = time.monotonic()
     resolve = resolver or default_resolver
+    _progress(on_progress, 'reading', 0, 0)
     entries = list_library_entries(ctx)
 
     by_artist: dict[str, list[dict[str, Any]]] = {}
@@ -563,7 +573,7 @@ def detect_split_albums(  # noqa: PLR0914
             if key not in tasks:
                 tasks[key] = (song_from_entry(entry), spotify_id)
 
-    resolved = _resolve_tasks(resolve, tasks)
+    resolved = _resolve_tasks(resolve, tasks, on_progress=on_progress)
 
     effective: list[_Entry] = []
     for entry in entries:
@@ -589,7 +599,9 @@ def detect_split_albums(  # noqa: PLR0914
         groups.setdefault((artist_key, album_key), []).append(item)
 
     plans: list[MergePlan] = []
-    for items in groups.values():
+    _progress(on_progress, 'grouping', 0, len(groups))
+    for index, items in enumerate(groups.values(), start=1):
+        _progress(on_progress, 'grouping', index, len(groups))
         if len(items) < 2:
             continue
         plan = _build_plan(items)
@@ -616,13 +628,19 @@ def detect_split_albums(  # noqa: PLR0914
 
 
 def _resolve_tasks(
-    resolve: Resolver, tasks: dict[str, tuple[dict[str, Any], str]]
+    resolve: Resolver,
+    tasks: dict[str, tuple[dict[str, Any], str]],
+    *,
+    on_progress: Optional[Progress] = None,
 ) -> dict[str, Optional[dict[str, Any]]]:
+    _progress(on_progress, 'matching', 0, len(tasks))
     if not tasks:
         return {}
     if len(tasks) == 1:
         key, (song, spotify_id) = next(iter(tasks.items()))
-        return {key: _safe_resolve(resolve, song, spotify_id)}
+        result = {key: _safe_resolve(resolve, song, spotify_id)}
+        _progress(on_progress, 'matching', 1, 1)
+        return result
 
     results: dict[str, Optional[dict[str, Any]]] = {}
     workers = min(MAX_PARALLEL_LOOKUPS, len(tasks))
@@ -642,6 +660,7 @@ def _resolve_tasks(
                     'Album merge: tag-source lookup failed'
                 )
                 results[key] = None
+            _progress(on_progress, 'matching', len(results), len(tasks))
     return results
 
 
@@ -1006,6 +1025,7 @@ def apply_merge(  # noqa: PLR0914
     downloader: Any,
     settings: Optional[dict[str, Any]] = None,
     monitor_db: Any = None,
+    on_progress: Optional[Progress] = None,
 ) -> dict[str, Any]:
     """Retag and move every kept track; delete the duplicate copies.
 
@@ -1026,12 +1046,12 @@ def apply_merge(  # noqa: PLR0914
     reclaimed_bytes = 0
     merged = 0
     failed: list[str] = []
+    coerced = [plan for raw in plans if (plan := _coerce_plan(raw))]
+    total = sum(len(plan.tracks) for plan in coerced)
+    completed = 0
+    _progress(on_progress, 'merging', completed, total)
 
-    for raw in plans:
-        plan = _coerce_plan(raw)
-        if plan is None:
-            continue
-
+    for plan in coerced:
         sources: dict[str, Optional[Path]] = {}
         found: list[tuple[MergeTrack, str, Optional[Path]]] = []
         for track in plan.tracks:
@@ -1069,6 +1089,8 @@ def apply_merge(  # noqa: PLR0914
         for track, stored, source in found:
             if not track.keep:
                 continue
+            _progress(on_progress, 'merging', completed, total)
+            completed += 1
             if source is None:
                 failed.append(stored)
                 continue
@@ -1117,7 +1139,11 @@ def apply_merge(  # noqa: PLR0914
 
         plan_deleted = 0
         for track, stored, source in found:
-            if track.keep or source is None:
+            if track.keep:
+                continue
+            _progress(on_progress, 'merging', completed, total)
+            completed += 1
+            if source is None:
                 continue
             kept_file = drop_to_keep.get(track.file)
             kept_target = moved_targets.get(kept_file) if kept_file else None
@@ -1159,6 +1185,7 @@ def apply_merge(  # noqa: PLR0914
         if plan_moved or plan_deleted:
             merged += 1
 
+    _progress(on_progress, 'merging', total, total)
     invalidate_library_paths_cache(drop_entries=True)
     return {
         'merged': merged,

@@ -9,7 +9,7 @@ from types import SimpleNamespace
 from typing import Any, Optional
 
 import pytest
-from mutagen.id3 import APIC, ID3, TALB, TDRC, TIT2, TPE1, TPE2, TRCK
+from mutagen.id3 import APIC, ID3, TALB, TCON, TDRC, TIT2, TPE1, TPE2, TRCK
 
 from downtify import cover_sources, library_upgrade
 from downtify.library_catalog import LibraryContext
@@ -65,6 +65,7 @@ _FULL_TAGS = {
     'album_artist': 'Artist',
     'year': '2020',
     'track_number': '3',
+    'genre': 'Pop',
 }
 
 
@@ -85,6 +86,8 @@ def _write_track(
         tags.add(TDRC(encoding=3, text=fields['year']))
     if fields['track_number']:
         tags.add(TRCK(encoding=3, text=str(fields['track_number'])))
+    if fields['genre']:
+        tags.add(TCON(encoding=3, text=fields['genre']))
     if cover_px:
         tags.add(
             APIC(
@@ -97,6 +100,98 @@ def _write_track(
         )
     tags.save(str(path), v2_version=4)
     return path
+
+
+@pytest.fixture(autouse=True)
+def _no_live_genre_requests(monkeypatch: Any) -> None:
+    monkeypatch.setattr(
+        library_upgrade.itunes, 'fetch_genre', lambda _song: ''
+    )
+
+
+def test_missing_genre_is_a_metadata_finding(tmp_path: Path) -> None:
+    track = _write_track(tmp_path / 'a.mp3', genre='', cover_px=1200)
+    entry = library_upgrade.library_catalog.library_entry_for_file(
+        'a.mp3', track
+    )
+    assert library_upgrade._metadata_gaps(entry) == ['genre']
+    assert CATEGORY_METADATA in track_findings(
+        entry, track, artwork_min_px=600
+    )
+
+
+@pytest.mark.parametrize(
+    ('mode', 'original', 'expected'),
+    [('fill', '', 'Rock'), ('fill', 'Pop', 'Pop'), ('verify', 'Pop', 'Rock')],
+)
+def test_genre_refresh_respects_metadata_mode(
+    tmp_path: Path, monkeypatch: Any, mode: str, original: str, expected: str
+) -> None:
+    ctx = _context(tmp_path)
+    track = _write_track(
+        ctx.download_dir / 'a.mp3', genre=original, cover_px=1200
+    )
+    monkeypatch.setattr(
+        library_upgrade.itunes,
+        'lookup_track_metadata',
+        lambda _song: {'genre': 'Rock'},
+    )
+    upgrade_track(
+        'a.mp3',
+        deps=_deps(ctx),
+        options=UpgradeOptions(
+            categories=(CATEGORY_METADATA,), metadata_mode=mode
+        ),
+    )
+    assert str(ID3(str(track))['TCON']) == expected
+
+
+def test_spotify_metadata_gets_genre_from_itunes(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    ctx = _context(tmp_path)
+    track = _write_track(ctx.download_dir / 'a.mp3', genre='', cover_px=1200)
+    monkeypatch.setattr(
+        library_upgrade.spotify,
+        'track_from_id',
+        lambda *_args, **_kwargs: {'album_name': 'Album'},
+    )
+    monkeypatch.setattr(
+        library_upgrade.itunes, 'fetch_genre', lambda _song: 'Rock'
+    )
+    result = upgrade_track(
+        'a.mp3',
+        deps=_deps(ctx, spotify_id='1' * 22),
+        options=UpgradeOptions(categories=(CATEGORY_METADATA,)),
+    )
+    assert result.status == JOB_DONE
+    assert str(ID3(str(track))['TCON']) == 'Rock'
+
+
+def test_missing_remote_genre_does_not_rewrite_file(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    ctx = _context(tmp_path)
+    track = _write_track(ctx.download_dir / 'a.mp3', genre='', cover_px=1200)
+    before = track.read_bytes()
+    monkeypatch.setattr(
+        library_upgrade.itunes,
+        'lookup_track_metadata',
+        lambda _song: {'album_name': 'Album'},
+    )
+    result = upgrade_track(
+        'a.mp3',
+        deps=_deps(ctx),
+        options=UpgradeOptions(categories=(CATEGORY_METADATA,)),
+    )
+    assert result.status == JOB_SKIPPED
+    assert track.read_bytes() == before
+
+
+def test_song_from_tags_preserves_genre() -> None:
+    assert (
+        song_for_track({'title': 'Track', 'genre': 'Jazz'})['genre'] == 'Jazz'
+    )
 
 
 def _context(tmp_path: Path) -> LibraryContext:

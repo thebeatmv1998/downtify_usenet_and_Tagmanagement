@@ -201,6 +201,8 @@ def _metadata_gaps(entry: dict[str, Any]) -> list[str]:
         gaps.append('year')
     if not int(entry.get('track_number') or 0):
         gaps.append('track_number')
+    if _is_blank_or_placeholder(entry.get('genre')):
+        gaps.append('genre')
     return gaps
 
 
@@ -334,10 +336,21 @@ def _resolve_remote_metadata(
             # The album lookup costs two more requests; only a file with
             # no album tag of its own needs it (single-track downloads
             # before the fix that made them fetch it).
-            return spotify.track_from_id(
+            remote = spotify.track_from_id(
                 spotify_id, with_album=not song.get('album_name')
             )
-        return itunes.lookup_track_metadata(song)
+        else:
+            remote = itunes.lookup_track_metadata(song)
+        # Spotify track metadata does not include genre. iTunes caches
+        # genre by artist/album, so a whole album needs only one lookup.
+        if not (remote or {}).get('genre'):
+            try:
+                genre = itunes.fetch_genre(_merge_remote(song, remote or {}))
+                if genre:
+                    remote = {**(remote or {}), 'genre': genre}
+            except Exception:
+                logger.debug('Library upgrade: genre lookup unavailable')
+        return remote
     except Exception:
         logger.opt(exception=True).debug(
             'Library upgrade: metadata lookup failed for {!r}',
@@ -375,6 +388,7 @@ _VERIFY_FIELDS = (
     ('album_artist', 'album_artist'),
     ('year', 'year'),
     ('track_number', 'track_number'),
+    ('genre', 'genre'),
 )
 
 
@@ -755,6 +769,11 @@ def _match_song(
     if CATEGORY_METADATA in options.categories:
         remote = _resolve_remote_metadata(song, spotify_id)
         if remote:
+            if (
+                options.metadata_mode == METADATA_MODE_FILL
+                and not _is_blank_or_placeholder(entry.get('genre'))
+            ):
+                remote = {**remote, 'genre': song.get('genre', '')}
             song = _merge_remote(song, remote)
 
     # No source knew an album: a single's album is its own title, so the
@@ -788,8 +807,16 @@ def _metadata_change(
         corrections = _metadata_corrections(entry, remote)
         if corrections:
             return True, 'metadata: ' + ', '.join(corrections)
-    elif _metadata_gaps(entry) and (remote or album_fell_back):
-        return True, from_title if (album_fell_back and not remote) else ''
+    elif remote or album_fell_back:
+        gaps = _metadata_gaps(entry)
+        filled = any(
+            local_key in gaps
+            and not _is_blank_or_placeholder(song.get(remote_key))
+            and bool(song.get(remote_key))
+            for local_key, remote_key in _VERIFY_FIELDS
+        )
+        if filled:
+            return True, from_title if (album_fell_back and not remote) else ''
     # In verify mode a remote hit that says nothing about the album still
     # leaves the title fallback to write.
     if album_fell_back:

@@ -369,6 +369,7 @@ from . import (
     tag_editor,
 )
 from .activity import ActivityLog, NowPlaying, describe_user_agent
+from .album_merge_progress import MergeProgress
 from .auth import (
     AuthStore,
     PairingStore,
@@ -6173,8 +6174,30 @@ def _spotify_id_lookup() -> Optional[Any]:
     return _lookup
 
 
+_merge_progress = MergeProgress()
+
+
+@router.get('/api/library/albums/merge/progress/{operation_id}')
+async def library_albums_merge_progress(operation_id: str) -> dict[str, Any]:
+    return _merge_progress.get(operation_id)
+
+
+def _merge_progress_callback(operation_id: str) -> Any:
+    if not operation_id:
+        return None
+    try:
+        _merge_progress.start(operation_id)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return lambda stage, completed, total: _merge_progress.update(
+        operation_id, stage, completed, total
+    )
+
+
 @router.post('/api/library/albums/merge/preview')
-async def library_albums_merge_preview() -> dict[str, Any]:
+async def library_albums_merge_preview(
+    operation_id: str = Query(default='', max_length=64),
+) -> dict[str, Any]:
     """Albums the tag sources say belong together (writes nothing).
 
     A response the user confirms by posting back to
@@ -6182,6 +6205,7 @@ async def library_albums_merge_preview() -> dict[str, Any]:
     """
 
     ctx = library_context()
+    progress = _merge_progress_callback(operation_id)
     stats: dict[str, Any] = {
         'looked_up': 0,
         'resolved': 0,
@@ -6209,9 +6233,15 @@ async def library_albums_merge_preview() -> dict[str, Any]:
             spotify_id_for=_spotify_id_lookup(),
             resolver=_counting_resolver,
             stats=stats,
+            on_progress=progress,
         )
 
-    plans = await asyncio.to_thread(_detect)
+    try:
+        plans = await asyncio.to_thread(_detect)
+    except Exception:
+        _merge_progress.finish(operation_id, failed=True)
+        raise
+    _merge_progress.finish(operation_id)
     return {
         'candidates': [plan.to_dict() for plan in plans],
         'looked_up': stats.get('looked_up', 0),
@@ -6226,6 +6256,7 @@ async def library_albums_merge_preview() -> dict[str, Any]:
 @router.post('/api/library/albums/merge')
 async def library_albums_merge(
     payload: dict[str, Any] = Body(default={}),
+    operation_id: str = Query(default='', max_length=64),
 ) -> dict[str, Any]:
     """Retag and move the confirmed albums into one folder each."""
 
@@ -6236,31 +6267,39 @@ async def library_albums_merge(
         raise HTTPException(status_code=400, detail='plans must be a list')
 
     ctx = library_context()
-    result = await asyncio.to_thread(
-        album_merge.apply_merge,
-        plans,
-        ctx=ctx,
-        downloader=state.downloader,
-        settings=state.settings,
-        monitor_db=state.monitor_db,
-    )
-
-    affected = set(result.get('playlists') or [])
-    if affected and state.playlist_catalog is not None:
-        await asyncio.to_thread(
-            refresh_playlists_after_moves,
-            affected,
-            settings=state.settings,
+    progress = _merge_progress_callback(operation_id)
+    try:
+        result = await asyncio.to_thread(
+            album_merge.apply_merge,
+            plans,
+            ctx=ctx,
             downloader=state.downloader,
-            playlist_catalog=state.playlist_catalog,
-            track_index=state.track_index,
+            settings=state.settings,
             monitor_db=state.monitor_db,
-            navidrome_index=state.navidrome_index,
-            playlist_spotify_cache=state.playlist_spotify_cache,
-            cover_cache=state.cover_cache,
-            metadata_cache=state.metadata_cache,
+            on_progress=progress,
         )
-        result['playlists_refreshed'] = sorted(affected)
+        affected = set(result.get('playlists') or [])
+        if affected and state.playlist_catalog is not None:
+            if progress:
+                progress('playlists', 0, 0)
+            await asyncio.to_thread(
+                refresh_playlists_after_moves,
+                affected,
+                settings=state.settings,
+                downloader=state.downloader,
+                playlist_catalog=state.playlist_catalog,
+                track_index=state.track_index,
+                monitor_db=state.monitor_db,
+                navidrome_index=state.navidrome_index,
+                playlist_spotify_cache=state.playlist_spotify_cache,
+                cover_cache=state.cover_cache,
+                metadata_cache=state.metadata_cache,
+            )
+            result['playlists_refreshed'] = sorted(affected)
+    except Exception:
+        _merge_progress.finish(operation_id, failed=True)
+        raise
+    _merge_progress.finish(operation_id)
     return result
 
 

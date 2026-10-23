@@ -182,11 +182,17 @@ def test_apply_merge_moves_retags_and_writes_a_folder_cover(
         ),
     )
 
+    progress = []
     report = album_merge.apply_merge(
-        [plan.to_dict() for plan in plans], ctx=ctx, downloader=None
+        [plan.to_dict() for plan in plans],
+        ctx=ctx,
+        downloader=None,
+        on_progress=lambda *event: progress.append(event),
     )
 
     assert report['moved'] == 2
+    assert progress[0] == ('merging', 0, 2)
+    assert progress[-1] == ('merging', 2, 2)
     assert report['failed'] == []
     album_dir = ctx.download_dir / 'Little Mix' / 'Glory Days'
     first = album_dir / '01 - Shout Out to My Ex.mp3'
