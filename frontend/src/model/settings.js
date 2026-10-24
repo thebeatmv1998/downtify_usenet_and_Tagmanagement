@@ -4,6 +4,7 @@ import API from '/src/model/api'
 import { useAuth } from '/src/model/auth'
 import { currentLocale } from '/src/i18n'
 import { needsLanguageSync, splitUiLanguage } from '/src/lib/uiLanguage'
+import { applyTheme } from '/src/model/themeEngine'
 
 const settings = ref({
   audio_providers: ['youtube-music'],
@@ -91,6 +92,14 @@ const settings = ref({
   overwrite_existing_files: true,
   search_albums: true,
   mini_player_enabled: true,
+  theme: {
+    text_color: '',
+    primary_color: '',
+    secondary_color: '',
+    background_color: '',
+    font_family: '',
+    custom_css: '',
+  },
 })
 
 const MIN_PARALLEL_DOWNLOADS = 1
@@ -244,6 +253,7 @@ function loadServerSettings() {
       saved.value = snapshot()
       loaded.value = true
       syncUiLanguage()
+      applyTheme(settings.value.theme)
     })
     .catch(() => {
       loaded.value = true
@@ -322,6 +332,7 @@ async function saveSettings() {
       },
     }
     saved.value = snapshot()
+    applyTheme(settings.value.theme)
     isSaved.value = true
     return true
   } catch (error) {

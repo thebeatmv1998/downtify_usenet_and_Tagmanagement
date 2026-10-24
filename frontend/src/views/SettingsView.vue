@@ -90,6 +90,81 @@
                 />
               </SettingRow>
             </SettingGroup>
+            <SettingGroup
+              v-if="auth.isAdmin.value"
+              :title="t('settings.themeEngine')"
+              :description="t('settings.themeEngineHint')"
+            >
+              <SettingRow
+                v-for="field in themeColorFields"
+                :key="field.key"
+                :label="t(field.label)"
+              >
+                <div
+                  class="flex w-full min-w-0 items-center gap-2 sm:w-auto"
+                >
+                  <input
+                    type="color"
+                    :value="effectiveColor(field.key)"
+                    :aria-label="t(field.label)"
+                    class="h-9 w-12 shrink-0 cursor-pointer rounded-control border border-line-3 bg-bg p-1"
+                    @input="setThemeField(field.key, $event.target.value)"
+                  />
+                  <UiInput
+                    class="w-40"
+                    :model-value="s.theme[field.key]"
+                    :placeholder="effectiveColor(field.key)"
+                    mono
+                    @update:model-value="
+                      (value) => setThemeField(field.key, value)
+                    "
+                  />
+                  <UiButton
+                    v-if="s.theme[field.key]"
+                    size="sm"
+                    variant="ghost"
+                    icon="x"
+                    :aria-label="t('settings.themeResetField')"
+                    @click="setThemeField(field.key, '')"
+                  />
+                </div>
+              </SettingRow>
+              <SettingRow
+                :label="t('settings.themeFont')"
+                :description="t('settings.themeFontHint')"
+              >
+                <UiInput
+                  class="w-full sm:w-96"
+                  :model-value="s.theme.font_family"
+                  placeholder="'Sora Variable', 'Segoe UI', sans-serif"
+                  mono
+                  @update:model-value="
+                    (value) => setThemeField('font_family', value)
+                  "
+                />
+              </SettingRow>
+              <SettingRow
+                :label="t('settings.themeCss')"
+                :description="t('settings.themeCssHint')"
+              >
+                <textarea
+                  v-model="s.theme.custom_css"
+                  rows="8"
+                  spellcheck="false"
+                  :aria-label="t('settings.themeCss')"
+                  class="w-full rounded-control border border-line-3 bg-bg p-3 font-mono text-[12px] text-fg outline-none focus:border-accent"
+                ></textarea>
+              </SettingRow>
+              <SettingRow>
+                <UiButton
+                  variant="ghost"
+                  icon="refresh"
+                  @click="resetThemeFields"
+                >
+                  {{ t('settings.themeReset') }}
+                </UiButton>
+              </SettingRow>
+            </SettingGroup>
             <SettingGroup :title="t('settings.playerGroup')">
               <!-- Yours, and applied at once like the theme: it isn't part
                    of what "Save" sends to the server (model/account.js). -->
@@ -1055,7 +1130,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute } from 'vue-router'
 import AppIcon from '/src/components/ui/AppIcon.vue'
 import AppLogo from '/src/components/ui/AppLogo.vue'
@@ -1097,7 +1172,8 @@ import { useAccount } from '/src/model/account'
 import { useAuth } from '/src/model/auth'
 import { settingsSectionsFor } from '/src/lib/auth'
 import { usePlayerPrefs } from '/src/model/playerPrefs'
-import { useTheme } from '/src/model/theme'
+import { loadServerTheme, useTheme } from '/src/model/theme'
+import { applyTheme, DEFAULT_THEME } from '/src/model/themeEngine'
 import { useUi } from '/src/model/ui'
 import { useUpdateCheck } from '/src/model/updateCheck'
 import { useI18n } from '/src/i18n'
@@ -1115,6 +1191,64 @@ const update = useUpdateCheck().status
 
 const hasTrack = computed(() => !!player.currentTrack.value)
 const s = sm.settings
+
+// ── Theme engine (server-wide, admins) ───────────────────────────────
+const themeColorFields = computed(() => [
+  {
+    key: 'text_color',
+    label: 'settings.themeText',
+    fallback: '#ecedef',
+  },
+  {
+    key: 'primary_color',
+    label: 'settings.themePrimary',
+    fallback: '#1ad05c',
+  },
+  {
+    key: 'secondary_color',
+    label: 'settings.themeSecondary',
+    fallback: '#48dd87',
+  },
+  {
+    key: 'background_color',
+    label: 'settings.themeBackground',
+    fallback: '#0b0c0e',
+  },
+])
+let themePreviewTimer
+
+function effectiveColor(key) {
+  const value = s.value.theme?.[key]
+  if (value) return value
+  return themeColorFields.value.find((field) => field.key === key)?.fallback
+}
+
+function setThemeField(key, value) {
+  if (!s.value.theme) s.value.theme = { ...DEFAULT_THEME }
+  s.value.theme[key] = String(value || '').trim()
+}
+
+function resetThemeFields() {
+  s.value.theme = { ...DEFAULT_THEME }
+}
+
+// Live preview while editing; leaving the page restores the saved theme.
+watch(
+  () => s.value.theme,
+  () => {
+    clearTimeout(themePreviewTimer)
+    themePreviewTimer = setTimeout(
+      () => applyTheme(s.value.theme || {}),
+      200
+    )
+  },
+  { deep: true }
+)
+
+onBeforeUnmount(() => {
+  clearTimeout(themePreviewTimer)
+  loadServerTheme()
+})
 
 // Turning the Usenet integration on must also put it in the source order;
 // otherwise it is configured (the connection test passes) but never tried.

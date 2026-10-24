@@ -1176,3 +1176,60 @@ def test_usenet_cleanup_endpoint_requires_configuration(monkeypatch):
     with pytest.raises(HTTPException) as exc_info:
         asyncio.run(api.cleanup_usenet_endpoint())
     assert exc_info.value.status_code == 400
+
+
+# ?? Theme engine ?????????????????????????????????????????????????????
+
+
+def test_theme_defaults_are_empty():
+    assert DEFAULT_SETTINGS['theme'] == {
+        'text_color': '',
+        'primary_color': '',
+        'secondary_color': '',
+        'background_color': '',
+        'font_family': '',
+        'custom_css': '',
+    }
+
+
+def test_theme_accepts_literal_colours_and_a_font_stack():
+    theme = api._clean_theme({
+        'text_color': '#fff',
+        'primary_color': 'rgb(255, 0, 0)',
+        'secondary_color': 'hsl(120 50% 50%)',
+        'background_color': '#12345678',
+        'font_family': "'Sora Variable', 'Segoe UI', sans-serif",
+        'custom_css': '.x { color: red; }',
+    })
+    assert theme['text_color'] == '#fff'
+    assert theme['primary_color'] == 'rgb(255, 0, 0)'
+    assert theme['secondary_color'] == 'hsl(120 50% 50%)'
+    assert theme['background_color'] == '#12345678'
+    assert theme['font_family'] == "'Sora Variable', 'Segoe UI', sans-serif"
+    assert theme['custom_css'] == '.x { color: red; }'
+
+
+def test_theme_drops_css_injection_attempts_and_caps_custom_css():
+    theme = api._clean_theme({
+        'text_color': '#fff; } body { display: none',
+        'primary_color': 'url(javascript:alert(1))',
+        'secondary_color': 'expression(alert(1))',
+        'background_color': 'red',
+        'font_family': 'x;} body { display: none',
+        'custom_css': 'a' * 30_000,
+    })
+    assert not theme['text_color']
+    assert not theme['primary_color']
+    assert not theme['secondary_color']
+    assert not theme['background_color']
+    assert not theme['font_family']
+    assert len(theme['custom_css']) == 20_000
+
+
+def test_theme_is_missing_from_an_old_settings_file_and_gets_defaults(
+    tmp_path,
+):
+    path = tmp_path / 'settings.json'
+    path.write_text(json.dumps({'format': 'flac'}))
+    loaded = api._load_settings(path)
+    assert loaded['theme'] == DEFAULT_SETTINGS['theme']

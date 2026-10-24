@@ -25,6 +25,7 @@ export const NAV = [
       { title: 'Similar', page: 'features/similar.md' },
       { title: 'Finder', page: 'features/finder.md' },
       { title: 'Download Settings', page: 'features/download-settings.md' },
+      { title: 'Theme Engine', page: 'features/theme-engine.md' },
       { title: 'Playlist Monitor', page: 'features/playlist-monitor.md' },
       { title: 'Top Songs', page: 'features/top-songs.md' },
       { title: 'Library Import (CSV)', page: 'features/library-import.md' },

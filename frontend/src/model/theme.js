@@ -2,6 +2,9 @@
 // <html data-theme="dark|light"> (see the tokens in index.css).
 import { computed, ref, watch } from 'vue'
 
+import API from '/src/model/api'
+import { applyTheme, resetTheme } from '/src/model/themeEngine'
+
 const STORAGE_KEY = 'downtify-theme'
 const MODES = ['dark', 'light', 'system']
 
@@ -52,6 +55,21 @@ function setMode(next) {
 
 function toggle() {
   setMode(resolved.value === 'dark' ? 'light' : 'dark')
+}
+
+/** Fetch the admin's theme and apply it (public endpoint). */
+export async function loadServerTheme() {
+  try {
+    const res = await API.getTheme()
+    applyTheme(res.data || {})
+    return res.data || {}
+  } catch {
+    return null
+  }
+}
+
+export function clearServerTheme() {
+  resetTheme()
 }
 
 export function useTheme() {

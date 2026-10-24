@@ -587,6 +587,16 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     # artist's bio fetched after a download, needs it. ``''`` until a page
     # has said - then there is no language to fetch in.
     'ui_language': '',
+    # Theme engine: literal colours and a font list for the web UI, plus
+    # optional admin-authored CSS. Empty means "use the design default".
+    'theme': {
+        'text_color': '',
+        'primary_color': '',
+        'secondary_color': '',
+        'background_color': '',
+        'font_family': '',
+        'custom_css': '',
+    },
     # Soulseek via slskd, used when 'slskd' is in audio_providers.
     'slskd': {
         'enabled': False,
@@ -685,6 +695,7 @@ _NESTED_SETTINGS = (
     'navidrome',
     'library_upgrade',
     'external_library',
+    'theme',
 )
 
 
@@ -758,6 +769,43 @@ def _clean_ui_language(value: Any) -> str:
 
     code = value.strip() if isinstance(value, str) else ''
     return code if _UI_LANGUAGE_RE.fullmatch(code) else ''
+
+
+#: CSS colour forms accepted from the theme editor. Anything else (a
+#: ``url()``, an ``expression()``, a stray brace) is dropped before it can
+#: end up in the served stylesheet.
+_THEME_COLOR_RE = re.compile(
+    r'^(?:#[0-9a-fA-F]{3,8}|(?:rgb|hsl)a?\([0-9.,%\s/]+\))$'
+)
+#: A font-family list: names, quotes, commas and digits only.
+_THEME_FONT_RE = re.compile(r"^[A-Za-z0-9 ,._'\"-]{1,160}$")
+_THEME_COLOR_FIELDS = (
+    'text_color',
+    'primary_color',
+    'secondary_color',
+    'background_color',
+)
+_MAX_CUSTOM_CSS = 20_000
+
+
+def _clean_theme(raw: Any) -> dict[str, str]:
+    """Validate and normalize the theme engine settings.
+
+    Colours are limited to literal CSS colour syntax; fonts to a plain
+    family list. Custom CSS is admin-authored and injected as a text node
+    (never HTML), but is length-capped so a settings file cannot balloon.
+    """
+
+    theme = dict(DEFAULT_SETTINGS['theme'])
+    data = raw if isinstance(raw, dict) else {}
+    for key in _THEME_COLOR_FIELDS:
+        value = str(data.get(key) or '').strip()
+        theme[key] = value if _THEME_COLOR_RE.fullmatch(value) else ''
+    font = str(data.get('font_family') or '').strip()
+    theme['font_family'] = font if _THEME_FONT_RE.fullmatch(font) else ''
+    custom_css = str(data.get('custom_css') or '').replace('\x00', '')
+    theme['custom_css'] = custom_css[:_MAX_CUSTOM_CSS]
+    return theme
 
 
 def _clamp_cover_resolution(value: Any) -> int:
@@ -2578,6 +2626,7 @@ def _load_settings(path: Path) -> dict[str, Any]:
                 merged['cover_resolution']
             )
             merged['ui_language'] = _clean_ui_language(merged['ui_language'])
+            merged['theme'] = _clean_theme(merged.get('theme'))
             merged['external_library'] = effective_external_library(merged)
             normalize_lyrics_location(merged)
             return merged
@@ -8265,6 +8314,17 @@ def get_settings_endpoint(client_id: str = Query('')) -> dict[str, Any]:
     return state.settings
 
 
+@router.get('/api/theme')
+def get_theme_endpoint() -> dict[str, Any]:
+    """The public theme: colours, font and admin-authored CSS.
+
+    Deliberately readable without a session so the sign-in page and
+    every other account use the same look. No secrets live here.
+    """
+
+    return _clean_theme(state.settings.get('theme'))
+
+
 @router.get('/api/fs/dirs')
 def suggest_fs_dirs_endpoint(path: str = Query('')) -> dict[str, Any]:
     """Directory names that complete ``path`` as typed in Settings."""
@@ -8311,6 +8371,8 @@ async def update_settings_endpoint(
                 state.settings[key] = _clean_ui_language(raw_value) or (
                     state.settings.get(key, '')
                 )
+            elif key == 'theme':
+                state.settings[key] = _clean_theme(raw_value)
             elif key == 'slskd':
                 # The parallel limit is derived from max_parallel_downloads,
                 # not stored with slskd's own options.

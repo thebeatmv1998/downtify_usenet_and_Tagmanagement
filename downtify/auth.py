@@ -946,6 +946,7 @@ RULES: list[tuple[frozenset[str], re.Pattern[str], str]] = [
         (_READ, r'^/api/health$', PUBLIC),
         (_READ, r'^/api/version$', PUBLIC),
         (_READ, r'^/api/server/info$', PUBLIC),
+        (_READ, r'^/api/theme$', PUBLIC),
         (_READ, r'^/api/auth/status$', PUBLIC),
         (_m('POST'), r'^/api/auth/login$', PUBLIC),
         (_m('POST'), r'^/api/auth/logout$', PUBLIC),
