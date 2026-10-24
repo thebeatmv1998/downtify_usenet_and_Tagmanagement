@@ -773,7 +773,7 @@ def test_missing_song_does_not_submit_same_completed_album_again(
     tmp_path, monkeypatch
 ):
     album, wanted, other = _album_folder(tmp_path)
-    monkeypatch.setattr(usenet, '_existing_album_folder', lambda *args: None)
+    monkeypatch.setattr(usenet, '_existing_album_folders', lambda *args: [])
     monkeypatch.setattr(
         usenet, '_search_indexers', lambda *args: [_ALBUM_RELEASE]
     )
@@ -857,7 +857,7 @@ def _reset_album_cache():
 def test_album_only_prefetch_caches_the_release_without_picking_a_track(
     tmp_path, monkeypatch
 ):
-    monkeypatch.setattr(usenet, '_existing_album_folder', lambda *args: None)
+    monkeypatch.setattr(usenet, '_existing_album_folders', lambda *args: [])
     album, _wanted, _other = _album_folder(tmp_path)
     settings = _settings(tmp_path, prefer_albums=False)
 
@@ -930,7 +930,7 @@ def test_nzb_claim_allows_only_one_owner(tmp_path):
 def test_album_downloaded_once_and_reused_for_more_songs(
     tmp_path, monkeypatch
 ):
-    monkeypatch.setattr(usenet, '_existing_album_folder', lambda *args: None)
+    monkeypatch.setattr(usenet, '_existing_album_folders', lambda *args: [])
     album, wanted, other = _album_folder(tmp_path)
     settings = _settings(tmp_path, prefer_albums=True)
 
@@ -1157,6 +1157,41 @@ def test_a_deluxe_song_reuses_the_standard_album_without_searching(
     assert download_from_usenet(dict(deluxe), _settings(tmp_path)) == wanted
 
 
+def test_other_downloaded_release_folders_are_searched_for_the_track(
+    tmp_path, monkeypatch
+):
+    from mutagen.id3 import ID3, TIT2, TPE1
+
+    from tests.test_downloader_extended import _minimal_mp3
+
+    standard, _wanted, _other = _album_folder(tmp_path)
+    deluxe = (
+        tmp_path
+        / 'Artist - Album (Deluxe Edition)'
+        / 'Artist - Album (Deluxe Edition)'
+    )
+    deluxe.mkdir(parents=True)
+    bonus = deluxe / '06 - Bonus.mp3'
+    _minimal_mp3(bonus)
+    tags = ID3()
+    tags.add(TIT2(encoding=3, text='Bonus'))
+    tags.add(TPE1(encoding=3, text='Artist'))
+    tags.save(str(bonus))
+    usenet._album_cache_put(usenet.album_cache_key(dict(_SONG)), standard)
+    monkeypatch.setattr(
+        usenet,
+        '_search_indexers',
+        lambda *args: pytest.fail('must reuse disk'),
+    )
+    song = {
+        **_SONG,
+        'name': 'Bonus',
+        'album_name': 'Album (Deluxe Edition)',
+        'album_artist': 'Artist',
+    }
+    assert download_from_usenet(dict(song), _settings(tmp_path)) == bonus
+
+
 def test_a_track_missing_from_the_cached_album_never_downloads_it_again(
     tmp_path, monkeypatch
 ):
@@ -1176,7 +1211,7 @@ def test_a_missing_track_after_a_fresh_album_fetch_is_not_downloaded_again(
     tmp_path, monkeypatch
 ):
     album, _wanted, _other = _album_folder(tmp_path)
-    monkeypatch.setattr(usenet, '_existing_album_folder', lambda *args: None)
+    monkeypatch.setattr(usenet, '_existing_album_folders', lambda *args: [])
     monkeypatch.setattr(
         usenet, '_search_indexers', lambda *args: [_ALBUM_RELEASE]
     )

@@ -70,7 +70,9 @@ Edition variants count as one album for source reuse: `(Deluxe Edition)`,
 the same artist + base album. Once one such release is on disk, the other
 variants and their tracks reuse it. A track that is genuinely missing from the
 downloaded release is **not** answered by downloading another release of the
-same album; it moves on to the next source instead (or to a per-track search).
+same album; the complete download directory is still searched across *all*
+already-fetched release folders (standard, deluxe, reissue, CD1/CD2) for that
+track, and only when none contains it does the song move on to the next source.
 This is also why a discography no longer leaves several `.1`, `.2` copies of
 the same album behind. Incomplete batches keep their source folder until the
 run ends; only then does the automatic cleanup delete it.
@@ -80,6 +82,10 @@ audio source immediately and continues with the next source in the configured
 order, without waiting for the three-attempt limit to run out. It works while
 the song is waiting or downloading. The source list, retry behaviour and
 automatic failover are unchanged for every other song.
+
+The Queue opens on **All** so the whole pending album/artist batch is visible
+at once: the running tracks plus every song still waiting. The *In progress*
+tab remains a filter for only the currently downloading rows.
 
 **Settings → Usenet → Clean up SABnzbd now** deletes every finished SABnzbd job
 plus any remaining cached release folders immediately, including folders whose

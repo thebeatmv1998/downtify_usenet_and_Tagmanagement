@@ -148,7 +148,7 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useWindowVirtualizer } from '@tanstack/vue-virtual'
 import UiButton from '/src/components/ui/UiButton.vue'
 import UiEmpty from '/src/components/ui/UiEmpty.vue'
@@ -168,12 +168,10 @@ import { useAuth } from '/src/model/auth'
 import { useLibrary } from '/src/model/library'
 import { useUi } from '/src/model/ui'
 import { queueRowEstimate } from '/src/lib/queueList'
-import { shouldJumpToActive } from '/src/lib/queueTab'
 import { useI18n } from '/src/i18n'
 
 const { t } = useI18n()
 const route = useRoute()
-const router = useRouter()
 const dm = useDownloadManager()
 const tracker = useProgressTracker()
 const library = useLibrary()
@@ -200,18 +198,10 @@ const TABS = ['active', 'queued', 'done', 'failed', 'all']
 const tab = computed(() => {
   const requested = String(route.params.tab || '')
   if (TABS.includes(requested)) return requested
-  return counts.value.active || counts.value.queued ? 'active' : 'all'
+  // Show the whole outstanding batch by default: the active tab alone
+  // hides every waiting song, which made an album look like one track.
+  return 'all'
 })
-
-// Jump to "In progress" as soon as downloads start.
-watch(
-  () => counts.value.active,
-  (now, before) => {
-    if (shouldJumpToActive(now, before, tab.value)) {
-      router.replace({ name: 'Queue', params: { tab: 'active' } })
-    }
-  }
-)
 
 const tabs = computed(() =>
   [

@@ -1375,10 +1375,16 @@ def _pick_track_in_album(
     return best[1] if best else None
 
 
-def _existing_album_folder(
+def _existing_album_folders(
     complete_dir: Path, song: dict[str, Any]
-) -> Optional[Path]:
-    """Recover completed releases from disk even after a cache loss/restart."""
+) -> list[Path]:
+    """Every downloaded release family on disk for this artist + album.
+
+    Covers standard, deluxe, reissue and disc-split folders alike, so a
+    track missing from the first one can still be found in another
+    already-downloaded release without fetching anything new.
+    """
+
     raw_album = str(song.get('album_name') or '')
     album = _alnum_only(_base_album_name(raw_album)) or _alnum_only(raw_album)
     artists = song.get('artists') or []
@@ -1386,7 +1392,8 @@ def _existing_album_folder(
         str(song.get('album_artist') or (artists[0] if artists else ''))
     )
     if not album or not artist or not complete_dir.is_dir():
-        return None
+        return []
+    folders: list[Path] = []
     for entry in sorted(complete_dir.rglob('*')):
         if (
             not entry.is_file()
@@ -1403,8 +1410,43 @@ def _existing_album_folder(
                 str(meta.get('album_artist') or ''),
             ])
         )
-        if artist in text and album in text:
-            return entry.parent
+        if artist in text and album in text and entry.parent not in folders:
+            folders.append(entry.parent)
+    return folders
+
+
+def _existing_album_folder(
+    complete_dir: Path, song: dict[str, Any]
+) -> Optional[Path]:
+    """First downloaded release folder for the album, if any."""
+
+    folders = _existing_album_folders(complete_dir, song)
+    return folders[0] if folders else None
+
+
+def _album_folders_to_search(
+    complete_dir: Path, song: dict[str, Any], *preferred: Optional[Path]
+) -> list[Path]:
+    """Preferred folder first, then every other downloaded release."""
+
+    folders = [folder for folder in preferred if folder is not None]
+    for folder in _existing_album_folders(complete_dir, song):
+        if folder not in folders:
+            folders.append(folder)
+    return folders
+
+
+def _track_in_folders(
+    folders: list[Path],
+    song: dict[str, Any],
+    settings: dict[str, Any],
+) -> Optional[tuple[Path, Path]]:
+    for folder in folders:
+        found = _pick_track_in_album(folder, song, settings)
+        if found is not None and verify_downloaded_file_matches_spotify(
+            found, song
+        ):
+            return folder, found
     return None
 
 
@@ -1626,33 +1668,36 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
 
     # A previously downloaded album with this artist+album is still on
     # disk: extract the track from it instead of re-downloading anything.
-    if cached_album is None:
-        cached_album = _existing_album_folder(complete_dir, song)
-        if cached_album is not None:
-            for key in cache_keys:
-                _album_cache_put(key, cached_album)
-    if cached_album is not None:
+    # Every matching release folder is inspected (standard, deluxe,
+    # reissue, CD1/CD2), so a track missing from one edition can still be
+    # served from another one that is already downloaded.
+    folders = _album_folders_to_search(complete_dir, song, cached_album)
+    if folders:
         if album_only:
-            return cached_album
+            for key in cache_keys:
+                _album_cache_put(key, folders[0])
+            return folders[0]
         report(30.0, 'using downloaded album')
-        found = _pick_track_in_album(cached_album, spotify_row, settings)
-        if found is not None and verify_downloaded_file_matches_spotify(
-            found, spotify_row
-        ):
+        hit = _track_in_folders(folders, spotify_row, settings)
+        if hit is not None:
+            folder, found = hit
             logger.info(
-                'usenet: reused cached album title={!r} album={!r}',
+                'usenet: reused downloaded album title={!r} album={!r}',
                 song.get('name'),
-                cached_album.name,
+                folder.name,
             )
+            for key in cache_keys:
+                _album_cache_put(key, folder)
             return found
-        # The album is already here but this song is not in it. Searching
-        # again would download the same album (often a different edition)
-        # for every missing track, so leave it to the next source instead.
+        # The album family is already here but this song is in none of its
+        # releases. Searching again would download the same album (often
+        # another edition) for every missing track, so leave it to the
+        # next source instead.
         logger.info(
-            'usenet: cached album has no matching track title={!r} '
-            'album={!r}; not downloading the album again',
+            'usenet: downloaded album has no matching track title={!r} '
+            'albums={} ; not downloading the album again',
             song.get('name'),
-            cached_album.name,
+            len(folders),
         )
         return None
 
@@ -1734,10 +1779,14 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
             if nzb_state == 'cached' and nzb_cached is not None:
                 if album_only:
                     return nzb_cached
-                found = _pick_track_in_album(nzb_cached, spotify_row, settings)
-                if found is not None and (
-                    verify_downloaded_file_matches_spotify(found, spotify_row)
-                ):
+                folders = _album_folders_to_search(
+                    complete_dir, song, nzb_cached
+                )
+                hit = _track_in_folders(folders, spotify_row, settings)
+                if hit is not None:
+                    folder, found = hit
+                    for key in cache_keys:
+                        _album_cache_put(key, folder)
                     return found
                 # Already downloaded this release; do not fetch it again.
                 return None
@@ -1781,23 +1830,21 @@ def download_from_usenet(  # noqa: PLR0914, PLR1702  # search, rank, queue, poll
                     cached = _album_cache_get(event_key)
                     if cached is None:
                         cached = _album_cache_get(album_key)
-                    found = (
-                        _pick_track_in_album(cached, spotify_row, settings)
-                        if cached is not None
-                        else None
+                    folders = _album_folders_to_search(
+                        complete_dir, song, cached
                     )
-                    if found is not None and (
-                        verify_downloaded_file_matches_spotify(
-                            found, spotify_row
-                        )
-                    ):
+                    hit = _track_in_folders(folders, spotify_row, settings)
+                    if hit is not None:
+                        folder, found = hit
                         logger.info(
                             'usenet: reused album fetched in parallel '
                             'title={!r}',
                             song.get('name'),
                         )
+                        for key in cache_keys:
+                            _album_cache_put(key, folder)
                         return found
-                    if cached is not None:
+                    if folders:
                         # Same album, different edition; never fetch it a
                         # second time just because this track is missing.
                         return None
