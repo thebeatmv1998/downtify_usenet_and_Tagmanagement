@@ -427,6 +427,7 @@ export default {
     mergeStagereading: 'Reading library tags…',
     mergeStagematching: 'Matching singles to albums…',
     mergeStagegrouping: 'Comparing editions and quality…',
+    mergeStagerehoming: 'Bilinmeyen parçalar yerleştiriliyor…',
     mergeStagemerging: 'Moving tracks and removing duplicates…',
     mergeStageplaylists: 'Updating playlists…',
     mergeHint:
@@ -438,6 +439,10 @@ export default {
     },
     mergeScanned: 'Checked {tracks} tracks in {seconds}s.',
     mergeFind: 'Find split albums',
+    tidyAction: 'Bilinmeyenleri yerleştir ve temizle',
+    tidyHint:
+      'unknown klasörlerindeki parçaları gerçek albümlerine taşır (Spotify, Deezer veya iTunes araması), kopyaları ve boş albüm klasörlerini siler.',
+    tidyDone: '{rehomed} parça yerleştirildi, {duplicates} kopya silindi, {folders} boş klasör silindi.',
     mergeSearching: 'Looking for split albums\u2026',
     mergeNone: 'No split albums found.',
     mergeFound: {

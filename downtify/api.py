@@ -6752,6 +6752,60 @@ async def library_albums_merge_preview(
     }
 
 
+@router.post('/api/library/albums/tidy')
+async def library_albums_tidy(
+    operation_id: str = Query(default='', max_length=64),
+) -> dict[str, Any]:
+    """File ``unknown`` tracks under their real album and prune empties."""
+
+    if state.downloader is None:
+        raise HTTPException(status_code=500, detail='Downloader not ready')
+    ctx = library_context()
+    progress = _merge_progress_callback(operation_id)
+    try:
+        result = await asyncio.to_thread(
+            album_merge.tidy_library,
+            ctx,
+            downloader=state.downloader,
+            spotify_id_for=_spotify_id_lookup(),
+            monitor_db=state.monitor_db,
+            on_progress=progress,
+        )
+        await _refresh_library_playlists_after_moves(
+            set(result.get('playlists') or []), progress, result
+        )
+    except Exception:
+        _merge_progress.finish(operation_id, failed=True)
+        raise
+    _merge_progress.finish(operation_id)
+    return result
+
+
+async def _refresh_library_playlists_after_moves(
+    affected: set[str],
+    progress: Any,
+    result: dict[str, Any],
+) -> None:
+    if not affected or state.playlist_catalog is None:
+        return
+    if progress:
+        progress('playlists', 0, 0)
+    await asyncio.to_thread(
+        refresh_playlists_after_moves,
+        affected,
+        settings=state.settings,
+        downloader=state.downloader,
+        playlist_catalog=state.playlist_catalog,
+        track_index=state.track_index,
+        monitor_db=state.monitor_db,
+        navidrome_index=state.navidrome_index,
+        playlist_spotify_cache=state.playlist_spotify_cache,
+        cover_cache=state.cover_cache,
+        metadata_cache=state.metadata_cache,
+    )
+    result['playlists_refreshed'] = sorted(affected)
+
+
 @router.post('/api/library/albums/merge')
 async def library_albums_merge(
     payload: dict[str, Any] = Body(default={}),
@@ -6777,24 +6831,9 @@ async def library_albums_merge(
             monitor_db=state.monitor_db,
             on_progress=progress,
         )
-        affected = set(result.get('playlists') or [])
-        if affected and state.playlist_catalog is not None:
-            if progress:
-                progress('playlists', 0, 0)
-            await asyncio.to_thread(
-                refresh_playlists_after_moves,
-                affected,
-                settings=state.settings,
-                downloader=state.downloader,
-                playlist_catalog=state.playlist_catalog,
-                track_index=state.track_index,
-                monitor_db=state.monitor_db,
-                navidrome_index=state.navidrome_index,
-                playlist_spotify_cache=state.playlist_spotify_cache,
-                cover_cache=state.cover_cache,
-                metadata_cache=state.metadata_cache,
-            )
-            result['playlists_refreshed'] = sorted(affected)
+        await _refresh_library_playlists_after_moves(
+            set(result.get('playlists') or []), progress, result
+        )
     except Exception:
         _merge_progress.finish(operation_id, failed=True)
         raise

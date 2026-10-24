@@ -427,6 +427,7 @@ export default {
     mergeStagereading: 'Reading library tags…',
     mergeStagematching: 'Matching singles to albums…',
     mergeStagegrouping: 'Comparing editions and quality…',
+    mergeStagerehoming: 'Ταξινόμηση άγνωστων κομματιών…',
     mergeStagemerging: 'Moving tracks and removing duplicates…',
     mergeStageplaylists: 'Updating playlists…',
     mergeHint:
@@ -438,6 +439,10 @@ export default {
     },
     mergeScanned: 'Checked {tracks} tracks in {seconds}s.',
     mergeFind: 'Find split albums',
+    tidyAction: 'Ταξινόμηση αγνώστων & καθαρισμός',
+    tidyHint:
+      'Μετακινεί κομμάτια από φακέλους unknown στο πραγματικό τους άλμπουμ (αναζήτηση Spotify, Deezer ή iTunes), αφαιρεί διπλότυπα και διαγράφει άδειους φακέλους.',
+    tidyDone: '{rehomed} κομμάτια ταξινομήθηκαν, {duplicates} διπλότυπα αφαιρέθηκαν, {folders} άδειοι φάκελοι διαγράφηκαν.',
     mergeSearching: 'Looking for split albums\u2026',
     mergeNone: 'No split albums found.',
     mergeFound: {

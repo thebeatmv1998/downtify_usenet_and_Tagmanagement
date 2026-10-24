@@ -425,6 +425,7 @@ export default {
     mergeStagereading: 'Reading library tags…',
     mergeStagematching: 'Matching singles to albums…',
     mergeStagegrouping: 'Comparing editions and quality…',
+    mergeStagerehoming: 'Ismeretlen számok besorolása…',
     mergeStagemerging: 'Moving tracks and removing duplicates…',
     mergeStageplaylists: 'Updating playlists…',
     mergeHint:
@@ -436,6 +437,10 @@ export default {
     },
     mergeScanned: 'Checked {tracks} tracks in {seconds}s.',
     mergeFind: 'Find split albums',
+    tidyAction: 'Ismeretlenek besorolása és tisztítás',
+    tidyHint:
+      'Az unknown mappák zenéit a valódi albumukba mozgatja (Spotify, Deezer vagy iTunes keresés), eltávolítja a duplikátumokat és az üres mappákat.',
+    tidyDone: '{rehomed} szám besorolva, {duplicates} duplikátum törölve, {folders} üres mappa törölve.',
     mergeSearching: 'Looking for split albums\u2026',
     mergeNone: 'No split albums found.',
     mergeFound: {

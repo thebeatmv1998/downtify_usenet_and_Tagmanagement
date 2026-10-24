@@ -261,6 +261,15 @@
         >
           {{ t('upgrade.mergeFind') }}
         </UiButton>
+        <UiButton
+          variant="secondary"
+          icon="wand"
+          :loading="tidyBusy"
+          :disabled="mergeLoading || mergeBusy || tidyBusy"
+          @click="tidyLibrary"
+        >
+          {{ t('upgrade.tidyAction') }}
+        </UiButton>
         <span v-if="mergeLoading" class="text-[13px] text-muted">
           {{ t('upgrade.mergeSearching') }}
         </span>
@@ -368,6 +377,12 @@
       </div>
       <p v-else-if="mergeNote" class="mt-3 text-[13px] text-muted">
         {{ mergeNote }}
+      </p>
+      <p class="mt-3 text-[13px] text-pretty text-muted">
+        {{ t('upgrade.tidyHint') }}
+      </p>
+      <p v-if="tidyNote" class="mt-1.5 text-[13px] text-muted">
+        {{ tidyNote }}
       </p>
     </UiPanel>
 
@@ -575,6 +590,8 @@ const mergeResolved = ref(0)
 const mergeTracks = ref(0)
 const mergeElapsedMs = ref(0)
 const mergeProgress = ref({ stage: 'reading', completed: 0, total: 0 })
+const tidyBusy = ref(false)
+const tidyNote = ref('')
 let mergeProgressTimer
 let mergeOperationId = ''
 
@@ -595,9 +612,14 @@ function startMergeProgress(stage) {
       const res = await API.getAlbumMergeProgress(id)
       if (mergeOperationId !== id) return
       if (
-        ['reading', 'matching', 'grouping', 'merging', 'playlists'].includes(
-          res.data?.stage
-        )
+        [
+          'reading',
+          'matching',
+          'grouping',
+          'rehoming',
+          'merging',
+          'playlists',
+        ].includes(res.data?.stage)
       ) {
         mergeProgress.value = res.data
       }
@@ -669,6 +691,27 @@ async function applyMerge() {
   } finally {
     stopMergeProgress()
     mergeBusy.value = false
+  }
+}
+
+async function tidyLibrary() {
+  if (mergeLoading.value || mergeBusy.value || tidyBusy.value) return
+  tidyBusy.value = true
+  tidyNote.value = ''
+  try {
+    const res = await API.tidyLibrary(startMergeProgress('rehoming'))
+    tidyNote.value = t('upgrade.tidyDone', {
+      rehomed: res.data?.rehomed || 0,
+      duplicates: res.data?.duplicates_removed || 0,
+      folders: res.data?.folders_removed || 0,
+    })
+    await load()
+    await refreshJobs()
+  } catch (err) {
+    tidyNote.value = describeError(err)
+  } finally {
+    stopMergeProgress()
+    tidyBusy.value = false
   }
 }
 

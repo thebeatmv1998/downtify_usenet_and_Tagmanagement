@@ -650,9 +650,10 @@ def detect_split_albums(  # noqa: PLR0914
         groups.setdefault((artist_key, album_key), []).append(item)
 
     plans: list[MergePlan] = []
-    _progress(on_progress, 'grouping', 0, len(groups))
-    for index, items in enumerate(groups.values(), start=1):
-        _progress(on_progress, 'grouping', index, len(groups))
+    grouped = _merge_related_groups(groups)
+    _progress(on_progress, 'grouping', 0, len(grouped))
+    for index, items in enumerate(grouped, start=1):
+        _progress(on_progress, 'grouping', index, len(grouped))
         if len(items) < 2:
             continue
         plan = _build_plan(items)
@@ -735,6 +736,124 @@ def _clusters(items: list[_Entry]) -> list[list[_Entry]]:
     for group in by_song.values():
         clusters.extend(_duration_clusters(group, lambda item: item.duration))
     return clusters
+
+
+def _album_name_tokens(name: str) -> list[str]:
+    text = fold_text(base_album(name))
+    cleaned = ''.join(char if char.isalnum() else ' ' for char in text)
+    return [token for token in cleaned.split() if token]
+
+
+#: Words that extend an album title without naming a different release.
+#: Deliberately excludes ``live``, ``acoustic``, ``remix``, ``instrumental``
+#: and ``karaoke``: those are separate albums, not editions.
+_EDITION_EXTRA_TOKENS = frozenset({
+    'deluxe',
+    'expanded',
+    'special',
+    'bonus',
+    'edition',
+    'version',
+    'reissue',
+    'remaster',
+    'remastered',
+    'anniversary',
+    'spilled',
+    'complete',
+    'collector',
+    'collectors',
+    'limited',
+    'tour',
+    'standard',
+    'explicit',
+    'clean',
+    'cd',
+    'disc',
+    'disk',
+})
+
+
+def _related_album_names(left: str, right: str) -> bool:
+    """Whether two album titles are editions of the same release family.
+
+    Token-prefix relation only: ``GUTS`` / ``GUTS (Spilled)`` and
+    ``Global Warming`` / ``Global Warming Meltdown`` are related by name,
+    while ``SOUR`` / ``GUTS`` are not. The extra words have to name an
+    edition (deluxe, spilled, expanded, ...), never a different release
+    such as a live or remix album. Whether a related pair is really the
+    same album is decided by their track overlap below.
+    """
+
+    a = _album_name_tokens(left)
+    b = _album_name_tokens(right)
+    if not a or not b:
+        return False
+    short, long = (a, b) if len(a) <= len(b) else (b, a)
+    if long[: len(short)] != short:
+        return False
+    extra = long[len(short) :]
+    if not extra:
+        return True
+    return all(token in _EDITION_EXTRA_TOKENS for token in extra)
+
+
+def _song_keys_of(items: list[_Entry]) -> set[str]:
+    return {item.song_key for item in items if item.song_key}
+
+
+def _solid_song_overlap(left_keys: set[str], right_keys: set[str]) -> bool:
+    """Most of the smaller edition's songs also appear in the other one."""
+
+    if not left_keys or not right_keys:
+        return False
+    shared = len(left_keys & right_keys)
+    return shared / min(len(left_keys), len(right_keys)) >= 0.6
+
+
+def _merge_related_groups(
+    groups: dict[tuple[str, str], list[_Entry]],
+) -> list[list[_Entry]]:
+    """Join name-related groups whose track lists largely overlap.
+
+    ``GUTS`` and ``GUTS (Spilled)`` share almost every song, so they are
+    editions of one album. ``Global Warming`` and ``Global Warming
+    Meltdown`` are related by name but contain different songs, so they
+    stay separate albums.
+    """
+
+    keys = list(groups)
+    if len(keys) < 2:
+        return list(groups.values())
+    parent = {key: key for key in keys}
+
+    def find(key: tuple[str, str]) -> tuple[str, str]:
+        while parent[key] != key:
+            parent[key] = parent[parent[key]]
+            key = parent[key]
+        return key
+
+    by_artist: dict[str, list[tuple[str, str]]] = {}
+    for key in keys:
+        by_artist.setdefault(key[0], []).append(key)
+
+    keys_of = {key: _song_keys_of(groups[key]) for key in keys}
+    for artist_keys in by_artist.values():
+        if len(artist_keys) < 2:
+            continue
+        for index, left in enumerate(artist_keys):
+            for right in artist_keys[index + 1 :]:
+                if not _related_album_names(
+                    groups[left][0].album, groups[right][0].album
+                ):
+                    continue
+                if not _solid_song_overlap(keys_of[left], keys_of[right]):
+                    continue
+                parent[find(right)] = find(left)
+
+    combined: dict[tuple[str, str], list[_Entry]] = {}
+    for key in keys:
+        combined.setdefault(find(key), []).extend(groups[key])
+    return list(combined.values())
 
 
 def _build_plan(  # noqa: PLR0914
@@ -1272,12 +1391,14 @@ def apply_merge(  # noqa: PLR0914
             merged += 1
 
     _progress(on_progress, 'merging', total, total)
+    folders_removed = prune_empty_folders(ctx)
     invalidate_library_paths_cache(drop_entries=True)
     return {
         'merged': merged,
         'moved': moved,
         'deleted': deleted,
         'reclaimed_bytes': reclaimed_bytes,
+        'folders_removed': folders_removed,
         'failed': failed,
         'playlists': sorted(affected),
     }
@@ -1334,6 +1455,256 @@ def _resolve(stored: str, ctx: LibraryContext) -> Optional[Path]:
     return locate_library_file(
         stored, ctx.download_dir, ctx.slskd_dir, ctx.extra_dirs
     )
+
+
+# ── Unknown folders, leftovers ───────────────────────────────────────
+_UNKNOWN_FOLDER_NAMES = frozenset({
+    'unknown',
+    'unknown album',
+    'unknown artist',
+    'unknowns',
+    'unsorted',
+})
+
+
+def _is_unknown_album(value: Any) -> bool:
+    text = str(value or '').strip()
+    return is_blank_or_placeholder(text) or fold_text(text) in (
+        _UNKNOWN_FOLDER_NAMES
+    )
+
+
+def _under_unknown_folder(stored: str) -> bool:
+    parts = re.split(r'[\\/]+', str(stored or ''))
+    return any(
+        fold_text(part) in _UNKNOWN_FOLDER_NAMES for part in parts[:-1] if part
+    )
+
+
+def _song_with_remote(
+    song: dict[str, Any], remote: dict[str, Any]
+) -> dict[str, Any]:
+    merged = dict(song)
+    for key in (
+        'album_name',
+        'album_artist',
+        'year',
+        'release_date',
+        'genre',
+        'track_number',
+    ):
+        value = remote.get(key)
+        if value not in {None, '', 0}:
+            merged[key] = value
+    if not str(merged.get('album_artist') or '').strip():
+        artists = merged.get('artists') or []
+        merged['album_artist'] = str(artists[0] if artists else '')
+    return merged
+
+
+def rehome_unknown_tracks(  # noqa: PLR0914
+    ctx: LibraryContext,
+    *,
+    downloader: Any,
+    spotify_id_for: Optional[Callable[[str], str]] = None,
+    resolver: Optional[Resolver] = None,
+    monitor_db: Any = None,
+    on_progress: Optional[Progress] = None,
+    limit: int = 500,
+) -> dict[str, Any]:
+    """Move tracks out of ``unknown`` folders into their real album.
+
+    Files that were downloaded without album metadata end up under an
+    ``unknown`` folder (or carry an ``unknown`` album tag). The album is
+    resolved from the track's Spotify id, Deezer or iTunes, the file is
+    moved into the normal output-template folder and retagged. A copy
+    that already exists at the destination wins; the unknown copy is
+    then removed instead of creating a ``(2)`` file.
+    """
+
+    resolve = resolver or default_resolver
+    download_dir = Path(ctx.download_dir)
+    slskd_dir = ctx.slskd_dir
+    if downloader is not None:
+        slskd_dir = slskd_dir or slskd_dir_from_downloader(downloader)
+
+    entries = list_library_entries(ctx)
+    targets = [
+        entry
+        for entry in entries
+        if str(entry.get('file') or '').strip()
+        and (
+            _is_unknown_album(entry.get('album'))
+            or _under_unknown_folder(str(entry.get('file') or ''))
+        )
+    ]
+    total = min(len(targets), max(0, int(limit or 0)))
+    rehomed = 0
+    duplicates = 0
+    affected: set[str] = set()
+    failed: list[str] = []
+    _progress(on_progress, 'rehoming', 0, total)
+
+    for index, entry in enumerate(targets[:total], start=1):
+        _progress(on_progress, 'rehoming', index, total)
+        stored = str(entry.get('file') or '')
+        source = _resolve(stored, ctx)
+        if source is None:
+            continue
+        song = song_from_entry(entry)
+        spotify_id = ''
+        if spotify_id_for is not None:
+            try:
+                spotify_id = str(spotify_id_for(stored) or '')
+            except Exception:
+                logger.opt(exception=True).debug(
+                    'Unknown album: id lookup failed for {}', stored
+                )
+        found = _safe_resolve(resolve, song, spotify_id) or {}
+        album = str(found.get('album_name') or '').strip()
+        if _is_unknown_album(album):
+            continue
+        merged = _song_with_remote(song, found)
+        if not str(merged.get('album_artist') or '').strip():
+            continue
+        try:
+            target_dir, basename = _target_location(
+                merged, downloader, download_dir
+            )
+            target = target_dir / f'{basename}{source.suffix or ".mp3"}'
+            if target.resolve() == source.resolve():
+                # Already in the right folder; only refresh the tags.
+                embed_metadata(
+                    target,
+                    merged,
+                    download_cover=False,
+                    cover_bytes=None,
+                )
+                continue
+            if target.exists():
+                source_meta = read_audio_metadata(source)
+                target_meta = read_audio_metadata(target)
+                source_duration = _float_or_zero(source_meta.get('duration'))
+                target_duration = _float_or_zero(target_meta.get('duration'))
+                if (
+                    not source_duration
+                    or not target_duration
+                    or abs(source_duration - target_duration)
+                    <= DURATION_TOLERANCE_SECONDS
+                ):
+                    _relink(
+                        stored,
+                        target,
+                        ctx,
+                        download_dir,
+                        slskd_dir,
+                        affected,
+                        monitor_db,
+                    )
+                    root, _relative = library_file_root(
+                        stored,
+                        download_dir,
+                        slskd_dir,
+                        ctx.extra_dirs,
+                    )
+                    source.unlink()
+                    library_cleanup.remove_track_leftovers(source, root)
+                    duplicates += 1
+                    continue
+            cover = _cover_bytes(merged, source)
+            final = _move(source, target)
+            if final is None:
+                failed.append(stored)
+                continue
+            _move_sidecar(source, final)
+            try:
+                embed_metadata(
+                    final,
+                    merged,
+                    download_cover=True,
+                    cover_bytes=cover,
+                )
+                if cover:
+                    album_covers.write_cover(final.parent, cover)
+            except Exception:
+                logger.opt(exception=True).warning(
+                    'Unknown album: tagging {} failed', final
+                )
+            _relink(
+                stored,
+                final,
+                ctx,
+                download_dir,
+                slskd_dir,
+                affected,
+                monitor_db,
+            )
+            _prune_after_move(stored, source, ctx, download_dir, slskd_dir)
+            rehomed += 1
+        except Exception:
+            logger.opt(exception=True).warning(
+                'Unknown album: could not rehome {}', stored
+            )
+            failed.append(stored)
+
+    _progress(on_progress, 'rehoming', total, total)
+    return {
+        'rehomed': rehomed,
+        'duplicates_removed': duplicates,
+        'failed': failed,
+        'playlists': sorted(affected),
+    }
+
+
+def prune_empty_folders(ctx: LibraryContext) -> int:
+    """Delete empty album folders below the library roots."""
+
+    roots = [Path(ctx.download_dir), *ctx.extra_dirs]
+    removed = 0
+    for candidate_root in roots:
+        try:
+            root = candidate_root.resolve()
+        except OSError:
+            continue
+        if not root.is_dir():
+            continue
+        for dirpath, _dirnames, _filenames in os.walk(root, topdown=False):
+            path = Path(dirpath)
+            if path == root or path.name.startswith('.'):
+                continue
+            try:
+                if not any(path.iterdir()):
+                    path.rmdir()
+                    removed += 1
+            except OSError:
+                continue
+    return removed
+
+
+def tidy_library(
+    ctx: LibraryContext,
+    *,
+    downloader: Any,
+    spotify_id_for: Optional[Callable[[str], str]] = None,
+    resolver: Optional[Resolver] = None,
+    monitor_db: Any = None,
+    on_progress: Optional[Progress] = None,
+    limit: int = 500,
+) -> dict[str, Any]:
+    """Rehome ``unknown`` tracks, then remove empty album folders."""
+
+    result = rehome_unknown_tracks(
+        ctx,
+        downloader=downloader,
+        spotify_id_for=spotify_id_for,
+        resolver=resolver,
+        monitor_db=monitor_db,
+        on_progress=on_progress,
+        limit=limit,
+    )
+    result['folders_removed'] = prune_empty_folders(ctx)
+    invalidate_library_paths_cache(drop_entries=True)
+    return result
 
 
 def _target_location(

@@ -428,6 +428,7 @@ export default {
     mergeStagereading: 'Reading library tags…',
     mergeStagematching: 'Matching singles to albums…',
     mergeStagegrouping: 'Comparing editions and quality…',
+    mergeStagerehoming: 'Clasificando pistas desconocidas…',
     mergeStagemerging: 'Moving tracks and removing duplicates…',
     mergeStageplaylists: 'Updating playlists…',
     mergeHint:
@@ -439,6 +440,10 @@ export default {
     },
     mergeScanned: 'Checked {tracks} tracks in {seconds}s.',
     mergeFind: 'Find split albums',
+    tidyAction: 'Reubicar desconocidos y limpiar',
+    tidyHint:
+      'Mueve pistas de carpetas unknown a su álbum real (consulta Spotify, Deezer o iTunes), elimina copias duplicadas y borra carpetas vacías.',
+    tidyDone: '{rehomed} pista(s) clasificada(s), {duplicates} duplicado(s) eliminado(s), {folders} carpeta(s) vacía(s) borrada(s).',
     mergeSearching: 'Looking for split albums\u2026',
     mergeNone: 'No split albums found.',
     mergeFound: {

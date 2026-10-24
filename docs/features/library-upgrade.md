@@ -131,9 +131,27 @@ An album that was downloaded one single at a time often ends up filed under the 
 
 The edition with the most distinct songs wins. Every song is kept once: FLAC/ALAC beats lossy, then higher bitrate/sample rate wins, and the largest file breaks a tie. Duplicate copies are marked as such in the preview and deleted only after the kept copy has been moved into the album folder successfully. Copies whose lengths differ by more than five seconds are treated as different recordings (an extended mix or a live version), so both survive.
 
+Albums whose names are not just an edition marker but still belong together are
+recognized by their songs: when one title extends the other with edition words
+(`GUTS` / `GUTS (Spilled)`, `… (Deluxe)`, `… – Complete Edition`) **and** most
+of the smaller release's songs also appear in the larger one, both are merged.
+That catches deluxe/spilled editions with their own chart entry while keeping
+genuinely different releases apart: `Global Warming` and `Global Warming
+Meltdown` share only a name prefix, and live/acoustic/remix/karaoke albums are
+excluded from the name relation entirely, so they stay separate records.
+
 1. Click **Find split albums**. Nothing is written. Standard/deluxe editions and duplicate copies are found from the local tags with no network request at all; only tracks that look like standalone singles are looked up, in parallel and cached. A repeated scan therefore costs almost nothing.
 2. Each candidate is listed with its editions, the resulting track count and how many duplicate files will be removed. Untick what you don't want. During scanning and merging, a progress bar shows the current stage and completed work. Reading the library and refreshing playlists use an animated bar until their size is known.
-3. **Merge** rewrites album, album artist, year and track number (the winning edition's order, with bonus tracks appended), moves the kept files into one `Artist/Album/` folder (following your [file organization](file-organization.md) layout), deletes the losing duplicate copies, and refreshes the M3Us and Navidrome playlists that pointed at the old paths. A `.lrc` sidecar moves with its track; an album folder left without audio has its cover and empty parents removed.
+3. **Merge** rewrites album, album artist, year and track number (the winning edition's order, with bonus tracks appended), moves the kept files into one `Artist/Album/` folder (following your [file organization](file-organization.md) layout), deletes the losing duplicate copies, and refreshes the M3Us and Navidrome playlists that pointed at the old paths. A `.lrc` sidecar moves with its track; an album folder left without audio has its cover and empty parents removed, and the merge finishes by deleting every empty folder left below the library roots.
+
+Tracks that were downloaded without album metadata live in an `unknown` folder
+(or carry an `unknown` album tag). **Re-home unknown & clean folders** resolves
+their real album from Spotify, Deezer or iTunes, moves and retags them into the
+normal output-template folder, and removes the `unknown` folder once it is
+empty. A copy that already exists at the destination is kept; the unknown copy
+is deleted instead of producing a `(2)` file, and any other empty album folders
+are removed at the end. Use this after fixing a batch that downloaded without
+album tags; the merge preview itself never needs it.
 
 A track the tag sources can't place with confidence is left where it is; the preview never guesses. The preview reports how many tracks a source matched and how long the scan took. If a source was rate-limited (Apple Music refuses a burst of requests), the count is low and a note tells you to try again shortly. Deezer is asked before Apple Music because it answers faster, and every successful answer is cached for the life of the process.
 
@@ -162,6 +180,7 @@ This is a one-off repair for playlists built before the fix. New playlist downlo
 | `POST` | `/api/library/upgrade/cancel` | Drop the rest of the queue |
 | `POST` | `/api/library/albums/merge/preview` | Album merge candidates; writes nothing |
 | `POST` | `/api/library/albums/merge` | Merge the confirmed albums (body `{plans}`) |
+| `POST` | `/api/library/albums/tidy` | Re-home `unknown` tracks, delete duplicates and empty folders |
 | `POST` | `/api/library/playlists/rebuild` | Rewrite every known playlist's M3U from the library |
 
 Progress is also pushed over the [WebSocket](../api-reference.md#websocket) as `{"type": "library_upgrade", "upgrade": {…}}`.

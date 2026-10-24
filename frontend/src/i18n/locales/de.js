@@ -495,6 +495,7 @@ export default {
     mergeStagereading: 'Bibliotheks-Tags werden gelesen…',
     mergeStagematching: 'Singles werden Alben zugeordnet…',
     mergeStagegrouping: 'Editionen und Qualität werden verglichen…',
+    mergeStagerehoming: 'Unbekannte Titel werden einsortiert…',
     mergeStagemerging: 'Titel werden verschoben und Duplikate entfernt…',
     mergeStageplaylists: 'Playlists werden aktualisiert…',
     mergeHint:
@@ -506,6 +507,10 @@ export default {
     },
     mergeScanned: '{tracks} Titel in {seconds}s geprüft.',
     mergeFind: 'Find split albums',
+    tidyAction: 'Unbekannte einsortieren & Ordner aufräumen',
+    tidyHint:
+      'Verschiebt Titel aus unknown-Ordnern in ihr echtes Album (Spotify-, Deezer- oder iTunes-Abfrage), entfernt doppelte Kopien und löscht leere Albumordner.',
+    tidyDone: '{rehomed} Titel einsortiert, {duplicates} Duplikat(e) entfernt, {folders} leere(r) Ordner gelöscht.',
     mergeSearching: 'Looking for split albums…',
     mergeNone: 'No split albums found.',
     mergeFound: {

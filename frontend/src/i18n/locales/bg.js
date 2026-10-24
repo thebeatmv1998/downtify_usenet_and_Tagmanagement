@@ -419,6 +419,7 @@ export default {
     mergeStagereading: 'Reading library tags…',
     mergeStagematching: 'Matching singles to albums…',
     mergeStagegrouping: 'Comparing editions and quality…',
+    mergeStagerehoming: 'Подреждане на неизвестни песни…',
     mergeStagemerging: 'Moving tracks and removing duplicates…',
     mergeStageplaylists: 'Updating playlists…',
     mergeHint:
@@ -430,6 +431,10 @@ export default {
     },
     mergeScanned: 'Checked {tracks} tracks in {seconds}s.',
     mergeFind: 'Find split albums',
+    tidyAction: 'Подреждане на неизвестни и почистване',
+    tidyHint:
+      'Премества песни от папки unknown в истинския им албум (търсене в Spotify, Deezer или iTunes), премахва дубликати и изтрива празни папки.',
+    tidyDone: '{rehomed} песни подредени, {duplicates} дубликата премахнати, {folders} празни папки изтрити.',
     mergeSearching: 'Looking for split albums\u2026',
     mergeNone: 'No split albums found.',
     mergeFound: {

@@ -696,3 +696,175 @@ def test_duration_clusters_keep_extended_versions_separate() -> None:
         items, lambda item: item.duration
     )
     assert [len(cluster) for cluster in clusters] == [2, 1]
+
+
+# ?? Content-aware editions, unknown folders, empty folders ???????????
+
+
+def _no_lookup(_song, _spotify_id):
+    return None
+
+
+def test_spilled_edition_is_merged_by_track_overlap(tmp_path: Path) -> None:
+    ctx = _context(tmp_path)
+    standard = ctx.download_dir / 'Little Mix' / 'GUTS'
+    for number, title in enumerate(('A', 'B'), start=1):
+        _write_track(
+            standard / f'{title}.mp3',
+            title=title,
+            album='GUTS',
+            number=str(number),
+        )
+    spilled = ctx.download_dir / 'Little Mix' / 'GUTS (Spilled)'
+    for number, title in enumerate(('A', 'B', 'C'), start=1):
+        _write_track(
+            spilled / f'{title}.mp3',
+            title=title,
+            album='GUTS (Spilled)',
+            number=str(number),
+        )
+
+    plans = album_merge.detect_split_albums(ctx, resolver=_no_lookup)
+
+    assert len(plans) == 1
+    plan = plans[0]
+    assert plan.album == 'GUTS (Spilled)'
+    assert {track.title for track in plan.tracks if track.keep} == {
+        'A',
+        'B',
+        'C',
+    }
+    assert 'GUTS' in plan.editions
+    assert 'GUTS (Spilled)' in plan.editions
+
+
+def test_similar_name_with_different_songs_is_not_merged(
+    tmp_path: Path,
+) -> None:
+    ctx = _context(tmp_path)
+    first = ctx.download_dir / 'Little Mix' / 'Global Warming'
+    for number, title in enumerate(('A', 'B'), start=1):
+        _write_track(
+            first / f'{title}.mp3',
+            title=title,
+            album='Global Warming',
+            number=str(number),
+        )
+    second = ctx.download_dir / 'Little Mix' / 'Global Warming Meltdown'
+    for number, title in enumerate(('C', 'D'), start=1):
+        _write_track(
+            second / f'{title}.mp3',
+            title=title,
+            album='Global Warming Meltdown',
+            number=str(number),
+        )
+
+    assert album_merge.detect_split_albums(ctx, resolver=_no_lookup) == []
+
+
+def _unknown_resolver(song, _spotify_id):
+    if song.get('name') != 'Shout Out to My Ex':
+        return None
+    return {
+        'album_name': 'Glory Days',
+        'album_artist': 'Little Mix',
+        'year': '2016',
+        'track_number': 1,
+        'genre': 'Pop',
+    }
+
+
+def test_unknown_folder_tracks_are_rehomed_and_folder_disappears(
+    tmp_path: Path,
+) -> None:
+    ctx = _context(tmp_path)
+    unknown = ctx.download_dir / 'unknown' / 'song.mp3'
+    _write_track(unknown, title='Shout Out to My Ex', album='unknown')
+
+    report = album_merge.tidy_library(
+        ctx,
+        downloader=None,
+        resolver=_unknown_resolver,
+    )
+
+    target = (
+        ctx.download_dir
+        / 'Little Mix'
+        / 'Glory Days'
+        / '01 - Shout Out to My Ex.mp3'
+    )
+    assert report['rehomed'] == 1
+    assert target.is_file()
+    assert not (ctx.download_dir / 'unknown').exists()
+    tags = ID3(str(target))
+    assert str(tags['TALB']) == 'Glory Days'
+    assert str(tags['TPE2']) == 'Little Mix'
+    assert tags['TRCK'].text[0] == '1'
+
+
+def test_unknown_duplicate_is_removed_when_the_album_already_has_it(
+    tmp_path: Path,
+) -> None:
+    ctx = _context(tmp_path)
+    existing = (
+        ctx.download_dir
+        / 'Little Mix'
+        / 'Glory Days'
+        / '01 - Shout Out to My Ex.mp3'
+    )
+    _write_track(
+        existing, title='Shout Out to My Ex', album='Glory Days', number='1'
+    )
+    duplicate = ctx.download_dir / 'unknown' / 'song.mp3'
+    _write_track(duplicate, title='Shout Out to My Ex', album='unknown')
+
+    report = album_merge.tidy_library(
+        ctx,
+        downloader=None,
+        resolver=_unknown_resolver,
+    )
+
+    assert report['duplicates_removed'] == 1
+    assert report['rehomed'] == 0
+    assert existing.is_file()
+    assert not (ctx.download_dir / 'unknown').exists()
+
+
+def test_empty_album_folders_are_deleted_but_used_ones_stay(
+    tmp_path: Path,
+) -> None:
+    ctx = _context(tmp_path)
+    empty = ctx.download_dir / 'Little Mix' / 'Empty Album'
+    empty.mkdir(parents=True)
+    used = ctx.download_dir / 'Little Mix' / 'Glory Days'
+    _write_track(used / 'a.mp3', title='A', album='Glory Days', number='1')
+
+    removed = album_merge.prune_empty_folders(ctx)
+
+    assert removed == 1
+    assert not empty.exists()
+    assert used.is_dir()
+
+
+def test_live_album_with_the_same_songs_is_not_merged(tmp_path: Path) -> None:
+    ctx = _context(tmp_path)
+    studio = ctx.download_dir / 'Little Mix' / 'Glory Days'
+    for number, title in enumerate(('A', 'B'), start=1):
+        _write_track(
+            studio / f'{title}.mp3',
+            title=title,
+            album='Glory Days',
+            number=str(number),
+            frames=40,
+        )
+    live = ctx.download_dir / 'Little Mix' / 'Glory Days Live'
+    for number, title in enumerate(('A', 'B'), start=1):
+        _write_track(
+            live / f'{title}.mp3',
+            title=title,
+            album='Glory Days Live',
+            number=str(number),
+            frames=80,
+        )
+
+    assert album_merge.detect_split_albums(ctx, resolver=_no_lookup) == []

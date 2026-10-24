@@ -779,6 +779,12 @@ function getAlbumMergeProgress(operationId) {
   )
 }
 
+function tidyLibrary(operationId) {
+  return API.post('/api/library/albums/tidy', null, {
+    params: { operation_id: operationId },
+  })
+}
+
 function rebuildLibraryPlaylists() {
   return API.post('/api/library/playlists/rebuild')
 }
@@ -1018,6 +1024,7 @@ export default {
   writePlaylistM3u,
   findSplitAlbums,
   mergeAlbums,
+  tidyLibrary,
   getAlbumMergeProgress,
   rebuildLibraryPlaylists,
   getTrackTags,
