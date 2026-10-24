@@ -442,6 +442,7 @@ export default {
     tidyHint:
       'Move faixas de pastas unknown para o álbum correto (consulta Spotify, Deezer ou iTunes), remove cópias duplicadas e apaga pastas vazias.',
     tidyDone: '{rehomed} faixa(s) organizada(s), {duplicates} duplicata(s) removida(s), {folders} pasta(s) vazia(s) apagada(s).',
+    tidyRemaining: '{count} faixa(s) não puderam ser associadas a um álbum.',
     mergeSearching: 'Looking for split albums\u2026',
     mergeNone: 'No split albums found.',
     mergeFound: {

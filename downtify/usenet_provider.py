@@ -152,7 +152,7 @@ def album_cache_key(song: dict[str, Any]) -> str:
 _BRACKETED_RE = re.compile(r'[\(\[\{][^\)\]\}]*[\)\]\}]')
 _DISC_MARKER_RE = re.compile(r'\b(?:cd|disc|disk)\s*\d+\b', re.IGNORECASE)
 _EDITION_RE = re.compile(
-    r'\b(?:deluxe|reissue|remaster(?:ed)?|expanded|anniversary|'
+    r'\b(?:deluxe|spilled|reissue|remaster(?:ed)?|expanded|anniversary|'
     r'bonus\s+tracks?|collector\'?s\s+edition|special\s+edition)\b',
     re.IGNORECASE,
 )

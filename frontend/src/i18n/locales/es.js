@@ -444,6 +444,7 @@ export default {
     tidyHint:
       'Mueve pistas de carpetas unknown a su álbum real (consulta Spotify, Deezer o iTunes), elimina copias duplicadas y borra carpetas vacías.',
     tidyDone: '{rehomed} pista(s) clasificada(s), {duplicates} duplicado(s) eliminado(s), {folders} carpeta(s) vacía(s) borrada(s).',
+    tidyRemaining: '{count} pista(s) no se pudieron asignar a un álbum.',
     mergeSearching: 'Looking for split albums\u2026',
     mergeNone: 'No split albums found.',
     mergeFound: {

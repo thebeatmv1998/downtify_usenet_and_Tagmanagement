@@ -511,6 +511,7 @@ export default {
     tidyHint:
       'Verschiebt Titel aus unknown-Ordnern in ihr echtes Album (Spotify-, Deezer- oder iTunes-Abfrage), entfernt doppelte Kopien und löscht leere Albumordner.',
     tidyDone: '{rehomed} Titel einsortiert, {duplicates} Duplikat(e) entfernt, {folders} leere(r) Ordner gelöscht.',
+    tidyRemaining: '{count} Titel konnten keinem Album zugeordnet werden.',
     mergeSearching: 'Looking for split albums…',
     mergeNone: 'No split albums found.',
     mergeFound: {

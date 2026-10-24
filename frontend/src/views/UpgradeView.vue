@@ -280,7 +280,11 @@
           {{ t('upgrade.mergeNone') }}
         </span>
       </div>
-      <div v-if="mergeLoading || mergeBusy" class="mt-3" aria-live="polite">
+      <div
+        v-if="mergeLoading || mergeBusy || tidyBusy"
+        class="mt-3"
+        aria-live="polite"
+      >
         <div class="mb-2 flex justify-between text-[13px] text-muted">
           <span>{{ t(`upgrade.mergeStage${mergeProgress.stage}`) }}</span>
           <span v-if="mergeProgress.total">
@@ -705,6 +709,11 @@ async function tidyLibrary() {
       duplicates: res.data?.duplicates_removed || 0,
       folders: res.data?.folders_removed || 0,
     })
+    const left =
+      (res.data?.remaining || 0) + (res.data?.unresolved || 0)
+    if (left) {
+      tidyNote.value += ` ${t('upgrade.tidyRemaining', { count: left })}`
+    }
     await load()
     await refreshJobs()
   } catch (err) {

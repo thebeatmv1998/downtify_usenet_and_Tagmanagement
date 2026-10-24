@@ -441,6 +441,7 @@ export default {
     tidyHint:
       'Az unknown mappák zenéit a valódi albumukba mozgatja (Spotify, Deezer vagy iTunes keresés), eltávolítja a duplikátumokat és az üres mappákat.',
     tidyDone: '{rehomed} szám besorolva, {duplicates} duplikátum törölve, {folders} üres mappa törölve.',
+    tidyRemaining: '{count} számot nem sikerült albumhoz rendelni.',
     mergeSearching: 'Looking for split albums\u2026',
     mergeNone: 'No split albums found.',
     mergeFound: {

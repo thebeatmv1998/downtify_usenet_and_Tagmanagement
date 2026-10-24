@@ -509,6 +509,7 @@ export default {
     tidyHint:
       'unknown 폴더의 곡을 실제 앨범으로 이동하고(Spotify, Deezer 또는 iTunes 조회) 중복 복사본과 빈 앨범 폴더를 삭제합니다.',
     tidyDone: '{rehomed}개 곡 정리, {duplicates}개 중복 삭제, {folders}개 빈 폴더 삭제.',
+    tidyRemaining: '{count}개 곡을 앨범에 배정하지 못했습니다.',
     mergeSearching: 'Looking for split albums…',
     mergeNone: 'No split albums found.',
     mergeFound: {

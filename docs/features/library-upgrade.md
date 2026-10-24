@@ -159,6 +159,13 @@ New downloads also look the album up before they are filed: when a track's tags
 carry no album, Deezer/iTunes are asked once and the result is used for both the
 folder and the tags, so fresh downloads no longer create `unknown` folders.
 
+The cleanup processes **every** unknown track (no 500-track cutoff) and shows a
+progress bar while it works. A title tag that still contains the artist prefix
+(`Olivia Rodrigo - brutal`) is matched as `brutal`, so it lines up with the
+correctly tagged copy and with the tag sources. The result line reports how many
+tracks were filed, how many duplicate copies were removed, how many empty
+folders were deleted, and how many tracks no source could place.
+
 Use this after fixing a batch that downloaded without album tags; the merge
 preview itself never needs it.
 

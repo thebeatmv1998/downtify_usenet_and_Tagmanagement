@@ -917,3 +917,71 @@ def test_a_folder_with_only_a_cover_is_removed(tmp_path: Path) -> None:
 
     assert album_merge.prune_empty_folders(ctx) == 1
     assert not folder.exists()
+
+
+def test_spilled_folder_is_merged_even_when_the_tags_say_guts(
+    tmp_path: Path,
+) -> None:
+    ctx = _context(tmp_path)
+    standard = ctx.download_dir / 'Olivia Rodrigo' / 'GUTS (2023)'
+    for number, title in enumerate(('A', 'B'), start=1):
+        _write_track(
+            standard / f'{title}.mp3',
+            title=title,
+            album='GUTS',
+            number=str(number),
+        )
+    spilled = ctx.download_dir / 'Olivia Rodrigo' / 'GUTS (spilled)'
+    for number, title in enumerate(('C', 'D'), start=1):
+        _write_track(
+            spilled / f'{title}.mp3',
+            title=title,
+            album='GUTS',
+            number=str(number),
+        )
+
+    plans = album_merge.detect_split_albums(ctx, resolver=_no_lookup)
+
+    assert len(plans) == 1
+    plan = plans[0]
+    assert plan.album == 'GUTS'
+    assert {track.title for track in plan.tracks if track.keep} == {
+        'A',
+        'B',
+        'C',
+        'D',
+    }
+    assert any('spilled' in edition for edition in plan.editions)
+
+
+def test_artist_prefixed_title_is_cleaned_before_matching(
+    tmp_path: Path,
+) -> None:
+    ctx = _context(tmp_path)
+    existing = (
+        ctx.download_dir
+        / 'Little Mix'
+        / 'Glory Days'
+        / '01 - Shout Out to My Ex.mp3'
+    )
+    _write_track(
+        existing, title='Shout Out to My Ex', album='Glory Days', number='1'
+    )
+    unknown = (
+        ctx.download_dir / 'unknown' / 'Little Mix - Shout Out to My Ex.mp3'
+    )
+    _write_track(
+        unknown,
+        title='Little Mix - Shout Out to My Ex',
+        album='',
+    )
+
+    report = album_merge.tidy_library(
+        ctx,
+        downloader=None,
+        resolver=lambda *args: None,
+    )
+
+    assert report['duplicates_removed'] == 1
+    assert existing.is_file()
+    assert not unknown.exists()

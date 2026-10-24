@@ -452,6 +452,7 @@ export default {
     tidyHint:
       'Déplace les pistes des dossiers unknown vers leur véritable album (recherche Spotify, Deezer ou iTunes), supprime les doublons et les dossiers vides.',
     tidyDone: '{rehomed} piste(s) classée(s), {duplicates} doublon(s) supprimé(s), {folders} dossier(s) vide(s) supprimé(s).',
+    tidyRemaining: '{count} piste(s) n’ont pas pu être associée(s) à un album.',
     mergeSearching: 'Looking for split albums\u2026',
     mergeNone: 'No split albums found.',
     mergeFound: {

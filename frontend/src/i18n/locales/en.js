@@ -436,6 +436,7 @@ export default {
     tidyHint:
       'Moves tracks out of unknown folders into their real album (Spotify, Deezer or iTunes lookup), removes duplicate copies and deletes empty album folders.',
     tidyDone: '{rehomed} track(s) filed, {duplicates} duplicate(s) removed, {folders} empty folder(s) deleted.',
+    tidyRemaining: '{count} track(s) could not be matched to an album.',
     mergeSearching: 'Looking for split albums\u2026',
     mergeNone: 'No split albums found.',
     mergeFound: {

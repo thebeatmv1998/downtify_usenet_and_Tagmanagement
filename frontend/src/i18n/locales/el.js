@@ -443,6 +443,7 @@ export default {
     tidyHint:
       'Μετακινεί κομμάτια από φακέλους unknown στο πραγματικό τους άλμπουμ (αναζήτηση Spotify, Deezer ή iTunes), αφαιρεί διπλότυπα και διαγράφει άδειους φακέλους.',
     tidyDone: '{rehomed} κομμάτια ταξινομήθηκαν, {duplicates} διπλότυπα αφαιρέθηκαν, {folders} άδειοι φάκελοι διαγράφηκαν.',
+    tidyRemaining: '{count} κομμάτια δεν αντιστοιχήθηκαν σε άλμπουμ.',
     mergeSearching: 'Looking for split albums\u2026',
     mergeNone: 'No split albums found.',
     mergeFound: {

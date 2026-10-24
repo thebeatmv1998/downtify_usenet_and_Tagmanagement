@@ -435,6 +435,7 @@ export default {
     tidyHint:
       'Премества песни от папки unknown в истинския им албум (търсене в Spotify, Deezer или iTunes), премахва дубликати и изтрива празни папки.',
     tidyDone: '{rehomed} песни подредени, {duplicates} дубликата премахнати, {folders} празни папки изтрити.',
+    tidyRemaining: '{count} песни не можаха да бъдат причислени към албум.',
     mergeSearching: 'Looking for split albums\u2026',
     mergeNone: 'No split albums found.',
     mergeFound: {

@@ -443,6 +443,7 @@ export default {
     tidyHint:
       'unknown klasörlerindeki parçaları gerçek albümlerine taşır (Spotify, Deezer veya iTunes araması), kopyaları ve boş albüm klasörlerini siler.',
     tidyDone: '{rehomed} parça yerleştirildi, {duplicates} kopya silindi, {folders} boş klasör silindi.',
+    tidyRemaining: '{count} parça bir albüme atanamadı.',
     mergeSearching: 'Looking for split albums\u2026',
     mergeNone: 'No split albums found.',
     mergeFound: {

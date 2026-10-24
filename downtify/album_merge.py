@@ -97,7 +97,7 @@ _LOSSLESS_CODECS = frozenset({
 #: non-empty base title remains, so an album actually called "Deluxe"
 #: is left alone.
 _EDITION_WORD = (
-    r'(?:the\s+)?(?:super\s+deluxe|deluxe|special|expanded|'
+    r'(?:the\s+)?(?:super\s+deluxe|deluxe|spilled|special|expanded|'
     r'bonus(?:\s+tracks?)?|(?:\d+(?:st|nd|rd|th)\s+)?anniversary|'
     r'collector\'?s|limited|platinum|legacy|'
     r'(?:(?:19|20)\d{2}\s+)?remaster(?:ed)?)'
@@ -131,7 +131,7 @@ _EDITION_TAIL = re.compile(
 )
 
 _EDITION_RANK_WORDS = re.compile(
-    r'deluxe|special|expanded|anniversary|remaster|bonus|'
+    r'deluxe|spilled|special|expanded|anniversary|remaster|bonus|'
     r'collector|limited|platinum|legacy',
     re.IGNORECASE,
 )
@@ -1481,6 +1481,26 @@ def _under_unknown_folder(stored: str) -> bool:
     )
 
 
+def _strip_artist_prefix(title: str, artist: str) -> str:
+    """``Olivia Rodrigo - brutal`` → ``brutal`` for a matching artist.
+
+    Files downloaded without tags often carry the whole ``Artist - Title``
+    string as their title tag. That never matches the clean title on the
+    real album copy, so strip it before any lookup.
+    """
+
+    text = str(title or '').strip()
+    name = str(artist or '').strip()
+    if not text or not name:
+        return text
+    for separator in (' - ', ' – ', ' — '):
+        prefix = f'{name}{separator}'
+        if text.casefold().startswith(prefix.casefold()):
+            cleaned = text[len(prefix) :].strip()
+            return cleaned or text
+    return text
+
+
 def _song_with_remote(
     song: dict[str, Any], remote: dict[str, Any]
 ) -> dict[str, Any]:
@@ -1535,7 +1555,7 @@ def rehome_unknown_tracks(  # noqa: PLR0914
     resolver: Optional[Resolver] = None,
     monitor_db: Any = None,
     on_progress: Optional[Progress] = None,
-    limit: int = 500,
+    limit: int = 0,
 ) -> dict[str, Any]:
     """Move tracks out of ``unknown`` folders into their real album.
 
@@ -1564,7 +1584,10 @@ def rehome_unknown_tracks(  # noqa: PLR0914
             or _under_unknown_folder(str(entry.get('file') or ''))
         )
     ]
-    total = min(len(targets), max(0, int(limit or 0)))
+    total = (
+        min(len(targets), max(0, int(limit or 0))) if limit else len(targets)
+    )
+    selected = targets if not limit else targets[:total]
     rehomed = 0
     duplicates = 0
     unresolved = 0
@@ -1572,14 +1595,18 @@ def rehome_unknown_tracks(  # noqa: PLR0914
     failed: list[str] = []
     _progress(on_progress, 'rehoming', 0, total)
 
-    for index, entry in enumerate(targets[:total], start=1):
+    for index, entry in enumerate(selected, start=1):
         _progress(on_progress, 'rehoming', index, total)
         stored = str(entry.get('file') or '')
         source = _resolve(stored, ctx)
         if source is None:
             continue
         song = song_from_entry(entry)
-        local = local_index.get(song_key(album_artist_of(entry), song['name']))
+        artist = album_artist_of(entry)
+        clean_title = _strip_artist_prefix(str(song.get('name') or ''), artist)
+        if clean_title:
+            song['name'] = clean_title
+        local = local_index.get(song_key(artist, song['name']))
         if local is not None:
             found = {
                 'album_name': str(local.get('album') or ''),
@@ -1690,6 +1717,7 @@ def rehome_unknown_tracks(  # noqa: PLR0914
         'rehomed': rehomed,
         'duplicates_removed': duplicates,
         'unresolved': unresolved,
+        'remaining': len(targets) - len(selected),
         'failed': failed,
         'playlists': sorted(affected),
     }
@@ -1777,7 +1805,7 @@ def tidy_library(
     resolver: Optional[Resolver] = None,
     monitor_db: Any = None,
     on_progress: Optional[Progress] = None,
-    limit: int = 500,
+    limit: int = 0,
 ) -> dict[str, Any]:
     """Rehome ``unknown`` tracks, then remove empty album folders."""
 
