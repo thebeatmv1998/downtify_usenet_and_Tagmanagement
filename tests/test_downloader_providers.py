@@ -615,3 +615,31 @@ def test_explicit_video_override_still_downloads_that_video(
     )
     assert d.download(override).endswith('.mp3')
     assert no_youtube == ['https://music.youtube.com/watch?v=vid12345678']
+
+
+def test_a_missing_album_is_filled_before_choosing_the_folder(
+    tmp_path, monkeypatch
+):
+    from downtify import album_lookup
+
+    d = Downloader(tmp_path)
+    monkeypatch.setattr(
+        album_lookup,
+        'lookup_album',
+        lambda song: {
+            'album_name': 'Real Album',
+            'album_artist': 'Artist',
+            'year': '2020',
+            'track_number': 3,
+        },
+    )
+    song = d._with_album_metadata({
+        'name': 'Track',
+        'artists': ['Artist'],
+        'album_name': 'unknown',
+    })
+    assert song['album_name'] == 'Real Album'
+    assert song['album_artist'] == 'Artist'
+    assert song['year'] == '2020'
+    assert song['track_number'] == 3
+    assert d._album_subdir(song) == 'Real Album'

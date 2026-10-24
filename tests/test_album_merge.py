@@ -868,3 +868,52 @@ def test_live_album_with_the_same_songs_is_not_merged(tmp_path: Path) -> None:
         )
 
     assert album_merge.detect_split_albums(ctx, resolver=_no_lookup) == []
+
+
+def test_unknown_track_uses_a_correctly_tagged_copy_without_a_lookup(
+    tmp_path: Path,
+) -> None:
+    ctx = _context(tmp_path)
+    existing = (
+        ctx.download_dir
+        / 'Little Mix'
+        / 'Glory Days'
+        / '01 - Shout Out to My Ex.mp3'
+    )
+    _write_track(
+        existing, title='Shout Out to My Ex', album='Glory Days', number='1'
+    )
+    unknown = ctx.download_dir / 'unknown' / 'song.mp3'
+    _write_track(unknown, title='Shout Out to My Ex', album='')
+
+    def _must_not_lookup(_song, _spotify_id):
+        raise AssertionError('local tags already know the album')
+
+    report = album_merge.tidy_library(
+        ctx,
+        downloader=None,
+        resolver=_must_not_lookup,
+    )
+
+    # The destination already had the track: the unknown copy is removed.
+    assert report['duplicates_removed'] == 1
+    assert existing.is_file()
+    assert not unknown.exists()
+    assert not (ctx.download_dir / 'unknown').exists()
+
+
+def test_a_folder_with_only_a_cover_is_removed(tmp_path: Path) -> None:
+    ctx = _context(tmp_path)
+    _write_track(
+        ctx.download_dir / 'Little Mix' / 'Glory Days' / 'a.mp3',
+        title='A',
+        album='Glory Days',
+        number='1',
+    )
+    folder = ctx.download_dir / 'Little Mix' / 'Abandoned'
+    folder.mkdir(parents=True)
+    (folder / 'cover.jpg').write_bytes(b'jpeg')
+    (folder / 'info.nfo').write_text('release info', encoding='utf-8')
+
+    assert album_merge.prune_empty_folders(ctx) == 1
+    assert not folder.exists()

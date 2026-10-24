@@ -45,7 +45,7 @@ from . import (
     spotify,
 )
 from . import lyrics as lyrics_mod
-from .downloader import _sanitize, embed_metadata
+from .downloader import _AUDIO_EXTENSIONS, _sanitize, embed_metadata
 from .library_catalog import (
     LibraryContext,
     album_artist_of,
@@ -1502,6 +1502,31 @@ def _song_with_remote(
     return merged
 
 
+def _local_album_index(
+    entries: list[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    """``artist|title`` → a library row whose album is already known.
+
+    Resolving an unknown track against this index costs no network
+    request and handles the common case where the song also exists in a
+    correctly tagged copy (another album, playlist or download).
+    """
+
+    index: dict[str, dict[str, Any]] = {}
+    for entry in entries:
+        album = str(entry.get('album') or '').strip()
+        if _is_unknown_album(album):
+            continue
+        artist = album_artist_of(entry)
+        title = str(entry.get('title') or '').strip()
+        if not artist or not title:
+            continue
+        key = song_key(artist, title)
+        if key != '|':
+            index.setdefault(key, entry)
+    return index
+
+
 def rehome_unknown_tracks(  # noqa: PLR0914
     ctx: LibraryContext,
     *,
@@ -1529,6 +1554,7 @@ def rehome_unknown_tracks(  # noqa: PLR0914
         slskd_dir = slskd_dir or slskd_dir_from_downloader(downloader)
 
     entries = list_library_entries(ctx)
+    local_index = _local_album_index(entries)
     targets = [
         entry
         for entry in entries
@@ -1541,6 +1567,7 @@ def rehome_unknown_tracks(  # noqa: PLR0914
     total = min(len(targets), max(0, int(limit or 0)))
     rehomed = 0
     duplicates = 0
+    unresolved = 0
     affected: set[str] = set()
     failed: list[str] = []
     _progress(on_progress, 'rehoming', 0, total)
@@ -1552,17 +1579,28 @@ def rehome_unknown_tracks(  # noqa: PLR0914
         if source is None:
             continue
         song = song_from_entry(entry)
-        spotify_id = ''
-        if spotify_id_for is not None:
-            try:
-                spotify_id = str(spotify_id_for(stored) or '')
-            except Exception:
-                logger.opt(exception=True).debug(
-                    'Unknown album: id lookup failed for {}', stored
-                )
-        found = _safe_resolve(resolve, song, spotify_id) or {}
+        local = local_index.get(song_key(album_artist_of(entry), song['name']))
+        if local is not None:
+            found = {
+                'album_name': str(local.get('album') or ''),
+                'album_artist': str(local.get('album_artist') or ''),
+                'year': str(local.get('year') or ''),
+                'track_number': int(local.get('track_number') or 0),
+                'genre': str(local.get('genre') or ''),
+            }
+        else:
+            spotify_id = ''
+            if spotify_id_for is not None:
+                try:
+                    spotify_id = str(spotify_id_for(stored) or '')
+                except Exception:
+                    logger.opt(exception=True).debug(
+                        'Unknown album: id lookup failed for {}', stored
+                    )
+            found = _safe_resolve(resolve, song, spotify_id) or {}
         album = str(found.get('album_name') or '').strip()
         if _is_unknown_album(album):
+            unresolved += 1
             continue
         merged = _song_with_remote(song, found)
         if not str(merged.get('album_artist') or '').strip():
@@ -1651,14 +1689,32 @@ def rehome_unknown_tracks(  # noqa: PLR0914
     return {
         'rehomed': rehomed,
         'duplicates_removed': duplicates,
+        'unresolved': unresolved,
         'failed': failed,
         'playlists': sorted(affected),
     }
 
 
 def prune_empty_folders(ctx: LibraryContext) -> int:
-    """Delete empty album folders below the library roots."""
+    """Delete album folders that no longer hold audio.
 
+    A folder whose only remaining files are cover art, lyrics or SABnzbd
+    leftovers is empty for this purpose: those files are removed and the
+    folder goes too. Folders with audio, or with a subfolder that still
+    has some, are left alone.
+    """
+
+    leftovers = frozenset({
+        'cover.jpg',
+        'folder.jpg',
+        'front.jpg',
+        'album.jpg',
+        'cover.png',
+        'folder.png',
+        'front.png',
+        'thumbs.db',
+        '.ds_store',
+    })
     roots = [Path(ctx.download_dir), *ctx.extra_dirs]
     removed = 0
     for candidate_root in roots:
@@ -1672,6 +1728,38 @@ def prune_empty_folders(ctx: LibraryContext) -> int:
             path = Path(dirpath)
             if path == root or path.name.startswith('.'):
                 continue
+            try:
+                entries = list(path.iterdir())
+            except OSError:
+                continue
+            has_audio = any(
+                entry.is_file()
+                and entry.suffix.lower().lstrip('.') in _AUDIO_EXTENSIONS
+                for entry in entries
+            )
+            has_content = any(
+                entry.is_dir()
+                and not entry.name.startswith('.')
+                and any(entry.iterdir())
+                for entry in entries
+            )
+            if has_audio or has_content:
+                continue
+            for entry in entries:
+                if not entry.is_file():
+                    continue
+                name = entry.name.casefold()
+                if name in leftovers or entry.suffix.lower() in {
+                    '.lrc',
+                    '.jpg',
+                    '.jpeg',
+                    '.png',
+                    '.nfo',
+                }:
+                    try:
+                        entry.unlink()
+                    except OSError:
+                        pass
             try:
                 if not any(path.iterdir()):
                     path.rmdir()

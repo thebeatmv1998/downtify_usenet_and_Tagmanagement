@@ -148,10 +148,19 @@ Tracks that were downloaded without album metadata live in an `unknown` folder
 (or carry an `unknown` album tag). **Re-home unknown & clean folders** resolves
 their real album from Spotify, Deezer or iTunes, moves and retags them into the
 normal output-template folder, and removes the `unknown` folder once it is
-empty. A copy that already exists at the destination is kept; the unknown copy
-is deleted instead of producing a `(2)` file, and any other empty album folders
-are removed at the end. Use this after fixing a batch that downloaded without
-album tags; the merge preview itself never needs it.
+empty. Before any network request it first looks for the same artist and title
+in a correctly tagged library copy, so duplicated songs are fixed offline. A
+copy that already exists at the destination is kept; the unknown copy is
+deleted instead of producing a `(2)` file, and any other empty album folders
+are removed at the end. Folders that only still hold a cover, lyrics or a
+release `.nfo` count as empty and are cleaned up too.
+
+New downloads also look the album up before they are filed: when a track's tags
+carry no album, Deezer/iTunes are asked once and the result is used for both the
+folder and the tags, so fresh downloads no longer create `unknown` folders.
+
+Use this after fixing a batch that downloaded without album tags; the merge
+preview itself never needs it.
 
 A track the tag sources can't place with confidence is left where it is; the preview never guesses. The preview reports how many tracks a source matched and how long the scan took. If a source was rate-limited (Apple Music refuses a burst of requests), the count is low and a note tells you to try again shortly. Deezer is asked before Apple Music because it answers faster, and every successful answer is cached for the life of the process.
 

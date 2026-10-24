@@ -34,7 +34,7 @@ from mutagen.oggopus import OggOpus
 from mutagen.oggvorbis import OggVorbis
 from yt_dlp.postprocessor.ffmpeg import FFmpegExtractAudioPP
 
-from . import cover_sources, download_control
+from . import album_lookup, cover_sources, download_control
 from . import lyrics as lyrics_mod
 from . import spotify as spotify_mod
 from .content_advisory import (
@@ -1311,6 +1311,45 @@ class Downloader:
             f'Could not find an audio match for {song.get("name")!r}'
         )
 
+    @staticmethod
+    def _with_album_metadata(song: dict[str, Any]) -> dict[str, Any]:
+        """Fill a missing album before choosing the output folder.
+
+        A download without album tags used to land in ``unknown/`` even
+        when Deezer or iTunes knew the release. The lookup is cached, so
+        an album costs at most one request per session.
+        """
+
+        def missing(value: Any) -> bool:
+            text = str(value or '').strip()
+            return not text or text.casefold() in {
+                'unknown',
+                'unknown album',
+                'unknown artist',
+            }
+
+        if not missing(song.get('album_name')):
+            return song
+        found = album_lookup.lookup_album(song)
+        if not found:
+            return song
+        updated = dict(song)
+        for key in (
+            'album_name',
+            'album_artist',
+            'year',
+            'release_date',
+            'genre',
+            'track_number',
+        ):
+            if missing(updated.get(key)) and found.get(key):
+                updated[key] = found[key]
+        if missing(updated.get('album_artist')):
+            artists = updated.get('artists') or []
+            if artists:
+                updated['album_artist'] = str(artists[0])
+        return updated
+
     def _provider_order(self) -> list[str]:
         """Configured sources that are actually enabled, deduplicated."""
 
@@ -1375,6 +1414,8 @@ class Downloader:
             existing = self.find_existing_download(song, subdir)
             if existing is not None:
                 return self._skip_existing(existing, progress_cb)
+
+        song = self._with_album_metadata(song)
 
         # Known-long tracks are refused before any search or fetch.
         reject_overlong_song(song, self.max_track_duration_seconds)
@@ -1463,6 +1504,7 @@ class Downloader:
             )
 
         song = enrich_from_match(song, match)
+        song = self._with_album_metadata(song)
 
         # Sparse rows learn their duration from the per-track embed
         # above; re-check now that it is known.
