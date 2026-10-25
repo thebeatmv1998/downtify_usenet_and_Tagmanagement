@@ -488,6 +488,12 @@ class AuthStore:
         self._lock = threading.Lock()
         self._signed_in = _SignInCache(SIGN_IN_CACHE_SECONDS)
         self._init_db()
+        try:
+            # Password hashes and token hashes live here; keep the file
+            # private to the container user.
+            os.chmod(self._path, 0o600)
+        except OSError:
+            logger.debug('Could not restrict auth database permissions')
         self.users = UserStore(db_path)
         self.users.add_change_listener(self._signed_in.clear)
         if self.users.ensure_default_admin(existing_install=existing_install):
@@ -1307,7 +1313,21 @@ class AuthMiddleware:
                 method, scope['path'], query
             )
             if device_id:
-                return Principal('signed', CLIENT, device_id), False
+                # Keep the device's owner on the principal so per-user
+                # visibility (hidden library items) still applies to a
+                # signed URL.
+                device = store.get_device(device_id) or {}
+                return (
+                    Principal(
+                        'signed',
+                        CLIENT,
+                        device_id,
+                        int(device.get('user_id') or 0),
+                        str(device.get('username') or ''),
+                        '',
+                    ),
+                    False,
+                )
         if 'ticket=' in query and scope.get('type') == 'websocket':
             tickets = self._get_tickets()
             ticket = dict(parse_qsl(query)).get('ticket', '')

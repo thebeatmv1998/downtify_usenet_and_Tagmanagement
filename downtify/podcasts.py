@@ -72,10 +72,12 @@ from .library_catalog import PODCASTS_DIRNAME
 from .m3u import sanitize_playlist_name
 from .spotify import fetch_embed_entity, parse_spotify_url
 from .sqlite_utils import connect_sqlite
+from .url_safety import safe_get, safe_stream
 
 _FEED_TIMEOUT = 20
 _DOWNLOAD_TIMEOUT = httpx.Timeout(15, read=120)
 _CHUNK_SIZE = 1 << 16  # 64 KiB
+_MAX_ARTWORK_BYTES = 20 * 1024 * 1024
 
 #: Enclosure MIME type -> file extension. Only audio; a video enclosure
 #: is dropped at parse time (video podcasts are a non-goal — see the
@@ -313,12 +315,17 @@ def parse_feed_bytes(content: bytes, feed_url: str) -> ParsedFeed:
 
 
 def fetch_feed(feed_url: str) -> ParsedFeed:
-    """Fetch and parse a podcast RSS feed (blocking)."""
+    """Fetch and parse a podcast RSS feed (blocking).
 
-    resp = httpx.get(
+    The URL comes from a user (or from a feed the user pasted), so it goes
+    through :mod:`downtify.url_safety`: no loopback, LAN, metadata or
+    other reserved address is fetched, and redirects are checked one by
+    one.
+    """
+
+    resp = safe_get(
         feed_url,
         timeout=_FEED_TIMEOUT,
-        follow_redirects=True,
         headers={
             'User-Agent': 'Downtify/podcasts (+https://github.com/henriquesebastiao/downtify)'
         },
@@ -409,8 +416,10 @@ def _fetch_image_bytes(url: str) -> Optional[bytes]:
     if not url:
         return None
     try:
-        resp = httpx.get(url, timeout=_FEED_TIMEOUT, follow_redirects=True)
+        resp = safe_get(url, timeout=_FEED_TIMEOUT)
         resp.raise_for_status()
+        if len(resp.content) > _MAX_ARTWORK_BYTES:
+            return None
         return resp.content
     except Exception:
         logger.opt(exception=True).debug(
@@ -685,11 +694,9 @@ def download_episode(
 
     total = 0
     written = 0
-    with httpx.stream(
-        'GET',
+    with safe_stream(
         episode.enclosure_url,
         timeout=_DOWNLOAD_TIMEOUT,
-        follow_redirects=True,
     ) as resp:
         resp.raise_for_status()
         total = int(resp.headers.get('content-length') or 0)

@@ -23,6 +23,16 @@ Paste one of these into the **Add a podcast** box, or type a name to search:
 
 ::: info Spotify-exclusive shows can't be downloaded
 A show that only exists on Spotify (no public feed) is reported as such — Downtify does not guess or fall back to something else. Search for the show by name to double-check before assuming it's exclusive.
+
+::: info Private feeds
+Because a feed URL and its episode links are user-supplied, the server
+refuses `http`/`https` URLs that resolve to loopback, LAN, link-local or
+other reserved addresses, and checks every redirect. A deliberately
+private feed server (for example on your NAS) needs
+`DOWNTIFY_ALLOW_PRIVATE_FEEDS=true`; see
+[Environment variables](../getting-started/environment-variables.md).
+The same guard applies to feed artwork and episode downloads.
+:::
 :::
 
 Before confirming, you choose:

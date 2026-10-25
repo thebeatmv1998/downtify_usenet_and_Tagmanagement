@@ -81,6 +81,8 @@ Paired apps get the same lists: [`GET /api/v1/playlists`](../api-reference.md#ge
 
 Admins decide what the other accounts see. Everything is visible to everyone until an admin hides something: a **song**, a whole **album** or a whole **artist**. Hidden items leave the Library, search's "in library" marks, playlists' track lists and what a paired phone syncs — for users, not for admins.
 
+A hidden song is also refused by the direct file routes (`/downloads/…`, `/media/…`, `/cover`, `/lyrics`): guessing its path does not let a user read the audio or its cover/lyrics. Playlist files (`.m3u`) and other sidecars are separate documents, not library tracks, and are not filtered by the hidden-song rules.
+
 - **In the Library**, open the `…` menu of a song, album or artist and choose **Hide from users** (or **Show to users** to undo it). In the Tracks tab, select several songs and use **Hide from users** in the selection bar.
 - Admins keep seeing everything. What is hidden carries a small crossed-out eye, and its tooltip says why: hidden on its own, with its album, or with its artist.
 - **Settings › Users › Hidden from users** lists every hidden artist, album and song, with **Show to users** next to each.

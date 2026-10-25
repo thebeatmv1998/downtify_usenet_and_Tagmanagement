@@ -56,6 +56,7 @@ from downtify.library_archive import (
     stream_library_zip,
 )
 from downtify.library_catalog import (
+    AUDIO_EXTENSIONS,
     TRACK_QUERY_LIMIT_MAX,
     filter_library_entries,
     list_entries_for_stored_paths,
@@ -92,6 +93,7 @@ from downtify.playlist_spotify_cache import (
     playlist_spotify_cache_loop,
 )
 from downtify.podcasts import PodcastStore
+from downtify.security_headers import SecurityHeadersMiddleware
 from downtify.server_identity import ServerIdentity
 from downtify.server_port import (
     DEFAULT_PORT,
@@ -196,6 +198,27 @@ class SPAStaticFiles(StaticFiles):
             return await super().get_response(path, scope)
         except Exception:
             return await super().get_response('index.html', scope)
+
+
+class LibraryStaticFiles(StaticFiles):
+    """``/downloads`` with the library's hidden-item rule applied.
+
+    The API listings cut what an admin hid from users; a raw static file
+    request would otherwise still serve it by path.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._audio_suffixes = tuple(
+            f'.{suffix.lower()}' for suffix in AUDIO_EXTENSIONS
+        )
+
+    async def get_response(self, path: str, scope):
+        if path.lower().endswith(self._audio_suffixes):
+            request = Request(scope)
+            if not api.file_visible_to(path, request):
+                return Response(status_code=404)
+        return await super().get_response(path, scope)
 
 
 def _fix_mime_types() -> None:
@@ -615,6 +638,9 @@ def build_app() -> FastAPI:
     )
     # Compress large JSON listings (``GET /tracks``) for the web UI.
     app.add_middleware(GZipMiddleware, minimum_size=1000)
+    # Outermost: every response - including an auth denial - carries the
+    # hardening headers.
+    app.add_middleware(SecurityHeadersMiddleware)
 
     settings_path = DATABASE_DIR / 'settings.json'
     api.state.settings_path = settings_path
@@ -761,7 +787,7 @@ def build_app() -> FastAPI:
         return tracks
 
     @app.get('/media/{file_path:path}')
-    def serve_media(file_path: str) -> FileResponse:
+    def serve_media(file_path: str, request: Request) -> FileResponse:
         """Serve a library file by its library path.
 
         Covers what the ``/downloads`` static mount can't: slskd downloads
@@ -770,6 +796,8 @@ def build_app() -> FastAPI:
         """
         full = resolve_library_file(file_path, api.library_context())
         if full is None:
+            raise HTTPException(status_code=404, detail='File not found')
+        if not api.file_visible_to(file_path, request):
             raise HTTPException(status_code=404, detail='File not found')
         return FileResponse(
             full,
@@ -973,7 +1001,7 @@ def build_app() -> FastAPI:
         return await api.after_library_delete(results, result, user_id)
 
     @app.get('/lyrics')
-    def get_lyrics(file: str) -> dict:
+    def get_lyrics(file: str, request: Request) -> dict:
         """Lyrics saved with a library track, for the player.
 
         ``{"synced": "<LRC text>", "plain": "<text>"}`` - the ``.lrc``
@@ -981,19 +1009,19 @@ def build_app() -> FastAPI:
         empty.
         """
         full = resolve_library_file(file, api.library_context())
-        if full is None:
+        if full is None or not api.file_visible_to(file, request):
             raise HTTPException(status_code=404, detail='File not found')
         return read_track_lyrics(full)
 
     @app.get('/cover')
-    def get_cover(file: str, size: str = ''):
+    def get_cover(request: Request, file: str, size: str = ''):
         """A library track's cover. ``size=150|300|600`` (longest side,
         px) serves a scaled copy cached under ``<data>/cover_thumbs``, for
         lists and grids that show it small; without it, the full image."""
         # Resolved and confined to the downloads or slskd folder, which
         # prevents path traversal.
         full = resolve_library_file(file, api.library_context())
-        if full is None:
+        if full is None or not api.file_visible_to(file, request):
             raise HTTPException(status_code=404, detail='File not found')
 
         thumbs = api.state.cover_thumbs
@@ -1061,7 +1089,7 @@ def build_app() -> FastAPI:
 
     app.mount(
         '/downloads',
-        StaticFiles(directory=str(DOWNLOAD_DIR)),
+        LibraryStaticFiles(directory=str(DOWNLOAD_DIR)),
         name='downloads',
     )
     app.mount(

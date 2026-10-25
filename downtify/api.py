@@ -322,6 +322,7 @@ import contextlib
 import hashlib
 import json
 import mimetypes
+import os
 import re
 import shutil
 import threading
@@ -1728,6 +1729,32 @@ def filter_paths_for_request(
     ]
 
 
+def file_visible_to(stored: str, request: Optional[Request]) -> bool:
+    """Whether *request* may read the library file at *stored*.
+
+    The direct file routes (``/downloads``, ``/media``, ``/cover``,
+    ``/lyrics``) bypass the library listings, so a hidden song would
+    otherwise still be readable by its path. Admin-hidden entries are
+    refused here; paths that aren't library rows at all (podcast
+    episodes, sidecars) are not governed by the visibility rules and
+    stay readable.
+
+    Only the matching row is checked, instead of building the full
+    allowed-key set for every audio request.
+    """
+
+    if request_is_admin(request):
+        return True
+    rules = hidden_rules()
+    if not rules:
+        return True
+    wanted = str(stored or '').replace('\\', '/')
+    for entry in listing_for_request(library_context()):
+        if str(entry.get('file') or '').replace('\\', '/') == wanted:
+            return not rules.hides(entry)
+    return True
+
+
 def playlists_for_request(request: Optional[Request]) -> list[dict[str, Any]]:
     """Playlist listing entries *request* may open.
 
@@ -2638,6 +2665,13 @@ def _load_settings(path: Path) -> dict[str, Any]:
 def _save_settings(path: Path, settings: dict[str, Any]) -> None:
     try:
         path.write_text(json.dumps(settings, indent=2), encoding='utf-8')
+        # settings.json holds API keys and integration passwords; keep it
+        # private to the container user even when the data volume is
+        # group/world readable.
+        try:
+            os.chmod(path, 0o600)
+        except OSError:
+            logger.debug('Could not restrict settings file permissions')
     except Exception as exc:
         logger.warning('Could not persist settings: {}', exc)
 
