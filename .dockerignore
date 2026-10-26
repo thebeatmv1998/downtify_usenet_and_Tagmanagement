@@ -15,3 +15,9 @@ frontend/dist
 docs/node_modules
 docs/.vitepress/cache
 docs/.vitepress/dist
+downtify-usenet.tar.gz
+*.patch
+*.bundle
+downloads
+data
+design
