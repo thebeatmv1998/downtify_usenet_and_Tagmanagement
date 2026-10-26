@@ -19,7 +19,7 @@ docker run -d \
   -v /path/to/music:/downloads \
   -v downtify_data:/data \
   --restart unless-stopped \
-  ghcr.io/henriquesebastiao/downtify
+  thebeat1998/downtify-usenet
 ```
 
 Replace `/path/to/music` with the directory where you want your music saved.
@@ -45,7 +45,7 @@ docker run -d \
   -p 9090:8000 \           # host:container
   -v /path/to/music:/downloads \
   -v downtify_data:/data \
-  ghcr.io/henriquesebastiao/downtify
+  thebeat1998/downtify-usenet
 ```
 
 Then open **[http://localhost:9090](http://localhost:9090)**.
@@ -55,13 +55,13 @@ Then open **[http://localhost:9090](http://localhost:9090)**.
 Pull the latest image and recreate the container:
 
 ```bash
-docker pull ghcr.io/henriquesebastiao/downtify
+docker pull thebeat1998/downtify-usenet
 docker stop downtify && docker rm downtify
 docker run -d --name downtify -p 8000:8000 \
   -v /path/to/music:/downloads \
   -v downtify_data:/data \
   --restart unless-stopped \
-  ghcr.io/henriquesebastiao/downtify
+  thebeat1998/downtify-usenet
 ```
 
 Your music and settings are preserved in the volumes.

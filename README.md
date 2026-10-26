@@ -68,13 +68,19 @@ Read-only music folders stay protected during **Upgrade library**: their tracks 
 
 ## Quick start
 
+> **This fork** adds the Usenet audio source (Newznab + SABnzbd), Soulseek,
+> library tools (merge/upgrade/tag editor/duplicates), the theme engine and the
+> Unraid template. The published image is
+> **[`thebeat1998/downtify-usenet`](https://hub.docker.com/r/thebeat1998/downtify-usenet)**
+> (`latest` or a version tag such as `3.7.0-usenet.24`).
+
 You only need [Docker](https://docs.docker.com/get-docker/).
 
 ```bash
 docker run -d -p 8000:8000 --name downtify \
   -v /path/to/downloads:/downloads \
   -v downtify_data:/data \
-  ghcr.io/henriquesebastiao/downtify
+  thebeat1998/downtify-usenet
 ```
 
 Open [http://localhost:8000](http://localhost:8000), sign in as **`admin`** / **`downtify`**, change that password in **Settings → General** (or turn accounts off with `DOWNTIFY_DISABLE_AUTH=true` on a server only you can reach), then paste a link and start the download. Replace `/path/to/downloads` with the folder where you want your music.
@@ -87,7 +93,7 @@ Open [http://localhost:8000](http://localhost:8000), sign in as **`admin`** / **
 services:
   downtify:
     container_name: downtify
-    image: ghcr.io/henriquesebastiao/downtify:latest
+    image: thebeat1998/downtify-usenet:latest
     ports:
       - '8000:8000'
     volumes:

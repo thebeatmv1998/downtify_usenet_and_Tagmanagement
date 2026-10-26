@@ -1,14 +1,14 @@
 <?xml version="1.0"?>
 <Container version="2">
   <Name>downtify</Name>
-  <Repository>downtify/downtify</Repository>
-  <Registry>https://hub.docker.com/r/downtify/downtify</Registry>
+  <Repository>thebeat1998/downtify-usenet</Repository>
+  <Registry>https://hub.docker.com/r/thebeat1998/downtify-usenet</Registry>
   <Network>bridge</Network>
   <MyIP/>
   <Shell>sh</Shell>
   <Privileged>false</Privileged>
-  <Support>https://github.com/henriquesebastiao/downtify/issues</Support>
-  <Project>https://github.com/henriquesebastiao/downtify</Project>
+  <Support>https://github.com/thebeatmv1998/downtify_usenet_and_Tagmanagement/issues</Support>
+  <Project>https://github.com/thebeatmv1998/downtify_usenet_and_Tagmanagement</Project>
   <Overview>Download music from Spotify and YouTube Music playlists, with optional Soulseek (slskd) and Usenet (Newznab indexer + SABnzbd) audio sources.</Overview>
   <Category>MediaApp:Music Tools:</Category>
   <WebUI>http://[IP]:[PORT:8000]/</WebUI>
