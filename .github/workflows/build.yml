@@ -37,8 +37,9 @@ jobs:
       - name: Resolve image tag
         id: version
         run: |
-          ref="${{ github.event.release.tag_name || github.ref_name }}"
-          echo "tag=${ref#v}" >> "$GITHUB_OUTPUT"
+          ref="${{ github.event.inputs.version_tag || github.event.release.tag_name || github.ref_name }}"
+          ref="${ref#v}"
+          echo "tag=${ref}" >> "$GITHUB_OUTPUT"
 
       - name: Check Docker Hub credentials
         run: |
