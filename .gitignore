@@ -329,3 +329,6 @@ wheels/*
 downtify-usenet.tar.gz
 downtify-*.patch
 downtify-*.bundle
+
+# Windows test leftovers (trash-worker tests used to create these in cwd).
+/tmp*/
