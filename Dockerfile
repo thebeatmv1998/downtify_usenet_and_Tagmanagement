@@ -55,7 +55,7 @@ RUN npm run build
 FROM python:3.15-alpine
 
 LABEL maintainer="Henrique Sebastião <contato@henriquesebastiao.com>"
-LABEL version="3.7.0"
+LABEL version="3.8.0"
 LABEL description="Self-hosted Spotify/YouTube Music downloader with Usenet (Newznab + SABnzbd) and Soulseek support"
 
 # Unraid/usenet fork of henriquesebastiao/downtify: adds the Usenet audio
@@ -64,7 +64,7 @@ LABEL description="Self-hosted Spotify/YouTube Music downloader with Usenet (New
 # split albums, playlist .m3u rebuild, a tag editor and a duplicate finder.
 LABEL org.opencontainers.image.title="Downtify (usenet)" \
     org.opencontainers.image.description="Download your Spotify, YouTube Music and Deezer playlists and songs along with album art and metadata, with optional Usenet (Newznab + SABnzbd) and Soulseek audio sources." \
-    org.opencontainers.image.version="3.7.0" \
+    org.opencontainers.image.version="3.8.0" \
     org.opencontainers.image.authors="Henrique Sebastião <contato@henriquesebastiao.com>" \
     org.opencontainers.image.url="https://github.com/henriquesebastiao/downtify" \
     org.opencontainers.image.source="https://github.com/henriquesebastiao/downtify" \

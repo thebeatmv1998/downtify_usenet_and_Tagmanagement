@@ -108,7 +108,10 @@ async function run() {
   failed.value = false
   result.value = null
   try {
-    const call = TEST_CALLS[props.kind]
+    const call = {
+      ...TEST_CALLS,
+      deemix: API.testDeemix,
+    }[props.kind]
     const res = await call(props.config)
     if (mine === serial) result.value = res.data
   } catch {

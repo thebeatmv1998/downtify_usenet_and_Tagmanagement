@@ -5,8 +5,6 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
-import pytest
-
 from downtify.cookies import check_cookies_file
 
 _SPEC = importlib.util.spec_from_file_location(

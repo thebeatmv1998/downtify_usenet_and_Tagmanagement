@@ -15,11 +15,21 @@ export default {
     show: 'Покажи',
     hide: 'Скрий',
     unknownArtist: 'Неизвестен изпълнител',
-    tracks: { one: '{count} песен', other: '{count} песни' },
-    albums: { one: '{count} албум', other: '{count} албума' },
-    artists: { one: '{count} изпълнител', other: '{count} изпълнители' },
+    tracks: {
+      one: '{count} песен',
+      other: '{count} песни',
+    },
+    albums: {
+      one: '{count} албум',
+      other: '{count} албума',
+    },
+    artists: {
+      one: '{count} изпълнител',
+      other: '{count} изпълнители',
+    },
     lengthMinutes: '{minutes} мин',
     lengthHours: '{hours} ч {minutes} мин',
+    undo: 'Отмяна',
   },
   nav: {
     main: 'Основно',
@@ -76,7 +86,10 @@ export default {
     hintDeezer: 'Песни, албуми, плейлисти и изпълнители от Deezer',
     hintCsv: 'Импортирай CSV (Soundiiz, Exportify…)',
     downloading: 'Изтегля се сега',
-    waiting: { one: 'Още {count} чака', other: 'Още {count} чакат' },
+    waiting: {
+      one: 'Още {count} чака',
+      other: 'Още {count} чакат',
+    },
     openQueue: 'Отвори опашката',
     yourLibrary: 'Твоята библиотека',
     openLibrary: 'Отвори библиотеката',
@@ -99,6 +112,7 @@ export default {
     step3Title: 'Слушай навсякъде',
     step3Body:
       'Пусни я тук, синхронизирай плейлисти с Наблюдение или насочи Jellyfin, Plex или Navidrome към библиотеката си.',
+    hintSoundcloud: 'Песни от SoundCloud',
   },
   search: {
     title: 'Търсене',
@@ -116,7 +130,6 @@ export default {
     songs: 'Песни',
     albums: 'Албуми',
     artists: 'Изпълнители',
-    downloadDiscography: 'Download full discography of {name}',
     artist: 'Изпълнител',
     showAllSongs: 'Покажи всички {count} песни',
     recent: 'Скорошни търсения',
@@ -127,7 +140,7 @@ export default {
     typeSingle: 'Сингъл',
     typeEp: 'EP',
     unsupportedLink:
-      'Downtify не може да изтегли този линк. Постави песен, албум или плейлист от Spotify, или линк от YouTube Music.',
+      'Downtify не може да изтегли този линк. Постави песен, албум или плейлист от Spotify, линк от YouTube Music или песен от SoundCloud.',
     tipSearchTitle: 'Търси по име',
     tipSearchBody:
       'Въведи изпълнител, албум или песен — резултатите идват от YouTube Music.',
@@ -137,6 +150,7 @@ export default {
     tipYoutubeTitle: 'Постави линк от YouTube Music',
     tipYoutubeBody:
       'Песни, албуми, плейлисти — или страница на изпълнител за всички издания.',
+    downloadDiscography: 'Download full discography of {name}',
   },
   charts: {
     title: 'Класации',
@@ -211,9 +225,18 @@ export default {
       playlist: 'Плейлист',
       artist: 'Изпълнител',
     },
-    releases: { one: '{count} издание', other: '{count} издания' },
-    downloadAll: { one: 'Изтегли', other: 'Изтегли всички {count}' },
-    downloadNew: { one: 'Изтегли {count} нова', other: 'Изтегли {count} нови' },
+    releases: {
+      one: '{count} издание',
+      other: '{count} издания',
+    },
+    downloadAll: {
+      one: 'Изтегли',
+      other: 'Изтегли всички {count}',
+    },
+    downloadNew: {
+      one: 'Изтегли {count} нова',
+      other: 'Изтегли {count} нови',
+    },
     redownloadAll: 'Изтегли всички отново',
     downloadSelected: 'Изтегли избраните',
     allInLibrary: 'Всичко е в библиотеката ти',
@@ -235,6 +258,12 @@ export default {
     selectAll: 'Избери всички',
     playCountSpotify: 'Възпроизвеждания в Spotify',
     playCountYoutubeMusic: 'Възпроизвеждания в YouTube Music (приблизително)',
+    allHandled: 'Вече е в библиотеката или опашката',
+    addPlaylist: 'Добавяне към моите плейлисти',
+    noAvailableTracks: 'Все още няма изтеглени песни за добавяне.',
+    saveAvailableHint:
+      'Налични са {count} от {total} песни. Използват се съществуващите аудиофайлове; липсващите песни няма да бъдат изтеглени.',
+    openSoundcloud: 'Отвори в SoundCloud',
   },
   queue: {
     title: 'Опашка',
@@ -243,18 +272,21 @@ export default {
     tabDone: 'Готови',
     tabFailed: 'Неуспешни',
     tabAll: 'Всички',
-    countActive: { one: '{count} се изтегля', other: '{count} се изтеглят' },
-    countQueued: { one: '{count} чака', other: '{count} чакат' },
-    countFailed: { one: '{count} неуспешно', other: '{count} неуспешни' },
+    countActive: {
+      one: '{count} се изтегля',
+      other: '{count} се изтеглят',
+    },
+    countQueued: {
+      one: '{count} чака',
+      other: '{count} чакат',
+    },
+    countFailed: {
+      one: '{count} неуспешно',
+      other: '{count} неуспешни',
+    },
     retryFailed: 'Повтори неуспешните ({count})',
     clearDone: 'Изчисти готовите ({count})',
     clearAll: 'Изчисти опашката',
-    stopAll: '???? ?????? ??????????',
-    stopped: '{count} ?????????(?) ??????.',
-    stopFailed: '???????????? ?? ?????? ?? ????? ??????.',
-    skipSource: '??? ????????? ????????',
-    skipRequested: '??????????? ??? ????????? ????? ????????.',
-    skipFailed: '?????????? ?? ???? ?? ???? ?????????.',
     emptyTitle: 'Опашката е празна',
     emptyBody:
       'Потърси музика или постави линк — изтеглянията се показват тук.',
@@ -276,7 +308,7 @@ export default {
     retry: 'Опитай отново',
     remove: 'Премахни от опашката',
     failedGeneric: 'Изтеглянето не успя.',
-    overridePlaceholder: 'Постави линк от YouTube за аудио',
+    overridePlaceholder: 'Постави линк от YouTube или SoundCloud за аудио',
     useLink: 'Използвай този линк',
     invalidYoutube: 'Това не прилича на линк към видео в YouTube.',
     playlistDownloads: 'Изтегляния на плейлисти',
@@ -286,6 +318,28 @@ export default {
     importHint: 'CSV експорт от Soundiiz, TuneMyMusic, Exportify и подобни.',
     importButton: 'Избери CSV файл',
     importFailed: 'CSV файлът не може да бъде импортиран.',
+    stopAll: '???? ?????? ??????????',
+    stopped: '{count} ?????????(?) ??????.',
+    stopFailed: '???????????? ?? ?????? ?? ????? ??????.',
+    skipSource: '??? ????????? ????????',
+    skipRequested: '??????????? ??? ????????? ????? ????????.',
+    skipFailed: '?????????? ?? ???? ?? ???? ?????????.',
+    pause: 'Пауза на изтеглянията',
+    resume: 'Продължи изтеглянията',
+    pauseFailed: 'Опашката не можа да бъде променена. Опитай отново.',
+    pausingTitle: 'Изтеглянията спират…',
+    pausingBody: {
+      one: 'Изчакване {count} изтегляне да приключи. Няма да започват нови изтегляния.',
+      other:
+        'Изчакване {count} изтегляния да приключат. Няма да започват нови изтегляния.',
+    },
+    pausedTitle: 'Изтеглянията са на пауза',
+    pausedBody: 'Няма да започват нови изтегляния, докато не продължиш.',
+    pausedKept:
+      'Чакащите песни остават в опашката, дори ако Downtify се рестартира или обнови.',
+    statusPaused: 'На пауза',
+    invalidAudioLink:
+      'Това не прилича на линк към видео в YouTube или песен в SoundCloud.',
   },
   library: {
     title: 'Библиотека',
@@ -333,11 +387,15 @@ export default {
     selectTrack: 'Избери {title}',
     select: 'Избери',
     deselect: 'Отмени избора',
-    selectedCount: { one: '{count} избрана', other: '{count} избрани' },
+    selectedCount: {
+      one: '{count} избрана',
+      other: '{count} избрани',
+    },
     clearSelection: 'Изчисти избора',
     downloadZip: 'Изтегли като ZIP',
     saveToDevice: 'Запази на това устройство',
     upgrade: 'Подобри библиотеката',
+    storage: 'Хранилище и използване',
   },
   likes: {
     like: 'Добави към Харесани песни',
@@ -367,7 +425,10 @@ export default {
     scanning: 'Сканиране на библиотеката',
     scanProgress: '{done} от {total} парчета проверени',
     scanResult: 'Резултат от сканирането',
-    libraryCount: { one: '{count} парче', other: '{count} парчета' },
+    libraryCount: {
+      one: '{count} парче',
+      other: '{count} парчета',
+    },
     librarySize: 'Размер на библиотеката',
     nothingTitle: 'Няма какво да се подобри',
     nothingBody:
@@ -390,7 +451,10 @@ export default {
     metadata: 'Обнови етикетите',
     metadataHint:
       'Попълва албум, изпълнител на албума, дата на издаване и номер на парчето от Spotify. Само за парчета, чието парче в Spotify Downtify още познава.',
-    tracksAffected: { one: '{count} парче', other: '{count} парчета' },
+    tracksAffected: {
+      one: '{count} парче',
+      other: '{count} парчета',
+    },
     options: 'Настройки',
     artworkMin: 'Подобри обложките под',
     artworkMinHint:
@@ -403,57 +467,11 @@ export default {
     recheck: 'Не проверявай парче отново за',
     recheckHint:
       'Наскоро проверено парче се пропуска при следващото сканиране. По-нов Downtify винаги проверява всичко отначало.',
-    recheckDays: { one: '{count} ден', other: '{count} дни' },
+    recheckDays: {
+      one: '{count} ден',
+      other: '{count} дни',
+    },
     recheckNever: 'Винаги проверявай всички парчета',
-    metadataMode: 'Metadata mode',
-    metadataModeFill: 'Fill in missing tags',
-    metadataModeFillHint:
-      'Only empty or placeholder tags (like "Unknown album") are completed. Values already in the file are kept.',
-    metadataModeVerify: 'Verify and correct tags',
-    metadataModeVerifyHint:
-      'Every track is compared with Spotify or Apple Music and wrong values are corrected. Slower: one remote lookup per track.',
-    album_cover: 'Add album folder covers',
-    album_coverHint:
-      'Write a cover.jpg into an album folder that has audio but no cover image, using the artwork already embedded in its tracks.',
-    mergeTitle: 'Merge split albums',
-    mergeStagereading: 'Reading library tags…',
-    mergeStagematching: 'Matching singles to albums…',
-    mergeStagegrouping: 'Comparing editions and quality…',
-    mergeStagerehoming: 'Подреждане на неизвестни песни…',
-    mergeStagemerging: 'Moving tracks and removing duplicates…',
-    mergeStageplaylists: 'Updating playlists…',
-    mergeHint:
-      'Albums kept as separate singles or as standard and deluxe editions are merged into one folder. The edition with the most songs wins; duplicate songs keep the best-quality file and the other copies are deleted.',
-    mergeEditions: 'Editions: {editions}',
-    mergeDuplicates: {
-      one: '{count} duplicate file will be removed',
-      other: '{count} duplicate files will be removed',
-    },
-    mergeScanned: 'Checked {tracks} tracks in {seconds}s.',
-    mergeFind: 'Find split albums',
-    tidyAction: 'Подреждане на неизвестни и почистване',
-    tidyHint:
-      'Премества песни от папки unknown в истинския им албум (търсене в Spotify, Deezer или iTunes), премахва дубликати и изтрива празни папки.',
-    tidyDone: '{rehomed} песни подредени, {duplicates} дубликата премахнати, {folders} празни папки изтрити.',
-    tidyRemaining: '{count} песни не можаха да бъдат причислени към албум.',
-    mergeSearching: 'Looking for split albums\u2026',
-    mergeNone: 'No split albums found.',
-    mergeFound: {
-      one: '{count} album to merge',
-      other: '{count} albums to merge',
-    },
-    mergeApply: { one: 'Merge {count} album', other: 'Merge {count} albums' },
-    mergeApplying: 'Merging\u2026',
-    mergeDone: 'Merged {moved} track(s), removed {deleted} duplicate(s).',
-    mergeStats:
-      '{resolved} of {looked_up} tracks were matched to an album by a tag source.',
-    mergeLimited:
-      'Some tracks could not be checked because a tag source was unavailable (rate limit). Wait a few minutes and try again.',
-    playlistsTitle: 'Rebuild playlist files',
-    playlistsHint:
-      'Rewrite every playlist\u2019s .m3u from what is already on disk, so songs you downloaded earlier are listed too \u2014 not just the last batch.',
-    playlistsRebuild: 'Rebuild playlists',
-    playlistsDone: 'Rebuilt {rebuilt} playlists, {linked} track(s) linked.',
     start: 'Започни',
     startCount: {
       one: 'Подобри {count} парче',
@@ -484,59 +502,81 @@ export default {
     stageLyrics: 'Търсене на текст',
     stageWriting: 'Записване на файла',
     loadFailed: 'Подобряването на библиотеката не можа да се зареди',
-  },
-  tags: {
-    edit: 'Edit tags?',
-    title: 'Edit tags',
-    description:
-      'Fix the tags of "{title}", by hand or from MusicBrainz / Discogs.',
-    loading: 'Loading tags?',
-    fieldTitle: 'Title',
-    fieldArtist: 'Artist',
-    fieldAlbum: 'Album',
-    fieldAlbumArtist: 'Album artist',
-    fieldTrack: 'Track',
-    fieldTotal: 'Tracks total',
-    fieldDisc: 'Disc',
-    fieldDiscTotal: 'Discs total',
-    fieldDate: 'Date (YYYY-MM-DD)',
-    fieldGenre: 'Genre',
-    fieldComment: 'Comment',
-    fieldComposer: 'Composer',
-    fieldSource: 'Source',
-    changeCover: 'Choose image',
-    removeCover: 'Remove cover',
-    searchTitle: 'Fill from a tag source',
-    sourceMusicbrainz: 'MusicBrainz',
-    sourceDiscogs: 'Discogs',
-    searchPlaceholder: 'Artist, album or track',
-    search: 'Search',
-    noResults: 'Nothing found.',
-    use: 'Use',
-    filled: 'Fields filled from the source.',
-    save: 'Save tags',
-    saved: 'Tags saved.',
-  },
-  duplicates: {
-    title: 'Duplicates',
-    subtitle: 'The same song or album saved more than once.',
-    titles: 'Duplicate titles',
-    albums: 'Duplicate albums',
-    noneTitle: 'No duplicates',
-    noneBody: 'Every title and album in the library is unique.',
-    checkAgain: 'Check again',
-    checking: 'Checking?',
-    copyCount: { one: '{count} copy', other: '{count} copies' },
-    trackCount: { one: '{count} track', other: '{count} tracks' },
-    selectExtras: 'Select all but one',
-    selected: '{count} selected',
-    reasonMultipleFolders: 'Saved in more than one folder',
-    reasonRepeatedSong: 'The same song appears more than once',
-    deleteTitle: 'Delete the selected copies?',
-    deleteBody:
-      'The files are removed from disk, along with their playlists and covers.',
-    deleteSelected: 'Delete selected',
-    deleted: 'Deleted {count} file(s).',
+    metadataMode: 'Metadata mode',
+    metadataModeFill: 'Fill in missing tags',
+    metadataModeFillHint:
+      'Only empty or placeholder tags (like "Unknown album") are completed. Values already in the file are kept.',
+    metadataModeVerify: 'Verify and correct tags',
+    metadataModeVerifyHint:
+      'Every track is compared with Spotify or Apple Music and wrong values are corrected. Slower: one remote lookup per track.',
+    album_cover: 'Add album folder covers',
+    album_coverHint:
+      'Write a cover.jpg into an album folder that has audio but no cover image, using the artwork already embedded in its tracks.',
+    mergeTitle: 'Merge split albums',
+    mergeStagereading: 'Reading library tags…',
+    mergeStagematching: 'Matching singles to albums…',
+    mergeStagegrouping: 'Comparing editions and quality…',
+    mergeStagerehoming: 'Подреждане на неизвестни песни…',
+    mergeStagemerging: 'Moving tracks and removing duplicates…',
+    mergeStageplaylists: 'Updating playlists…',
+    mergeHint:
+      'Albums kept as separate singles or as standard and deluxe editions are merged into one folder. The edition with the most songs wins; duplicate songs keep the best-quality file and the other copies are deleted.',
+    mergeEditions: 'Editions: {editions}',
+    mergeDuplicates: {
+      one: '{count} duplicate file will be removed',
+      other: '{count} duplicate files will be removed',
+    },
+    mergeScanned: 'Checked {tracks} tracks in {seconds}s.',
+    mergeFind: 'Find split albums',
+    tidyAction: 'Подреждане на неизвестни и почистване',
+    tidyHint:
+      'Премества песни от папки unknown в истинския им албум (търсене в Spotify, Deezer или iTunes), премахва дубликати и изтрива празни папки.',
+    tidyDone:
+      '{rehomed} песни подредени, {duplicates} дубликата премахнати, {folders} празни папки изтрити.',
+    tidyRemaining: '{count} песни не можаха да бъдат причислени към албум.',
+    mergeSearching: 'Looking for split albums…',
+    mergeNone: 'No split albums found.',
+    mergeFound: {
+      one: '{count} album to merge',
+      other: '{count} albums to merge',
+    },
+    mergeApply: {
+      one: 'Merge {count} album',
+      other: 'Merge {count} albums',
+    },
+    mergeApplying: 'Merging…',
+    mergeDone: 'Merged {moved} track(s), removed {deleted} duplicate(s).',
+    mergeStats:
+      '{resolved} of {looked_up} tracks were matched to an album by a tag source.',
+    mergeLimited:
+      'Some tracks could not be checked because a tag source was unavailable (rate limit). Wait a few minutes and try again.',
+    playlistsTitle: 'Rebuild playlist files',
+    playlistsHint:
+      'Rewrite every playlist’s .m3u from what is already on disk, so songs you downloaded earlier are listed too — not just the last batch.',
+    playlistsRebuild: 'Rebuild playlists',
+    playlistsDone: 'Rebuilt {rebuilt} playlists, {linked} track(s) linked.',
+    chooseRecording: 'Choose a Deezer recording',
+    chooseRecordingHint:
+      'Review an exact recording when old album tags do not match. The artist and full title must still match.',
+    recordingLink: 'Deezer track link',
+    previewRecording: 'Preview',
+    recordingReviewHint:
+      'Review the album and duration. This prepares a single-track scan; replacement starts only after you confirm the scan.',
+    analyzeRecording: 'Analyze this choice',
+    recordingPreviewFailed: 'Unable to preview this Deezer track.',
+    replacementRescan: 'Options changed: scan again before starting.',
+    deemixTitle: 'Replace recordings with Deemix',
+    replaceAudio: 'Use verified Deemix recordings',
+    replaceAudioHint:
+      'Match the exact artist, title and album. Keep music in the Deemix folder. Ambiguous matches leave originals untouched. This scan replaces audio instead of retagging it.',
+    deleteOriginals: 'Remove old Downtify audio after import',
+    deleteOriginalsHint:
+      'Only remove each verified original after playlists, likes and playback references are updated. External files and sidecars are never removed.',
+    replacementProgress:
+      'Awaiting publication or cleanup: {pending}. Old copies removed: {removed}. Originals kept: {kept}.',
+    audio: 'Deemix recordings',
+    audioHint:
+      'Verify catalog duration and decoded audio before updating playlists and removing an old copy.',
   },
   album: {
     kicker: 'Албум',
@@ -544,22 +584,29 @@ export default {
     moreBy: 'Още от {artist}',
     searchMore: 'Търси в YouTube Music',
     delete: 'Изтрий албума',
+    markCompilation: 'Отбележи като Различни изпълнители',
+    unmarkCompilation: 'Премахни отбелязването Различни изпълнители',
+    markedCompilation: 'Албумът е отбелязан като Различни изпълнители',
+    unmarkedCompilation: 'Албумът вече не е Различни изпълнители',
+    compilationPartial: 'Някои песни не можаха да бъдат променени',
+    compilationFailed: 'Албумът не можа да бъде променен',
   },
   artist: {
     kicker: 'Изпълнител',
     notFound: 'Изпълнителят не е намерен',
     findMore: 'Намери още',
+    relatedArtists: 'На феновете допада и',
+    topSongsLink: 'Още популярни песни',
+    linksTab: 'Връзки',
+    linksPlatforms: 'Стрийминг платформи',
+    linksSocial: 'Социални мрежи',
     downloadDiscography: 'Download full discography',
     discographyStarted:
       'Downloading the complete discography of {name} in the background. Manage it under Monitor.',
     discographyChecking:
       'Checking {name} for missing releases in the background.',
     discographyFailed: 'Could not start the discography download.',
-    relatedArtists: 'На феновете допада и',
-    topSongsLink: 'Още популярни песни',
-    linksTab: 'Връзки',
-    linksPlatforms: 'Стрийминг платформи',
-    linksSocial: 'Социални мрежи',
+    guest: 'Участие',
   },
   artistArt: {
     editPhoto: 'Редактиране на снимката',
@@ -621,7 +668,10 @@ export default {
     kicker: 'Плейлист',
     notFound: 'Плейлистът не е намерен',
     progress: '{have} от {total} изтеглени',
-    missingShort: { one: 'липсва {count}', other: 'липсват {count}' },
+    missingShort: {
+      one: 'липсва {count}',
+      other: 'липсват {count}',
+    },
     missingTitle: {
       one: '{count} песен още не е изтеглена',
       other: '{count} песни още не са изтеглени',
@@ -633,7 +683,10 @@ export default {
       one: 'Изтегли {count} липсваща',
       other: 'Изтегли {count} липсващи',
     },
-    downloading: { one: '{count} се изтегля', other: '{count} се изтеглят' },
+    downloading: {
+      one: '{count} се изтегля',
+      other: '{count} се изтеглят',
+    },
     complete: 'Пълен',
     watch: 'Следи за нови песни',
     openSource: 'Отвори оригиналния плейлист',
@@ -663,6 +716,19 @@ export default {
     nothingYet: 'Още няма изтеглени песни',
     nothingYetHint: 'Песните се появяват тук, когато се изтеглят.',
     nothingYetManualHint: 'Добави песни от библиотеката.',
+    hideTrack: 'Скрий от плейлиста',
+    hiddenTrack: 'Скрита от „{name}“',
+    hiddenTitle: {
+      one: '{count} скрита песен',
+      other: '{count} скрити песни',
+    },
+    hiddenHint:
+      'Песни, които сте скрили от този плейлист. Те остават извън него, когато се синхронизира с източника си, и остават в библиотеката ви.',
+    hiddenGone: 'Вече не е в библиотеката ви',
+    unhide: 'Покажи отново',
+    unhidden: 'Отново в „{name}“',
+    unhiddenLater:
+      'Тя ще се върне в „{name}“, когато плейлистът изтегли липсващото',
   },
   track: {
     title: 'Заглавие',
@@ -703,7 +769,6 @@ export default {
       artist: 'Звучи от изпълнител',
       library: 'Звучи от библиотеката ти',
       search: 'Звучи от търсене',
-
       podcast: 'Звучи от подкаст',
     },
     goToAlbum: 'Албум',
@@ -717,7 +782,10 @@ export default {
     lyricsNotSynced: 'Този текст не е синхронизиран.',
     cannotPlay: 'Този файл не може да бъде пуснат.',
     sleepTimer: 'Таймер за сън',
-    sleepMinutes: { one: 'След {count} минута', other: 'След {count} минути' },
+    sleepMinutes: {
+      one: 'След {count} минута',
+      other: 'След {count} минути',
+    },
     sleepEndOfTrack: 'В края на песента',
     sleepEndOfTrackShort: 'Край на песента',
     sleepOff: 'Изключи таймера',
@@ -755,7 +823,11 @@ export default {
   monitor: {
     releaseTypes: 'Изтегляне',
     releaseTypesAtLeastOne: 'Оставете поне един вид издание',
-    release: { album: 'Албуми', single: 'Сингли', ep: 'EP' },
+    release: {
+      album: 'Албуми',
+      single: 'Сингли',
+      ep: 'EP',
+    },
     newOnly: 'Само нови издания',
     newOnlyHint:
       'Пропуска всичко, което изпълнителят вече е издал; изтегля се само излязлото, след като започнете да го следите.',
@@ -791,20 +863,38 @@ export default {
     kindPlaylist: 'Плейлист',
     kindArtist: 'Изпълнител',
     never: 'Още не е проверено',
-    releases: { one: '{count} издание', other: '{count} издания' },
+    releases: {
+      one: '{count} издание',
+      other: '{count} издания',
+    },
     pause: 'Пауза',
     resume: 'Продължи',
     stop: 'Спри наблюдението',
     openSource: 'Отвори оригинала',
-    everyMinutes: { one: 'Всяка минута', other: 'На всеки {count} минути' },
-    everyHours: { one: 'Всеки час', other: 'На всеки {count} часа' },
-    everyDays: { one: 'Всеки ден', other: 'На всеки {count} дни' },
-    everyWeeks: { one: 'Всяка седмица', other: 'На всеки {count} седмици' },
-    everyMonths: { one: 'Всеки месец', other: 'На всеки {count} месеца' },
+    everyMinutes: {
+      one: 'Всяка минута',
+      other: 'На всеки {count} минути',
+    },
+    everyHours: {
+      one: 'Всеки час',
+      other: 'На всеки {count} часа',
+    },
+    everyDays: {
+      one: 'Всеки ден',
+      other: 'На всеки {count} дни',
+    },
+    everyWeeks: {
+      one: 'Всяка седмица',
+      other: 'На всеки {count} седмици',
+    },
+    everyMonths: {
+      one: 'Всеки месец',
+      other: 'На всеки {count} месеца',
+    },
     urlLabelPlaylist: 'Линк към плейлиста',
     urlLabelArtist: 'Линк към изпълнителя',
     urlPlaceholderPlaylist:
-      'Постави линк към плейлист от Spotify или YouTube Music',
+      'Постави линк към плейлист от Spotify, Deezer или YouTube Music',
     urlPlaceholderArtist:
       'Постави линк към изпълнител от Spotify или YouTube Music',
     watchPlaylist: 'Следи плейлиста',
@@ -852,10 +942,12 @@ export default {
     save: 'Запази',
     saved: 'Наблюдението е обновено',
     retargeted: 'Вече се следи {name}',
+    tableColumns: 'Колони',
+    resetTableColumns: 'Нулиране на колоните',
   },
   sharing: {
     title: 'Споделяне на „{name}“',
-    hint: 'Хората, с които го споделиш, могат да го пускат, следват и да запазват копие, но не могат да го променят.',
+    hint: 'Хората, с които го споделиш, могат да го пускат, следват и да запазват копие. Само тези, на които позволиш да го редактират, могат да добавят или премахват песни.',
     private: 'Личен',
     privateHint: 'Само ти можеш да го виждаш.',
     shared: 'Избрани хора',
@@ -892,7 +984,7 @@ export default {
     },
     sharedWithMe: 'Споделени с мен',
     sharedWithMeHint:
-      'Плейлисти, които други са споделили с теб. Можеш да ги пускаш, но не и да ги променяш.',
+      'Плейлисти, които други са споделили с теб. Можеш да ги пускаш, а където собственикът позволи – и да добавяш или премахваш песни.',
     publicPlaylists: 'Публични плейлисти',
     publicPlaylistsHint:
       'Споделени с всички на този сървър. Следвай някой, за да остане в страничната лента.',
@@ -927,18 +1019,6 @@ export default {
     themeSystem: 'Системна',
     language: 'Език',
     languageHint: 'Използва се в целия интерфейс.',
-    themeEngine: 'Тема',
-    themeEngineHint: 'Промяна на цветовете и шрифта на интерфейса и добавяне на собствен CSS. Важи за всички акаунти и устройства; празно поле запазва оригиналния дизайн.',
-    themeText: 'Цвят на текста',
-    themePrimary: 'Основен цвят',
-    themeSecondary: 'Вторичен цвят',
-    themeBackground: 'Цвят на фона',
-    themeFont: 'Шрифт',
-    themeFontHint: 'Всеки CSS font stack, напр. \'Sora Variable\', \'Segoe UI\', sans-serif. Вградени: Sora и DM Sans. Други шрифтове трябва да са налични на устройството.',
-    themeCss: 'Собствен CSS',
-    themeCssHint: 'CSS след дизайн токените. Използвай променливите от tokens.css (--c-bg, --c-accent, …) или други селектори. Вмъква се като CSS, никога като HTML.',
-    themeReset: 'Нулиране на темата',
-    themeResetField: 'Изчисти този цвят',
     playerGroup: 'Плейър',
     showLyrics: 'Показвай текстовете в плейъра',
     showLyricsHint:
@@ -968,8 +1048,6 @@ export default {
     sourceYtmHint: 'Най-добри съвпадения на метаданни',
     sourceYt: 'YouTube',
     sourceYtHint: 'Резерва за песни, които липсват в YouTube Music',
-    sourceUsenet: 'Usenet (SABnzbd)',
-    sourceUsenetHint: 'Newznab индекси + SABnzbd — често без загуби',
     slskdTitle: 'slskd',
     slskdHint:
       'Изтегляй от Soulseek чрез своя slskd сървър. Ненамерените песни минават към следващия източник.',
@@ -981,49 +1059,6 @@ export default {
     slskdFolderHint: 'Пътят в контейнера на Downtify, не на хоста.',
     slskdTimeout: 'Общо време за изчакване',
     slskdQueuedTimeout: 'Време за изчакване в опашка',
-    usenetTitle: 'Usenet',
-    usenetHint:
-      'Изтегляне от Usenet: търсене в Newznab индекси, изтегляне чрез SABnzbd. Каквото не намери, преминава към следващия източник.',
-    usenetEnabled: 'Използвай Usenet',
-    usenetEnabledHint: 'Изисква SABnzbd и поне един Newznab индекс с API ключ.',
-    usenetSabUrl: 'Адрес на SABnzbd',
-    usenetSabKey: 'API ключ на SABnzbd',
-    usenetCategory: 'Категория в SABnzbd',
-    usenetCompleteDir: 'Папка за завършени изтегляния',
-    usenetCompleteDirHint: 'Пътят в контейнера на Downtify, не на хоста.',
-    usenetCleanup: 'Почистване на SABnzbd след това',
-    usenetCleanupHint:
-      'Премахва записа от историята и копието на SABnzbd, след като файлът е във вашите изтегляния.',
-    usenetIndexers: 'Newznab индекси',
-    usenetIndexersHint:
-      'Всички активни индекси се търсят паралелно; печели най-доброто издание.',
-    usenetIndexerName: 'Име',
-    usenetIndexerUrl: 'Адрес на индекса',
-    usenetIndexerKey: 'API ключ',
-    usenetAddIndexer: 'Добави индекс',
-    usenetRemoveIndexer: 'Премахни',
-    usenetTimeout: 'Общ лимит',
-    usenetMinScore: 'Минимален резултат за съвпадение',
-    usenetDurationSeconds: 'Толеранс на продължителността',
-    usenetDurationPercent: 'Толеранс на продължителността %',
-    usenetIndexerType: 'Тип',
-    usenetTypeNewznab: 'Newznab индексатор',
-    usenetTypeProwlarr: 'Prowlarr (нативен API)',
-    usenetFormats: 'Предпочитани формати',
-    usenetFormatsHint:
-      'Редът има значение: по-ранните формати получават по-висока оценка при съвпадение.',
-    usenetMinBitrate: 'Минимален битрейт',
-    usenetMaxBitrate: 'Максимален битрейт',
-    usenetPreferAlbums: 'Предпочитай албумни издания',
-    usenetCleanupNow: 'Почисти SABnzbd сега',
-    usenetCleanupNowHint:
-      'Изтрива всички завършени задачи и файловете им от SABnzbd — включително папките с албуми, запазени за повторна употреба.',
-    usenetCleanupDone:
-      'Removed {count} finished job(s) and {albums} cached album folder(s) from SABnzbd.',
-    usenetCleanupFailed:
-      'Почистването на SABnzbd не успя — проверете настройките за връзка.',
-    usenetPreferAlbumsHint:
-      "Usenet е ориентиран към албуми: търси и издания с име 'Изпълнител - Албум', изтегли албума и извлечи желания трак. Албумните издания се класират първи.",
     slskdInPlace: 'Остави файловете в папката на slskd',
     slskdInPlaceHint:
       'Тагва ги там, където slskd ги е запазил, вместо да ги копира в папката за изтегляния.',
@@ -1102,11 +1137,6 @@ export default {
       'Извън downloads и допълнителните музикални папки. Същото относително дърво като аудиото се пресъздава тук.',
     lyricsLrcFolderPlaceholder: '/data/lyrics',
     lyricsProviders: 'Доставчици',
-    tagEditorGroup: 'Tag editor',
-    discogsToken: 'Discogs token',
-    discogsTokenHint:
-      'Personal access token for the tag editor’s Discogs search. MusicBrainz needs none.',
-    discogsTokenPlaceholder: 'Discogs personal access token',
     lyricsProvidersHint:
       'Всяка песен пробва активните доставчици в този ред, докато някой има текст. Това, което даден доставчик не е имал, се помни един месец, за да не бъде питан отново при всяко изтегляне.',
     lyricsLrclibHint: 'Общностна база — обикновени и синхронизирани текстове',
@@ -1140,17 +1170,6 @@ export default {
         'Този адрес не е валиден. Започнете с http:// или https://.',
       connection_tls:
         'HTTPS сертификатът не е доверен. Използвайте http:// или сертификат от доверен орган.',
-      connection_not_sabnzbd:
-        'Нещо отговори на {url}, но не прилича на SABnzbd. Проверете адреса и порта.',
-      indexer_ok: 'Индексът {detail} отговори.',
-      indexer_missing: 'Попълнете адреса и API ключа на индекса ({detail}).',
-      indexer_bad_key: 'Индексът {detail} отхвърли API ключа.',
-      indexer_http_error: 'Индексът {detail} отговори с грешка.',
-      indexer_unreachable:
-        'Индексът {detail} е недостъпен. Проверете адреса и че работи.',
-      indexer_timeout: 'Индексът {detail} не отговори навреме.',
-      indexer_bad_url: 'Адресът на индекса е невалиден ({detail}).',
-      indexer_tls: 'HTTPS сертификатът на индекса не е доверен ({detail}).',
       connection_not_slskd:
         'Нещо отговори на {url}, но не прилича на slskd. Проверете адреса и порта.',
       connection_not_navidrome:
@@ -1173,6 +1192,20 @@ export default {
         'Зададеният администраторски акаунт не е администратор, затова не може да стартира сканиране на библиотеката.',
       scan_bad_admin:
         'Navidrome отхвърли потребителското име или паролата на администратора.',
+      connection_not_sabnzbd:
+        'Нещо отговори на {url}, но не прилича на SABnzbd. Проверете адреса и порта.',
+      indexer_ok: 'Индексът {detail} отговори.',
+      indexer_missing: 'Попълнете адреса и API ключа на индекса ({detail}).',
+      indexer_bad_key: 'Индексът {detail} отхвърли API ключа.',
+      indexer_http_error: 'Индексът {detail} отговори с грешка.',
+      indexer_unreachable:
+        'Индексът {detail} е недостъпен. Проверете адреса и че работи.',
+      indexer_timeout: 'Индексът {detail} не отговори навреме.',
+      indexer_bad_url: 'Адресът на индекса е невалиден ({detail}).',
+      indexer_tls: 'HTTPS сертификатът на индекса не е доверен ({detail}).',
+      connection_not_deemix: 'The server is not a compatible Deemix instance.',
+      quality_unavailable:
+        'The Deezer account cannot stream the requested quality.',
     },
     navidromeSync: 'Създавай плейлисти в Navidrome',
     navidromeSyncHint:
@@ -1268,6 +1301,87 @@ export default {
     experimental: 'Експериментално',
     experimentalHint:
       'Мобилните приложения още се разработват. Приложението за Android още няма публикувана версия, а начинът на сдвояване и поточно предаване може да се промени между версиите на Downtify.',
+    themeEngine: 'Тема',
+    themeEngineHint:
+      'Промяна на цветовете и шрифта на интерфейса и добавяне на собствен CSS. Важи за всички акаунти и устройства; празно поле запазва оригиналния дизайн.',
+    themeText: 'Цвят на текста',
+    themePrimary: 'Основен цвят',
+    themeSecondary: 'Вторичен цвят',
+    themeBackground: 'Цвят на фона',
+    themeFont: 'Шрифт',
+    themeFontHint:
+      "Всеки CSS font stack, напр. 'Sora Variable', 'Segoe UI', sans-serif. Вградени: Sora и DM Sans. Други шрифтове трябва да са налични на устройството.",
+    themeCss: 'Собствен CSS',
+    themeCssHint:
+      'CSS след дизайн токените. Използвай променливите от tokens.css (--c-bg, --c-accent, …) или други селектори. Вмъква се като CSS, никога като HTML.',
+    themeReset: 'Нулиране на темата',
+    themeResetField: 'Изчисти този цвят',
+    sourceUsenet: 'Usenet (SABnzbd)',
+    sourceUsenetHint: 'Newznab индекси + SABnzbd — често без загуби',
+    usenetTitle: 'Usenet',
+    usenetHint:
+      'Изтегляне от Usenet: търсене в Newznab индекси, изтегляне чрез SABnzbd. Каквото не намери, преминава към следващия източник.',
+    usenetEnabled: 'Използвай Usenet',
+    usenetEnabledHint: 'Изисква SABnzbd и поне един Newznab индекс с API ключ.',
+    usenetSabUrl: 'Адрес на SABnzbd',
+    usenetSabKey: 'API ключ на SABnzbd',
+    usenetCategory: 'Категория в SABnzbd',
+    usenetCompleteDir: 'Папка за завършени изтегляния',
+    usenetCompleteDirHint: 'Пътят в контейнера на Downtify, не на хоста.',
+    usenetCleanup: 'Почистване на SABnzbd след това',
+    usenetCleanupHint:
+      'Премахва записа от историята и копието на SABnzbd, след като файлът е във вашите изтегляния.',
+    usenetIndexers: 'Newznab индекси',
+    usenetIndexersHint:
+      'Всички активни индекси се търсят паралелно; печели най-доброто издание.',
+    usenetIndexerName: 'Име',
+    usenetIndexerUrl: 'Адрес на индекса',
+    usenetIndexerKey: 'API ключ',
+    usenetAddIndexer: 'Добави индекс',
+    usenetRemoveIndexer: 'Премахни',
+    usenetTimeout: 'Общ лимит',
+    usenetMinScore: 'Минимален резултат за съвпадение',
+    usenetDurationSeconds: 'Толеранс на продължителността',
+    usenetDurationPercent: 'Толеранс на продължителността %',
+    usenetIndexerType: 'Тип',
+    usenetTypeNewznab: 'Newznab индексатор',
+    usenetTypeProwlarr: 'Prowlarr (нативен API)',
+    usenetFormats: 'Предпочитани формати',
+    usenetFormatsHint:
+      'Редът има значение: по-ранните формати получават по-висока оценка при съвпадение.',
+    usenetMinBitrate: 'Минимален битрейт',
+    usenetMaxBitrate: 'Максимален битрейт',
+    usenetPreferAlbums: 'Предпочитай албумни издания',
+    usenetCleanupNow: 'Почисти SABnzbd сега',
+    usenetCleanupNowHint:
+      'Изтрива всички завършени задачи и файловете им от SABnzbd — включително папките с албуми, запазени за повторна употреба.',
+    usenetCleanupDone:
+      'Removed {count} finished job(s) and {albums} cached album folder(s) from SABnzbd.',
+    usenetCleanupFailed:
+      'Почистването на SABnzbd не успя — проверете настройките за връзка.',
+    usenetPreferAlbumsHint:
+      "Usenet е ориентиран към албуми: търси и издания с име 'Изпълнител - Албум', изтегли албума и извлечи желания трак. Албумните издания се класират първи.",
+    tagEditorGroup: 'Tag editor',
+    discogsToken: 'Discogs token',
+    discogsTokenHint:
+      'Personal access token for the tag editor’s Discogs search. MusicBrainz needs none.',
+    discogsTokenPlaceholder: 'Discogs personal access token',
+    sourceSoundcloud: 'SoundCloud',
+    sourceSoundcloudHint:
+      'Качвания, които липсват другаде, и самата песен при линкове от SoundCloud',
+    deemixTitle: 'Deemix',
+    deemixHint:
+      'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
+    deemixEnabled: 'Use Deemix',
+    deemixInPlace:
+      'Keep audio, artwork and lyrics in the shared Deemix folder, without rewriting its tags. Configure a private ARL file on the server; do not paste it here.',
+    deemixUrl: 'Deemix server URL',
+    deemixRemote: 'Download folder inside Deemix',
+    deemixLocal: 'Same folder inside Downtify (read-only is supported)',
+    deemixQuality: 'Audio quality',
+    primaryLibrary: 'Primary library folder',
+    primaryLibraryHint:
+      'Prefer this folder for matching artist, song and album. Files and saved playlist paths are preserved; nothing is deleted.',
   },
   shortcuts: {
     title: 'Клавишни комбинации',
@@ -1287,6 +1401,7 @@ export default {
     goQueue: 'Към опашката',
     close: 'Затвори „Сега звучи“',
     help: 'Покажи комбинациите',
+    findInPlaylist: 'Търсене в плейлиста (на страницата му)',
   },
   auth: {
     signInTitle: 'Вход в Downtify',
@@ -1361,7 +1476,8 @@ export default {
     body: 'Грешна песен или версия? Изберете правилната. Файлът запазва името, таговете, обложката и текста си и остава в плейлистите.',
     current: 'Сега',
     search: 'Търсене',
-    searchHint: 'Или поставете връзка от YouTube или YouTube Music.',
+    searchHint:
+      'Или поставете връзка от YouTube, YouTube Music или SoundCloud.',
     searchButton: 'Търсене',
     results: 'Версии за избор',
     none: 'Няма резултати. Опитайте други думи или поставете връзка.',
@@ -1485,9 +1601,18 @@ export default {
     lastSignIn: 'влязъл {when}',
     neverSignedIn: 'никога не е влизал',
     defaultPassword: 'парола по подразбиране',
-    tracksStat: { one: '{count} песен', other: '{count} песни' },
-    likesStat: { one: '{count} харесване', other: '{count} харесвания' },
-    playlistsStat: { one: '{count} плейлист', other: '{count} плейлиста' },
+    tracksStat: {
+      one: '{count} песен',
+      other: '{count} песни',
+    },
+    likesStat: {
+      one: '{count} харесване',
+      other: '{count} харесвания',
+    },
+    playlistsStat: {
+      one: '{count} плейлист',
+      other: '{count} плейлиста',
+    },
     trafficStat: 'входящ {down} · изходящ {up}',
     usageTotal: 'Общо',
     deleteTitle: 'Изтриване на {name}?',
@@ -1530,6 +1655,7 @@ export default {
       user_deleted: 'Изтрити потребители',
       password_changed: 'Сменени пароли',
       settings_changed: 'Променени настройки',
+      album_compilation: 'Отбелязани сборни албуми',
     },
     did: {
       login: 'влезе',
@@ -1550,6 +1676,8 @@ export default {
       user_deleted: 'изтри потребителя {what}',
       password_changed: 'смени паролата на {what}',
       settings_changed: 'промени настройки: {what}',
+      album_compilation:
+        'промени дали {what} е сборен албум с Различни изпълнители',
     },
   },
   discover: {
@@ -1662,9 +1790,6 @@ export default {
     clearQueueTitle: 'Изчистване на опашката?',
     clearQueueBody:
       'Чакащите и готовите елементи се премахват от списъка. Изтеглените файлове остават.',
-    stopAllTitle: '??????? ?? ?????? ???????????',
-    stopAllBody:
-      '?????? ?????? ? ?????? ?????????? ?? ??????, ??????????? ?????????? ?????? ?? ???????. ???? ??????????? ??????? ???????.',
     stopWatchingTitle: 'Спиране на наблюдението на „{name}“?',
     stopWatchingBody: 'Изтеглените песни остават в библиотеката ти.',
     removeEpisodeTitle: 'Премахване на изтеглянето на „{name}“?',
@@ -1678,14 +1803,23 @@ export default {
     removeArtistBannerTitle: 'Премахване на банера на {name}?',
     removeArtistArtBody:
       'Това само премахва запазения файл с изображение — нищо друго не се засяга.',
+    stopAllTitle: '??????? ?? ?????? ???????????',
+    stopAllBody:
+      '?????? ?????? ? ?????? ?????????? ?? ??????, ??????????? ?????????? ?????? ?? ???????. ???? ??????????? ??????? ???????.',
   },
   toast: {
-    playingNext: { one: 'Ще звучи следваща', other: '{count} песни следват' },
+    playingNext: {
+      one: 'Ще звучи следваща',
+      other: '{count} песни следват',
+    },
     addedToQueue: {
       one: 'Добавена към опашката',
       other: '{count} песни са добавени към опашката',
     },
-    deleted: { one: 'Песента е изтрита', other: '{count} песни са изтрити' },
+    deleted: {
+      one: 'Песента е изтрита',
+      other: '{count} песни са изтрити',
+    },
     releasedShared: {
       one: '{count} песен остава в общата библиотека (изтеглена е и от някой друг)',
       other:
@@ -1720,5 +1854,577 @@ export default {
   },
   source: {
     from: 'Изтеглено от {source}',
+  },
+  tags: {
+    edit: 'Edit tags?',
+    title: 'Edit tags',
+    description:
+      'Fix the tags of "{title}", by hand or from MusicBrainz / Discogs.',
+    loading: 'Loading tags?',
+    fieldTitle: 'Title',
+    fieldArtist: 'Artist',
+    fieldAlbum: 'Album',
+    fieldAlbumArtist: 'Album artist',
+    fieldTrack: 'Track',
+    fieldTotal: 'Tracks total',
+    fieldDisc: 'Disc',
+    fieldDiscTotal: 'Discs total',
+    fieldDate: 'Date (YYYY-MM-DD)',
+    fieldGenre: 'Genre',
+    fieldComment: 'Comment',
+    fieldComposer: 'Composer',
+    fieldSource: 'Source',
+    changeCover: 'Choose image',
+    removeCover: 'Remove cover',
+    searchTitle: 'Fill from a tag source',
+    sourceMusicbrainz: 'MusicBrainz',
+    sourceDiscogs: 'Discogs',
+    searchPlaceholder: 'Artist, album or track',
+    search: 'Search',
+    noResults: 'Nothing found.',
+    use: 'Use',
+    filled: 'Fields filled from the source.',
+    save: 'Save tags',
+    saved: 'Tags saved.',
+  },
+  duplicates: {
+    title: 'Duplicates',
+    subtitle: 'The same song or album saved more than once.',
+    titles: 'Duplicate titles',
+    albums: 'Duplicate albums',
+    noneTitle: 'No duplicates',
+    noneBody: 'Every title and album in the library is unique.',
+    checkAgain: 'Check again',
+    checking: 'Checking?',
+    copyCount: {
+      one: '{count} copy',
+      other: '{count} copies',
+    },
+    trackCount: {
+      one: '{count} track',
+      other: '{count} tracks',
+    },
+    selectExtras: 'Select all but one',
+    selected: '{count} selected',
+    reasonMultipleFolders: 'Saved in more than one folder',
+    reasonRepeatedSong: 'The same song appears more than once',
+    deleteTitle: 'Delete the selected copies?',
+    deleteBody:
+      'The files are removed from disk, along with their playlists and covers.',
+    deleteSelected: 'Delete selected',
+    deleted: 'Deleted {count} file(s).',
+  },
+  artistSuggestions: {
+    title: 'Изпълнители за следване',
+    listening: 'Според слушанията ти',
+    library: 'Според библиотеката ти',
+    listeningHelp:
+      'Изпълнителите, които слушаш най-много. Скорошните слушания тежат повече: тежестта на всяко слушане намалява наполовина на всеки {days} дни.',
+    libraryHelp:
+      'Изпълнителите с най-много песни, после албуми, в библиотеката ти.',
+    listens: {
+      one: '{count} слушане',
+      other: '{count} слушания',
+    },
+    tracks: {
+      one: '{count} песен',
+      other: '{count} песни',
+    },
+    albums: {
+      one: '{count} албум',
+      other: '{count} албума',
+    },
+    follow: 'Следвай',
+    more: 'Покажи още',
+    loading: 'Предложенията се зареждат…',
+    empty: 'Засега няма други изпълнители за предлагане.',
+    failed: 'Предложенията не можаха да се заредят.',
+    retry: 'Опитай отново',
+    choose: 'Кой изпълнител е {name}?',
+    chooseHelp:
+      'Повече от един изпълнител в YouTube Music може да е {name}. Сравни снимките или отвори профилите им и последвай правилния.',
+    notFound:
+      'В YouTube Music няма изпълнител с име {name}. Постави линка на изпълнителя.',
+    lookupFailed:
+      'Търсенето на изпълнители не е достъпно. Пак можеш да поставиш линк.',
+    followProfile: 'Следвай този изпълнител',
+    inspect: 'Отвори в YouTube Music',
+    manual: 'Постави линк',
+    cancel: 'Отказ',
+  },
+  trash: {
+    title: 'Кошче',
+    subtitle:
+      'Песни, извадени от библиотеката, пазят се {days} дни след преместването. Дотогава можеш да ги възстановиш.',
+    adminOnly: 'Само администратори могат да виждат това',
+    adminOnlyHint: 'Помоли администратор на този сървър да възстанови песен.',
+    off: 'Кошчето е изключено',
+    offHint:
+      'На този сървър песните се изтриват завинаги. Кошчето се включва в конфигурацията на сървъра (DOWNTIFY_TRASH).',
+    inTrash: 'В кошчето',
+    exclusions: 'Извън изтеглянията',
+    search: 'Търси в кошчето',
+    restoreSelected: {
+      one: 'Възстанови {count} песен',
+      other: 'Възстанови {count} песни',
+    },
+    summary: {
+      one: '{count} песен · {size}',
+      other: '{count} песни · {size}',
+    },
+    empty: 'Кошчето е празно',
+    emptyHint:
+      'Песните, преместени от библиотеката в кошчето, се показват тук, докато изтекат.',
+    noMatch: 'Нищо в кошчето не съвпада',
+    select: 'Избери „{title}“',
+    keptUntil: 'Пази се до {date}',
+    restore: 'Възстанови',
+    retry: 'Опитай пак',
+    previous: 'Назад',
+    next: 'Напред',
+    exclusionsHint:
+      'Песни, чийто срок в кошчето е изтекъл. Автоматичните изтегляния (наблюдение на плейлисти, следения) продължават да ги пропускат, докато не ги разрешиш отново.',
+    exclusionsEmpty: 'Нищо не е извън изтеглянията',
+    allowDownload: 'Разреши изтеглянията',
+    allowTitle: 'Да се разреши „{title}“ да се изтегли отново?',
+    allowBody:
+      'Автоматичните изтегляния може да я изтеглят пак. Сега нищо не се изтегля.',
+    move: 'Премести в кошчето',
+    preparing: 'Файловете се проверяват…',
+    confirmTitle: {
+      one: 'Да се премести {count} песен в кошчето?',
+      other: 'Да се преместят {count} песни в кошчето?',
+    },
+    confirmBody:
+      'Преместват се само тези файлове, заедно с файловете им с текстове. Те излизат от библиотеката за всички и могат да се възстановят в продължение на {days} дни. Плейлистите и харесванията им се връщат с тях, а автоматичните изтегляния ги пропускат междувременно.',
+    confirmMore: {
+      one: 'и още {count}',
+      other: 'и още {count}',
+    },
+    pending: {
+      one: '{count} песен се премества в кошчето',
+      other: '{count} песни се преместват в кошчето',
+    },
+    downloadBlocked:
+      'В кошчето за музика: администратор трябва да я разреши отново.',
+    states: {
+      preview: 'Чака потвърждение',
+      pending: 'Чака преместване',
+      moving: 'Премества се',
+      trashed: 'В кошчето',
+      restore_pending: 'Чака възстановяване',
+      restoring: 'Възстановява се',
+      restored: 'Възстановена',
+      purging: 'Изтича',
+      purged: 'Изтекла',
+      error: 'Спряна — файловете са запазени',
+    },
+    errors: {
+      unavailable: 'Кошчето не е достъпно в момента. Нищо не е преместено.',
+      admin_required: 'Само администратор може да използва кошчето.',
+      admin_access_revoked:
+        'Профилът, който поиска това, вече не е администратор.',
+      atomic_move_unsupported:
+        'Това хранилище не може да мести файлове безопасно. Нищо не е преместено.',
+      confirmation_expired: 'Проверката изтече. Избери песните отново.',
+      confirmation_invalid: 'Това потвърждение не е за твоя профил или избор.',
+      file_changed:
+        'Файлът се промени след проверката. Остана на мястото си; избери го отново.',
+      file_changed_during_move:
+        'Файлът се промени по време на преместването. Пази се в кошчето, за да го провериш.',
+      file_missing: 'Липсва файл. Провери хранилището и опитай пак.',
+      filesystem_unavailable:
+        'Хранилището не е достъпно. Провери го и опитай пак.',
+      identity_uncertain:
+        'Таговете на тази песен не стигат, за да остане извън автоматичните изтегляния. Нищо не е преместено.',
+      invalid_path: 'Този файл е извън папките, които кошчето покрива.',
+      invalid_selection: 'Избери между 1 и 200 песни.',
+      item_not_found: 'Тази песен вече не е в библиотеката.',
+      library_task_active:
+        'Подобряването на библиотеката работи. Изчакай го или първо го спри на пауза.',
+      nas_marker_changed:
+        'Хранилището не е това, което кошчето очаква. Нищо не е преместено.',
+      nas_marker_missing:
+        'Очакваното хранилище не е монтирано. Нищо не е преместено.',
+      operation_already_pending: 'Тази песен вече е на път.',
+      operation_in_progress:
+        'Преместването още тече. Изчакай го, преди да възстановяваш.',
+      operation_not_complete: 'Изчакай текущата стъпка да приключи.',
+      preview_busy: 'Тече друга проверка. Изчакай я да приключи.',
+      preview_unavailable: 'Проверката беше прекъсната. Избери песните отново.',
+      restore_collision:
+        'Там вече има друг файл. Нищо не е презаписано; песента остава в кошчето.',
+      retention_expired: 'Срокът ѝ в кошчето изтече.',
+      root_unavailable: 'Папката с музика не е достъпна.',
+      track_is_playing: 'Някой слуша тази песен. Първо я спри на пауза.',
+      trash_file_changed: 'Копието в кошчето се промени. Няма да бъде изтрито.',
+      trash_file_missing: 'Липсва файл в кошчето.',
+      trash_ignore_invalid:
+        'Файлът .ignore в папката на кошчето не е празен. Нищо не е преместено.',
+      trash_not_configured: 'Кошчето е изключено на този сървър.',
+      trash_permissions_unsafe:
+        'Други могат да четат папката на кошчето. Провери правата ѝ.',
+      unsafe_symlink: 'Пътят съдържа символна връзка, затова не се пипа.',
+      unsupported_collection: 'Папката на тази песен не е покрита от кошчето.',
+      unsupported_lyrics_location:
+        'Папката с текстове не е покрита от кошчето. Нищо не е преместено.',
+    },
+  },
+  downloadPolicy: {
+    block: 'Stop downloading',
+    blocked: 'Downloads suspended for this track.',
+    confirm: 'Suspend downloads for this track?',
+    confirmHelp:
+      'New attempts will be blocked. A shared transfer already started may finish. Existing files will not be deleted.',
+    exclusions: 'Suspended tracks',
+    empty: 'No suspended tracks.',
+    resume: 'Allow again',
+    timeout: 'Attempt time limit reached',
+    manual: 'Suspended manually',
+    error: 'Could not change the suspension.',
+    alreadyActive: 'An attempt for this track is already in progress.',
+    budget: 'Cumulative attempt limit',
+    budgetHelp:
+      'Automatically suspend a track after this cumulative attempt time. Time between attempts is excluded. 0 disables the limit.',
+  },
+  playlistNames: {
+    restore: 'Restore source name',
+  },
+  libraryOnly: {
+    title: 'Library-only mode',
+    active: 'Only music in your server library is available.',
+    enable: 'Use only the library',
+    hint: 'Search and similar tracks use your library. External music, previews, downloads and automatic watches are disabled.',
+    serverHint:
+      'Applies to all accounts, browsers and Android clients. Wait for external work to finish before enabling it. The phone still needs access to the server unless tracks are downloaded.',
+    empty: 'No matching tracks in the accessible library.',
+    similar:
+      'Similar tracks from saved library tags. No external provider is contacted.',
+  },
+  playlistFavorites: {
+    title: 'Любими плейлисти',
+    add: 'Добавяне на плейлиста в любими',
+    remove: 'Премахване на плейлиста от любими',
+  },
+  normalization: {
+    title: 'Нормализиране на силата на звука',
+    hint: 'Всички песни звучат с близка сила, без да се променят аудиофайловете ви.',
+    enable: 'Нормализиране на силата при възпроизвеждане',
+    enableHint:
+      'Използва измерената сила на звука на всяка песен, усилва с най-много 12 dB и не допуска пиковете да се изкривят. Неизмерените песни звучат с оригиналното си ниво.',
+    analysisHint:
+      'Анализът прочита всяка песен веднъж във фонов режим; следващите пускания измерват само нови или променени файлове. Никога не започва сам, дори след рестарт.',
+    progress: '{done} / {total} анализирани · {failed} неуспешни',
+    analyze: 'Анализ на библиотеката',
+    pause: 'Пауза на анализа',
+    resume: 'Продължаване на анализа',
+    pausing: 'Довършване на текущите файлове преди пауза…',
+    states: {
+      ready: 'Измерената сила е приложена към текущата песен.',
+      silent: 'Тиха песен: запазено оригиналното ниво.',
+      unanalysed: 'Песента още не е измерена: запазено оригиналното ниво.',
+      unavailable: 'Нормализирането не е налично: запазено оригиналното ниво.',
+    },
+  },
+  externalPlaylistImport: {
+    open: 'Import folder playlists',
+    title: 'Playlists in your music folders',
+    hint: 'Select the playlists to add, up to 50 at a time. Only available tracks are referenced. Source files and audio are never changed.',
+    loading: 'Looking for playlist files…',
+    empty: 'No M3U or M3U8 playlist files found in the added folders.',
+    counts:
+      '{count} available · {missing} unavailable · {duplicates} repeated entries',
+    existing: 'Already added as {name}',
+    preview: 'Preview the first 30 tracks',
+    truncated: 'The scan reached its limit; this list is incomplete.',
+    add: 'Add selected playlists ({count})',
+    result:
+      '{added} added · {existing} already present · {failed} need a new preview or could not be imported',
+  },
+  collaboration: {
+    canEdit: 'Може да добавя и премахва песни',
+    copyHint:
+      'Този плейлист следва източника си, затова другите не могат да редактират песните му. Сподели редактируемо копие: то остава твое, а оригиналът продължава да следва източника.',
+    copy: 'Сподели редактируемо копие',
+    byEditor: 'от {owner} · можеш да добавяш и премахваш песни',
+  },
+  buy: {
+    menu: 'Подкрепете артиста',
+    title: 'Подкрепете артиста',
+    body: 'Купете музиката или посетете собствения сайт на артиста.',
+    inStore: 'Отвори в магазина',
+    search: 'Търси „{query}“',
+    website: 'Официален сайт',
+    failed: 'Магазините не можаха да бъдат проверени.',
+    note: 'Bandcamp дава по-голямата част от всяка продажба на артиста. Това са обикновени връзки: Downtify не продава нищо и не печели от тях.',
+  },
+  playlistSearch: {
+    placeholder: 'Търсене в този плейлист',
+    all: 'Всички',
+    missing: 'Липсващи',
+    failed: 'Неуспешни',
+    notInNavidrome: 'Липсват в Navidrome',
+    fromFolders: 'Вашите папки',
+    unknownSource: 'Неизвестен източник',
+    showing: '{count} от {total}',
+    noMatch: 'Няма съвпадения',
+    noMatchHint: 'Опитайте с други думи или друг филтър.',
+  },
+  usage: {
+    title: 'Хранилище и използване',
+    subtitle: 'Колко голяма е библиотеката, колко бързо расте и откъде идва.',
+    adminOnly: 'Само администратори могат да виждат това',
+    adminOnlyHint:
+      'Попитайте администратор на този сървър за данните за хранилището.',
+    loadFailed: 'Данните за хранилището не можаха да се заредят.',
+    tileLibrary: 'Библиотека',
+    tileAdded: {
+      one: 'Добавено през последния ден',
+      other: 'Добавено за {count} дни',
+    },
+    tileGrowth: 'Нетна промяна',
+    tileFree: 'Свободно място',
+    tileDownloads: 'Изтеглени',
+    tileCleanup: 'Може да се освободи',
+    songs: {
+      one: '{count} песен',
+      other: '{count} песни',
+    },
+    files: {
+      one: '{count} файл',
+      other: '{count} файла',
+    },
+    perWeekRate: '{size} на седмица',
+    ofTotal: 'от {total}',
+    daysLeft: {
+      one: 'от {total} · пълно след около {count} ден при това темпо',
+      other: 'от {total} · пълно след около {count} дни при това темпо',
+    },
+    downloadsShort: '{skipped} пропуснати · {failed} неуспешни',
+    growthTitle: 'Размер на библиотеката',
+    growthHint:
+      'Библиотеката в края на всеки ден, без работните копия на slskd.',
+    estimated: 'Оценено по датите на файловете',
+    estimatedNote:
+      'Преди {date} размерът е оценен по датите на песните, които все още са в библиотеката, така че изтритите оттогава не са включени.',
+    allEstimatedNote:
+      'Отсега нататък Downtify записва размера на библиотеката всеки час. По-ранните дни са оценени по датите на песните, които все още са в библиотеката.',
+    addedPerDay: 'Добавено на ден',
+    addedPerWeek: 'Добавено на седмица',
+    sourcesTitle: 'По източник',
+    sourcesHint: {
+      one: 'Откъде е дошъл звукът и какво е добавил всеки източник през последния ден.',
+      other:
+        'Откъде е дошъл звукът и какво е добавил всеки източник през последните {count} дни.',
+    },
+    addedInPeriod: {
+      one: '+{size} · {count} песен за периода',
+      other: '+{size} · {count} песни за периода',
+    },
+    emptyLibrary: 'Библиотеката е празна.',
+    whereTitle: 'Къде се съхранява',
+    byLocation: 'Папка',
+    byFormat: 'Формат',
+    location: {
+      downloads: 'Папка за изтегляния',
+      slskd: 'Папка на slskd',
+      folders: 'Допълнителни музикални папки',
+    },
+    unknown: 'Неизвестно',
+    downloadsTitle: 'Изтегляния',
+    downloadsHint: {
+      one: 'Как са приключили изтеглянията от опашката и от Наблюдението на плейлисти през последния ден. Всеки опит се брои.',
+      other:
+        'Как са приключили изтеглянията от опашката и от Наблюдението на плейлисти през последните {count} дни. Всеки опит се брои.',
+    },
+    outcome: {
+      completed: 'Завършени',
+      skipped: 'Пропуснати',
+      failed: 'Неуспешни',
+    },
+    perDay: 'На ден',
+    perWeek: 'На седмица',
+    downloadedBySource: 'Изтеглено по източник · {size}',
+    noDownloads: 'Нищо не е изтеглено през този период.',
+    logEmptyNote:
+      'Все още няма преброени изтегляния: Downtify ги брои от тази версия нататък.',
+    logSinceNote: 'Изтеглянията се броят от {date}.',
+    cleanupTitle: 'Може да се почисти',
+    cleanupHint:
+      'Място, за което Downtify може да каже, че е излишно или останало. Оттук нищо не се изтрива.',
+    duplicatesTitle: 'Дублирани песни',
+    duplicatesHint:
+      '{exact} съхранени два пъти като един и същ файл, {likely} вероятно същата песен от друг източник. Размерът е колко би се освободило, ако се запази само най-голямото копие.',
+    duplicateKind: {
+      exact: 'Същият файл',
+      likely: 'Вероятно същата песен',
+    },
+    workingTitle: 'Работни копия на slskd',
+    workingHint:
+      'Прехвърляния от Soulseek, останали в папката на slskd, след като Downtify ги е копирал в библиотеката.',
+    workingInPlace:
+      'Файловете на slskd остават на място, така че папката на slskd е част от библиотеката.',
+    leftoversTitle: 'Останали временни файлове',
+    leftoversHint: 'Незавършени изтегляния и преобразувания, по-стари от час.',
+    orphansTitle: 'Осиротели придружаващи файлове',
+    orphansHint:
+      'Файлове с текстове и обложки на албуми, чиито песни вече ги няма.',
+    foldersTitle: 'Папки',
+    foldersHint: 'Всичко в папките, в които пише Downtify, по вид.',
+    rescan: 'Сканирай отново',
+    scanFailed: 'Папките не можаха да се сканират.',
+    scanning: 'Сканиране на папките…',
+    scannedAt: 'Сканирано {when} за {seconds} s',
+    folder: {
+      downloads: 'Папка за изтегляния',
+      slskd: 'Папка на slskd',
+      lyrics: 'Папка с текстове',
+    },
+    kind: {
+      audio: 'Песни',
+      podcasts: 'Подкасти',
+      lyrics: 'Текстове',
+      images: 'Изображения',
+      playlists: 'Плейлисти',
+      metadata: 'Снимки и профили на изпълнители',
+      temporary: 'Временни файлове',
+      other: 'Други',
+    },
+  },
+  watchStats: {
+    colActivity: 'Активност',
+    colStorage: 'Място',
+    period: 'Период',
+    days: {
+      one: '{count} ден',
+      other: '{count} дни',
+    },
+    totalNew: {
+      one: 'Нови за последния ден',
+      other: 'Нови за {count} дни',
+    },
+    totalSongs: 'Песни от наблюдения',
+    totalSize: 'На диска',
+    totalShared: 'В повече от едно наблюдение',
+    statsFailed: 'Статистиката не можа да се зареди.',
+    rateWeekShort: '{rate}/седмица',
+    sharedShort: '+{count} споделени',
+    activityTooltip:
+      '{added} нови за последните {count} дни · {rate} на седмица · {trend}',
+    storageTooltip:
+      '{unique} само в това наблюдение · {shared} споделени с други наблюдения',
+    sortActivity: 'Скорошна активност',
+    sortRate: 'Среден темп',
+    sortGrowth: 'Ръст на мястото',
+    sortStorage: 'Собствено място',
+    sortContributed: 'Изтеглени песни',
+    details: 'Активност и песни',
+    openInLibrary: 'Отвори в библиотеката',
+    notFound: 'Наблюдението не е намерено',
+    notFoundHint: 'Може да е премахнато или да е на друг акаунт.',
+    since: 'Наблюдава се от {date}',
+    tileSongs: 'Песни на диска',
+    tileDownloaded: 'Изтеглени от него',
+    tileLinked: 'Вече в библиотеката',
+    tileUnique: 'Само в това наблюдение',
+    tileUniqueHint: {
+      one: '{count} песен, която никое друго наблюдение няма',
+      other: '{count} песни, които никое друго наблюдение няма',
+    },
+    tileShared: 'Споделени',
+    tileSharedHint: '{size}, и в други наблюдения, пазят се веднъж',
+    tileFailing: 'С грешка',
+    unknownNote: {
+      one: '{count} песен е добавена, преди Downtify да записва как песните влизат в наблюдение.',
+      other:
+        '{count} песни са добавени, преди Downtify да записва как песните влизат в наблюдение.',
+    },
+    missingNote: {
+      one: '{count} песен, записана от това наблюдение, вече не е на диска.',
+      other: '{count} песни, записани от това наблюдение, вече не са на диска.',
+    },
+    activityTitle: 'Активност',
+    activityHint:
+      'Новите песни, които е добавило: не тези, които вече са били в библиотеката ви, и не тези от първата му проверка.',
+    newSongsLabel: {
+      one: 'добавена нова песен',
+      other: 'добавени нови песни',
+    },
+    rateDay: 'На ден',
+    rateWeek: 'На седмица',
+    rateMonth: 'На месец',
+    trendUp: 'Напоследък добавя повече',
+    trendDown: 'Напоследък добавя по-малко',
+    trendSteady: 'Равномерен темп',
+    trendIdle: 'Напоследък нищо ново',
+    trendNew: 'Още е рано да се каже',
+    periodGrowth: '{size} ново аудио',
+    periodLinked: {
+      one: 'още {count} вече беше в библиотеката ви',
+      other: 'още {count} вече бяха в библиотеката ви',
+    },
+    periodInitial: {
+      one: '{count} дойде с първата му проверка',
+      other: '{count} дойдоха с първата му проверка',
+    },
+    periodUnknown: {
+      one: '{count} от тях е записана, преди Downtify да записва как',
+      other: '{count} от тях са записани, преди Downtify да записва как',
+    },
+    barsPerDay: 'Нови песни на ден',
+    barsPerWeek: 'Нови песни на седмица',
+    providersTitle: 'Откъде е дошло аудиото',
+    failuresTitle: {
+      one: '{count} песен продължава да се проваля',
+      other: '{count} песни продължават да се провалят',
+    },
+    attempts: {
+      one: '{count} опит',
+      other: '{count} опита',
+    },
+    lastTried: 'последен опит {when}',
+    songsTitle: 'Песни от това наблюдение',
+    songsHint:
+      'Най-новите първо, включително песни, които вече са излезли от плейлиста. Изберете някои, за да ги пуснете, добавите в плейлист или изтриете.',
+    filter: {
+      all: 'Всички',
+      recent: {
+        one: 'Последния ден',
+        other: 'Последните {count} дни',
+      },
+      downloaded: 'Изтеглени от него',
+      linked: 'Вече в библиотеката',
+      unknown: 'Преди записването',
+    },
+    noSongs: 'Няма песни от това наблюдение на диска',
+    noSongsHint:
+      'Появяват се тук, щом проверка ги изтегли или ги намери в библиотеката ви.',
+  },
+  origin: {
+    menu: 'Откъде е дошла',
+    title: 'Откъде е дошла тази песен',
+    body: 'Наблюденията на плейлисти, които са я донесли в библиотеката ви.',
+    failed: 'Не можа да се зареди откъде е дошла тази песен.',
+    firstTitle: 'Първо изтеглена от',
+    none: 'Никое наблюдение не я е изтеглило: изтеглена е ръчно или преди Downtify да записва това.',
+    otherAccount: 'Наблюдение на друг акаунт',
+    backfill: 'Първа проверка',
+    estimated: 'Вероятно',
+    gone: 'Това наблюдение е премахнато или вече следи друга връзка.',
+    watchesTitle: {
+      one: 'В {count} наблюдение',
+      other: 'В {count} наблюдения',
+    },
+    noWatches: 'В момента никое наблюдение не я държи.',
+    others: {
+      one: '{count} от тях е на друг акаунт.',
+      other: '{count} от тях са на други акаунти.',
+    },
+    oneFile: 'Това е един файл: всички наблюдения сочат към същото копие.',
+    outcome: {
+      downloaded: 'Изтегли я',
+      linked: 'Вече в библиотеката',
+      unknown: 'Преди записването',
+    },
   },
 }

@@ -15,11 +15,21 @@ export default {
     show: 'Mostrar',
     hide: 'Ocultar',
     unknownArtist: 'Artista desconocido',
-    tracks: { one: '{count} canción', other: '{count} canciones' },
-    albums: { one: '{count} álbum', other: '{count} álbumes' },
-    artists: { one: '{count} artista', other: '{count} artistas' },
+    tracks: {
+      one: '{count} canción',
+      other: '{count} canciones',
+    },
+    albums: {
+      one: '{count} álbum',
+      other: '{count} álbumes',
+    },
+    artists: {
+      one: '{count} artista',
+      other: '{count} artistas',
+    },
     lengthMinutes: '{minutes} min',
     lengthHours: '{hours} h {minutes} min',
+    undo: 'Deshacer',
   },
   nav: {
     main: 'Principal',
@@ -76,7 +86,10 @@ export default {
     hintDeezer: 'Canciones, álbumes, playlists y artistas de Deezer',
     hintCsv: 'Importa un CSV (Soundiiz, Exportify…)',
     downloading: 'Descargando ahora',
-    waiting: { one: '{count} más en espera', other: '{count} más en espera' },
+    waiting: {
+      one: '{count} más en espera',
+      other: '{count} más en espera',
+    },
     openQueue: 'Abrir cola',
     yourLibrary: 'Tu biblioteca',
     openLibrary: 'Abrir biblioteca',
@@ -99,6 +112,7 @@ export default {
     step3Title: 'Escucha donde quieras',
     step3Body:
       'Reprodúcela aquí, mantén playlists sincronizadas con el Monitor de playlists o apunta Jellyfin, Plex o Navidrome a tu biblioteca.',
+    hintSoundcloud: 'Canciones de SoundCloud',
   },
   search: {
     title: 'Buscar',
@@ -116,7 +130,6 @@ export default {
     songs: 'Canciones',
     albums: 'Álbumes',
     artists: 'Artistas',
-    downloadDiscography: 'Download full discography of {name}',
     artist: 'Artista',
     showAllSongs: 'Mostrar las {count} canciones',
     recent: 'Búsquedas recientes',
@@ -127,7 +140,7 @@ export default {
     typeSingle: 'Sencillo',
     typeEp: 'EP',
     unsupportedLink:
-      'Downtify no puede descargar ese enlace. Pega una canción, álbum o playlist de Spotify, o un enlace de YouTube Music.',
+      'Downtify no puede descargar ese enlace. Pega una canción, álbum o playlist de Spotify, un enlace de YouTube Music o una canción de SoundCloud.',
     tipSearchTitle: 'Busca por nombre',
     tipSearchBody:
       'Escribe un artista, álbum o canción — los resultados vienen de YouTube Music.',
@@ -137,6 +150,7 @@ export default {
     tipYoutubeTitle: 'Pega un enlace de YouTube Music',
     tipYoutubeBody:
       'Canciones, álbumes, playlists — o la página de un artista para ver todos sus lanzamientos.',
+    downloadDiscography: 'Download full discography of {name}',
   },
   charts: {
     title: 'Listas de éxitos',
@@ -213,8 +227,14 @@ export default {
       playlist: 'Playlist',
       artist: 'Artista',
     },
-    releases: { one: '{count} lanzamiento', other: '{count} lanzamientos' },
-    downloadAll: { one: 'Descargar', other: 'Descargar las {count}' },
+    releases: {
+      one: '{count} lanzamiento',
+      other: '{count} lanzamientos',
+    },
+    downloadAll: {
+      one: 'Descargar',
+      other: 'Descargar las {count}',
+    },
     downloadNew: {
       one: 'Descargar {count} nueva',
       other: 'Descargar {count} nuevas',
@@ -240,6 +260,12 @@ export default {
     selectAll: 'Seleccionar todo',
     playCountSpotify: 'Reproducciones en Spotify',
     playCountYoutubeMusic: 'Reproducciones en YouTube Music (aproximado)',
+    allHandled: 'Ya está en tu biblioteca o en la cola',
+    addPlaylist: 'Añadir a mis listas',
+    noAvailableTracks: 'Todavía no hay canciones descargadas para añadir.',
+    saveAvailableHint:
+      '{count} de {total} canciones disponibles. Se reutilizan los archivos de audio; no se descargarán las canciones que falten.',
+    openSoundcloud: 'Abrir en SoundCloud',
   },
   queue: {
     title: 'Cola',
@@ -248,18 +274,21 @@ export default {
     tabDone: 'Completadas',
     tabFailed: 'Fallidas',
     tabAll: 'Todas',
-    countActive: { one: '{count} descargando', other: '{count} descargando' },
-    countQueued: { one: '{count} en espera', other: '{count} en espera' },
-    countFailed: { one: '{count} fallida', other: '{count} fallidas' },
+    countActive: {
+      one: '{count} descargando',
+      other: '{count} descargando',
+    },
+    countQueued: {
+      one: '{count} en espera',
+      other: '{count} en espera',
+    },
+    countFailed: {
+      one: '{count} fallida',
+      other: '{count} fallidas',
+    },
     retryFailed: 'Reintentar fallidas ({count})',
     clearDone: 'Limpiar completadas ({count})',
     clearAll: 'Vaciar cola',
-    stopAll: 'Detener todas las descargas',
-    stopped: '{count} descarga(s) detenida(s).',
-    stopFailed: 'No se pudieron detener las descargas.',
-    skipSource: 'Saltar a la siguiente fuente',
-    skipRequested: 'Cambiando a la siguiente fuente de audio.',
-    skipFailed: 'No se pudo saltar la fuente.',
     emptyTitle: 'La cola está vacía',
     emptyBody: 'Busca música o pega un enlace — las descargas aparecen aquí.',
     emptyAction: 'Buscar música',
@@ -280,7 +309,8 @@ export default {
     retry: 'Reintentar',
     remove: 'Quitar de la cola',
     failedGeneric: 'La descarga falló.',
-    overridePlaceholder: 'Pega un enlace de YouTube para usarlo como audio',
+    overridePlaceholder:
+      'Pega un enlace de YouTube o SoundCloud para usarlo como audio',
     useLink: 'Usar este enlace',
     invalidYoutube: 'Eso no parece un enlace de vídeo de YouTube.',
     playlistDownloads: 'Descargas de playlists',
@@ -291,6 +321,28 @@ export default {
       'Un CSV exportado de Soundiiz, TuneMyMusic, Exportify y similares.',
     importButton: 'Elegir archivo CSV',
     importFailed: 'No se pudo importar ese CSV.',
+    stopAll: 'Detener todas las descargas',
+    stopped: '{count} descarga(s) detenida(s).',
+    stopFailed: 'No se pudieron detener las descargas.',
+    skipSource: 'Saltar a la siguiente fuente',
+    skipRequested: 'Cambiando a la siguiente fuente de audio.',
+    skipFailed: 'No se pudo saltar la fuente.',
+    pause: 'Pausar descargas',
+    resume: 'Reanudar descargas',
+    pauseFailed: 'No se pudo cambiar la cola. Inténtalo de nuevo.',
+    pausingTitle: 'Pausando descargas…',
+    pausingBody: {
+      one: 'Esperando a que termine {count} descarga. No se iniciará ninguna descarga nueva.',
+      other:
+        'Esperando a que terminen {count} descargas. No se iniciará ninguna descarga nueva.',
+    },
+    pausedTitle: 'Descargas en pausa',
+    pausedBody: 'No se iniciará ninguna descarga nueva hasta que la reanudes.',
+    pausedKept:
+      'Las canciones en espera siguen en la cola, aunque Downtify se reinicie o se actualice.',
+    statusPaused: 'En pausa',
+    invalidAudioLink:
+      'Eso no parece un enlace de vídeo de YouTube ni de canción de SoundCloud.',
   },
   library: {
     title: 'Biblioteca',
@@ -347,6 +399,7 @@ export default {
     downloadZip: 'Descargar como ZIP',
     saveToDevice: 'Guardar en este dispositivo',
     upgrade: 'Mejorar biblioteca',
+    storage: 'Almacenamiento y uso',
   },
   likes: {
     like: 'Añadir a Canciones que me gustan',
@@ -376,7 +429,10 @@ export default {
     scanning: 'Analizando tu biblioteca',
     scanProgress: '{done} de {total} canciones revisadas',
     scanResult: 'Resultado del análisis',
-    libraryCount: { one: '{count} canción', other: '{count} canciones' },
+    libraryCount: {
+      one: '{count} canción',
+      other: '{count} canciones',
+    },
     librarySize: 'Tamaño de la biblioteca',
     nothingTitle: 'Nada que mejorar',
     nothingBody:
@@ -399,7 +455,10 @@ export default {
     metadata: 'Actualizar etiquetas',
     metadataHint:
       'Rellena álbum, artista del álbum, fecha de lanzamiento y número de pista desde Spotify. Solo para canciones cuya pista de Spotify Downtify todavía conoce.',
-    tracksAffected: { one: '{count} canción', other: '{count} canciones' },
+    tracksAffected: {
+      one: '{count} canción',
+      other: '{count} canciones',
+    },
     options: 'Opciones',
     artworkMin: 'Mejorar portadas menores de',
     artworkMinHint:
@@ -412,57 +471,11 @@ export default {
     recheck: 'No volver a revisar una canción durante',
     recheckHint:
       'Una canción revisada hace poco se salta en el siguiente análisis. Un Downtify más nuevo siempre lo revisa todo otra vez.',
-    recheckDays: { one: '{count} día', other: '{count} días' },
+    recheckDays: {
+      one: '{count} día',
+      other: '{count} días',
+    },
     recheckNever: 'Revisar siempre todas las canciones',
-    metadataMode: 'Metadata mode',
-    metadataModeFill: 'Fill in missing tags',
-    metadataModeFillHint:
-      'Only empty or placeholder tags (like "Unknown album") are completed. Values already in the file are kept.',
-    metadataModeVerify: 'Verify and correct tags',
-    metadataModeVerifyHint:
-      'Every track is compared with Spotify or Apple Music and wrong values are corrected. Slower: one remote lookup per track.',
-    album_cover: 'Add album folder covers',
-    album_coverHint:
-      'Write a cover.jpg into an album folder that has audio but no cover image, using the artwork already embedded in its tracks.',
-    mergeTitle: 'Merge split albums',
-    mergeStagereading: 'Reading library tags…',
-    mergeStagematching: 'Matching singles to albums…',
-    mergeStagegrouping: 'Comparing editions and quality…',
-    mergeStagerehoming: 'Clasificando pistas desconocidas…',
-    mergeStagemerging: 'Moving tracks and removing duplicates…',
-    mergeStageplaylists: 'Updating playlists…',
-    mergeHint:
-      'Albums kept as separate singles or as standard and deluxe editions are merged into one folder. The edition with the most songs wins; duplicate songs keep the best-quality file and the other copies are deleted.',
-    mergeEditions: 'Editions: {editions}',
-    mergeDuplicates: {
-      one: '{count} duplicate file will be removed',
-      other: '{count} duplicate files will be removed',
-    },
-    mergeScanned: 'Checked {tracks} tracks in {seconds}s.',
-    mergeFind: 'Find split albums',
-    tidyAction: 'Reubicar desconocidos y limpiar',
-    tidyHint:
-      'Mueve pistas de carpetas unknown a su álbum real (consulta Spotify, Deezer o iTunes), elimina copias duplicadas y borra carpetas vacías.',
-    tidyDone: '{rehomed} pista(s) clasificada(s), {duplicates} duplicado(s) eliminado(s), {folders} carpeta(s) vacía(s) borrada(s).',
-    tidyRemaining: '{count} pista(s) no se pudieron asignar a un álbum.',
-    mergeSearching: 'Looking for split albums\u2026',
-    mergeNone: 'No split albums found.',
-    mergeFound: {
-      one: '{count} album to merge',
-      other: '{count} albums to merge',
-    },
-    mergeApply: { one: 'Merge {count} album', other: 'Merge {count} albums' },
-    mergeApplying: 'Merging\u2026',
-    mergeDone: 'Merged {moved} track(s), removed {deleted} duplicate(s).',
-    mergeStats:
-      '{resolved} of {looked_up} tracks were matched to an album by a tag source.',
-    mergeLimited:
-      'Some tracks could not be checked because a tag source was unavailable (rate limit). Wait a few minutes and try again.',
-    playlistsTitle: 'Rebuild playlist files',
-    playlistsHint:
-      'Rewrite every playlist\u2019s .m3u from what is already on disk, so songs you downloaded earlier are listed too \u2014 not just the last batch.',
-    playlistsRebuild: 'Rebuild playlists',
-    playlistsDone: 'Rebuilt {rebuilt} playlists, {linked} track(s) linked.',
     start: 'Empezar',
     startCount: {
       one: 'Mejorar {count} canción',
@@ -493,59 +506,81 @@ export default {
     stageLyrics: 'Buscando letra',
     stageWriting: 'Escribiendo el archivo',
     loadFailed: 'No se pudo cargar la mejora de la biblioteca',
-  },
-  tags: {
-    edit: 'Edit tags?',
-    title: 'Edit tags',
-    description:
-      'Fix the tags of "{title}", by hand or from MusicBrainz / Discogs.',
-    loading: 'Loading tags?',
-    fieldTitle: 'Title',
-    fieldArtist: 'Artist',
-    fieldAlbum: 'Album',
-    fieldAlbumArtist: 'Album artist',
-    fieldTrack: 'Track',
-    fieldTotal: 'Tracks total',
-    fieldDisc: 'Disc',
-    fieldDiscTotal: 'Discs total',
-    fieldDate: 'Date (YYYY-MM-DD)',
-    fieldGenre: 'Genre',
-    fieldComment: 'Comment',
-    fieldComposer: 'Composer',
-    fieldSource: 'Source',
-    changeCover: 'Choose image',
-    removeCover: 'Remove cover',
-    searchTitle: 'Fill from a tag source',
-    sourceMusicbrainz: 'MusicBrainz',
-    sourceDiscogs: 'Discogs',
-    searchPlaceholder: 'Artist, album or track',
-    search: 'Search',
-    noResults: 'Nothing found.',
-    use: 'Use',
-    filled: 'Fields filled from the source.',
-    save: 'Save tags',
-    saved: 'Tags saved.',
-  },
-  duplicates: {
-    title: 'Duplicates',
-    subtitle: 'The same song or album saved more than once.',
-    titles: 'Duplicate titles',
-    albums: 'Duplicate albums',
-    noneTitle: 'No duplicates',
-    noneBody: 'Every title and album in the library is unique.',
-    checkAgain: 'Check again',
-    checking: 'Checking?',
-    copyCount: { one: '{count} copy', other: '{count} copies' },
-    trackCount: { one: '{count} track', other: '{count} tracks' },
-    selectExtras: 'Select all but one',
-    selected: '{count} selected',
-    reasonMultipleFolders: 'Saved in more than one folder',
-    reasonRepeatedSong: 'The same song appears more than once',
-    deleteTitle: 'Delete the selected copies?',
-    deleteBody:
-      'The files are removed from disk, along with their playlists and covers.',
-    deleteSelected: 'Delete selected',
-    deleted: 'Deleted {count} file(s).',
+    metadataMode: 'Metadata mode',
+    metadataModeFill: 'Fill in missing tags',
+    metadataModeFillHint:
+      'Only empty or placeholder tags (like "Unknown album") are completed. Values already in the file are kept.',
+    metadataModeVerify: 'Verify and correct tags',
+    metadataModeVerifyHint:
+      'Every track is compared with Spotify or Apple Music and wrong values are corrected. Slower: one remote lookup per track.',
+    album_cover: 'Add album folder covers',
+    album_coverHint:
+      'Write a cover.jpg into an album folder that has audio but no cover image, using the artwork already embedded in its tracks.',
+    mergeTitle: 'Merge split albums',
+    mergeStagereading: 'Reading library tags…',
+    mergeStagematching: 'Matching singles to albums…',
+    mergeStagegrouping: 'Comparing editions and quality…',
+    mergeStagerehoming: 'Clasificando pistas desconocidas…',
+    mergeStagemerging: 'Moving tracks and removing duplicates…',
+    mergeStageplaylists: 'Updating playlists…',
+    mergeHint:
+      'Albums kept as separate singles or as standard and deluxe editions are merged into one folder. The edition with the most songs wins; duplicate songs keep the best-quality file and the other copies are deleted.',
+    mergeEditions: 'Editions: {editions}',
+    mergeDuplicates: {
+      one: '{count} duplicate file will be removed',
+      other: '{count} duplicate files will be removed',
+    },
+    mergeScanned: 'Checked {tracks} tracks in {seconds}s.',
+    mergeFind: 'Find split albums',
+    tidyAction: 'Reubicar desconocidos y limpiar',
+    tidyHint:
+      'Mueve pistas de carpetas unknown a su álbum real (consulta Spotify, Deezer o iTunes), elimina copias duplicadas y borra carpetas vacías.',
+    tidyDone:
+      '{rehomed} pista(s) clasificada(s), {duplicates} duplicado(s) eliminado(s), {folders} carpeta(s) vacía(s) borrada(s).',
+    tidyRemaining: '{count} pista(s) no se pudieron asignar a un álbum.',
+    mergeSearching: 'Looking for split albums…',
+    mergeNone: 'No split albums found.',
+    mergeFound: {
+      one: '{count} album to merge',
+      other: '{count} albums to merge',
+    },
+    mergeApply: {
+      one: 'Merge {count} album',
+      other: 'Merge {count} albums',
+    },
+    mergeApplying: 'Merging…',
+    mergeDone: 'Merged {moved} track(s), removed {deleted} duplicate(s).',
+    mergeStats:
+      '{resolved} of {looked_up} tracks were matched to an album by a tag source.',
+    mergeLimited:
+      'Some tracks could not be checked because a tag source was unavailable (rate limit). Wait a few minutes and try again.',
+    playlistsTitle: 'Rebuild playlist files',
+    playlistsHint:
+      'Rewrite every playlist’s .m3u from what is already on disk, so songs you downloaded earlier are listed too — not just the last batch.',
+    playlistsRebuild: 'Rebuild playlists',
+    playlistsDone: 'Rebuilt {rebuilt} playlists, {linked} track(s) linked.',
+    chooseRecording: 'Choose a Deezer recording',
+    chooseRecordingHint:
+      'Review an exact recording when old album tags do not match. The artist and full title must still match.',
+    recordingLink: 'Deezer track link',
+    previewRecording: 'Preview',
+    recordingReviewHint:
+      'Review the album and duration. This prepares a single-track scan; replacement starts only after you confirm the scan.',
+    analyzeRecording: 'Analyze this choice',
+    recordingPreviewFailed: 'Unable to preview this Deezer track.',
+    replacementRescan: 'Options changed: scan again before starting.',
+    deemixTitle: 'Replace recordings with Deemix',
+    replaceAudio: 'Use verified Deemix recordings',
+    replaceAudioHint:
+      'Match the exact artist, title and album. Keep music in the Deemix folder. Ambiguous matches leave originals untouched. This scan replaces audio instead of retagging it.',
+    deleteOriginals: 'Remove old Downtify audio after import',
+    deleteOriginalsHint:
+      'Only remove each verified original after playlists, likes and playback references are updated. External files and sidecars are never removed.',
+    replacementProgress:
+      'Awaiting publication or cleanup: {pending}. Old copies removed: {removed}. Originals kept: {kept}.',
+    audio: 'Deemix recordings',
+    audioHint:
+      'Verify catalog duration and decoded audio before updating playlists and removing an old copy.',
   },
   album: {
     kicker: 'Álbum',
@@ -553,22 +588,29 @@ export default {
     moreBy: 'Más de {artist}',
     searchMore: 'Buscar en YouTube Music',
     delete: 'Eliminar álbum',
+    markCompilation: 'Marcar como Varios artistas',
+    unmarkCompilation: 'Desmarcar como Varios artistas',
+    markedCompilation: 'Álbum marcado como Varios artistas',
+    unmarkedCompilation: 'El álbum ya no es de Varios artistas',
+    compilationPartial: 'Algunas pistas no se pudieron cambiar',
+    compilationFailed: 'No se pudo cambiar el álbum',
   },
   artist: {
     kicker: 'Artista',
     notFound: 'Artista no encontrado',
     findMore: 'Buscar más',
+    relatedArtists: 'A los fans también les gusta',
+    topSongsLink: 'Ver más canciones populares',
+    linksTab: 'Enlaces',
+    linksPlatforms: 'Plataformas de streaming',
+    linksSocial: 'Redes sociales',
     downloadDiscography: 'Download full discography',
     discographyStarted:
       'Downloading the complete discography of {name} in the background. Manage it under Monitor.',
     discographyChecking:
       'Checking {name} for missing releases in the background.',
     discographyFailed: 'Could not start the discography download.',
-    relatedArtists: 'A los fans también les gusta',
-    topSongsLink: 'Ver más canciones populares',
-    linksTab: 'Enlaces',
-    linksPlatforms: 'Plataformas de streaming',
-    linksSocial: 'Redes sociales',
+    guest: 'Colaboración',
   },
   artistArt: {
     editPhoto: 'Editar foto',
@@ -628,7 +670,10 @@ export default {
     kicker: 'Playlist',
     notFound: 'Playlist no encontrada',
     progress: '{have} de {total} descargadas',
-    missingShort: { one: 'falta {count}', other: 'faltan {count}' },
+    missingShort: {
+      one: 'falta {count}',
+      other: 'faltan {count}',
+    },
     missingTitle: {
       one: '{count} canción aún sin descargar',
       other: '{count} canciones aún sin descargar',
@@ -640,7 +685,10 @@ export default {
       one: 'Descargar {count} faltante',
       other: 'Descargar {count} faltantes',
     },
-    downloading: { one: '{count} descargando', other: '{count} descargando' },
+    downloading: {
+      one: '{count} descargando',
+      other: '{count} descargando',
+    },
     complete: 'Completa',
     watch: 'Vigilar canciones nuevas',
     openSource: 'Abrir playlist original',
@@ -671,6 +719,19 @@ export default {
     nothingYet: 'Aún no hay canciones descargadas',
     nothingYetHint: 'Las canciones aparecen aquí a medida que se descargan.',
     nothingYetManualHint: 'Añade canciones de tu biblioteca.',
+    hideTrack: 'Ocultar de la playlist',
+    hiddenTrack: 'Oculta de “{name}”',
+    hiddenTitle: {
+      one: '{count} canción oculta',
+      other: '{count} canciones ocultas',
+    },
+    hiddenHint:
+      'Canciones que ocultaste de esta playlist. Siguen fuera cuando se sincroniza con su origen y siguen en tu biblioteca.',
+    hiddenGone: 'Ya no está en tu biblioteca',
+    unhide: 'Mostrar de nuevo',
+    unhidden: 'De vuelta en “{name}”',
+    unhiddenLater:
+      'Vuelve a “{name}” cuando la playlist descargue lo que le falta',
   },
   track: {
     title: 'Título',
@@ -711,7 +772,6 @@ export default {
       artist: 'Reproduciendo del artista',
       library: 'Reproduciendo de tu biblioteca',
       search: 'Reproduciendo de la búsqueda',
-
       podcast: 'Reproduciendo del podcast',
     },
     goToAlbum: 'Álbum',
@@ -725,7 +785,10 @@ export default {
     lyricsNotSynced: 'Esta letra no está sincronizada.',
     cannotPlay: 'Este archivo no se puede reproducir.',
     sleepTimer: 'Temporizador',
-    sleepMinutes: { one: 'En {count} minuto', other: 'En {count} minutos' },
+    sleepMinutes: {
+      one: 'En {count} minuto',
+      other: 'En {count} minutos',
+    },
     sleepEndOfTrack: 'Al terminar esta canción',
     sleepEndOfTrackShort: 'Fin de canción',
     sleepOff: 'Desactivar temporizador',
@@ -764,7 +827,11 @@ export default {
   monitor: {
     releaseTypes: 'Descargar',
     releaseTypesAtLeastOne: 'Deja al menos un tipo de lanzamiento',
-    release: { album: 'Álbumes', single: 'Sencillos', ep: 'EP' },
+    release: {
+      album: 'Álbumes',
+      single: 'Sencillos',
+      ep: 'EP',
+    },
     newOnly: 'Solo lanzamientos nuevos',
     newOnlyHint:
       'Omite todo lo que el artista ya ha publicado; solo se descarga lo que salga después de empezar a seguirlo.',
@@ -800,20 +867,38 @@ export default {
     kindPlaylist: 'Playlist',
     kindArtist: 'Artista',
     never: 'Aún sin comprobar',
-    releases: { one: '{count} lanzamiento', other: '{count} lanzamientos' },
+    releases: {
+      one: '{count} lanzamiento',
+      other: '{count} lanzamientos',
+    },
     pause: 'Pausar',
     resume: 'Reanudar',
     stop: 'Dejar de vigilar',
     openSource: 'Abrir original',
-    everyMinutes: { one: 'Cada minuto', other: 'Cada {count} minutos' },
-    everyHours: { one: 'Cada hora', other: 'Cada {count} horas' },
-    everyDays: { one: 'Cada día', other: 'Cada {count} días' },
-    everyWeeks: { one: 'Cada semana', other: 'Cada {count} semanas' },
-    everyMonths: { one: 'Cada mes', other: 'Cada {count} meses' },
+    everyMinutes: {
+      one: 'Cada minuto',
+      other: 'Cada {count} minutos',
+    },
+    everyHours: {
+      one: 'Cada hora',
+      other: 'Cada {count} horas',
+    },
+    everyDays: {
+      one: 'Cada día',
+      other: 'Cada {count} días',
+    },
+    everyWeeks: {
+      one: 'Cada semana',
+      other: 'Cada {count} semanas',
+    },
+    everyMonths: {
+      one: 'Cada mes',
+      other: 'Cada {count} meses',
+    },
     urlLabelPlaylist: 'Enlace de la playlist',
     urlLabelArtist: 'Enlace del artista',
     urlPlaceholderPlaylist:
-      'Pega el enlace de una playlist de Spotify o YouTube Music',
+      'Pega el enlace de una playlist de Spotify, Deezer o YouTube Music',
     urlPlaceholderArtist:
       'Pega el enlace de un artista de Spotify o YouTube Music',
     watchPlaylist: 'Vigilar playlist',
@@ -861,10 +946,12 @@ export default {
     save: 'Guardar',
     saved: 'Vigilancia actualizada',
     retargeted: 'Ahora vigilando {name}',
+    tableColumns: 'Columnas',
+    resetTableColumns: 'Restablecer columnas',
   },
   sharing: {
     title: 'Compartir “{name}”',
-    hint: 'Quienes la reciban pueden reproducirla, seguirla y guardar una copia, pero no modificarla.',
+    hint: 'Quienes la reciban pueden reproducirla, seguirla y guardar una copia. Solo quienes dejes editarla pueden añadir o quitar canciones.',
     private: 'Privada',
     privateHint: 'Solo tú puedes verla.',
     shared: 'Personas concretas',
@@ -901,7 +988,7 @@ export default {
     },
     sharedWithMe: 'Compartidas conmigo',
     sharedWithMeHint:
-      'Listas que otras personas han compartido contigo. Puedes reproducirlas, pero no modificarlas.',
+      'Listas que otras personas han compartido contigo. Puedes reproducirlas y, donde el propietario te deje, añadir o quitar canciones.',
     publicPlaylists: 'Playlists públicas',
     publicPlaylistsHint:
       'Compartidas con todos en este servidor. Sigue una para tenerla en la barra lateral.',
@@ -936,18 +1023,6 @@ export default {
     themeSystem: 'Sistema',
     language: 'Idioma',
     languageHint: 'Se usa en toda la interfaz.',
-    themeEngine: 'Motor de temas',
-    themeEngineHint: 'Cambia los colores y la fuente de la interfaz y añade tu propio CSS. Se aplica a todas las cuentas y dispositivos; un campo vacío mantiene el diseño original.',
-    themeText: 'Color del texto',
-    themePrimary: 'Color primario',
-    themeSecondary: 'Color secundario',
-    themeBackground: 'Color de fondo',
-    themeFont: 'Tipografía',
-    themeFontHint: 'Cualquier font stack CSS, p. ej. \'Sora Variable\', \'Segoe UI\', sans-serif. Incluidas: Sora y DM Sans. Las demás deben estar instaladas en el dispositivo.',
-    themeCss: 'CSS personalizado',
-    themeCssHint: 'CSS añadido después de los tokens de diseño. Usa las variables de tokens.css (--c-bg, --c-accent, …) o cualquier selector. Se inyecta como CSS, nunca como HTML.',
-    themeReset: 'Restablecer tema',
-    themeResetField: 'Borrar este color',
     playerGroup: 'Reproductor',
     showLyrics: 'Mostrar letras en el reproductor',
     showLyricsHint:
@@ -977,8 +1052,6 @@ export default {
     sourceYtmHint: 'Mejores coincidencias de metadatos',
     sourceYt: 'YouTube',
     sourceYtHint: 'Alternativa para canciones que faltan en YouTube Music',
-    sourceUsenet: 'Usenet (SABnzbd)',
-    sourceUsenetHint: 'Indexadores Newznab + SABnzbd — a menudo sin pérdida',
     slskdTitle: 'slskd',
     slskdHint:
       'Descarga de Soulseek a través de tu servidor slskd. Lo que no encuentre pasa a la siguiente fuente.',
@@ -991,51 +1064,6 @@ export default {
       'La ruta dentro del contenedor de Downtify, no en el host.',
     slskdTimeout: 'Tiempo de espera total',
     slskdQueuedTimeout: 'Tiempo de espera en cola',
-    usenetTitle: 'Usenet',
-    usenetHint:
-      'Descarga de Usenet: busca en indexadores Newznab y descarga con SABnzbd. Lo que no encuentre pasa a la siguiente fuente.',
-    usenetEnabled: 'Usar Usenet',
-    usenetEnabledHint:
-      'Necesita SABnzbd y al menos un indexador Newznab con clave de API.',
-    usenetSabUrl: 'URL de SABnzbd',
-    usenetSabKey: 'Clave de API de SABnzbd',
-    usenetCategory: 'Categoría de SABnzbd',
-    usenetCompleteDir: 'Carpeta de descargas completadas',
-    usenetCompleteDirHint:
-      'La ruta dentro del contenedor de Downtify, no en el host.',
-    usenetCleanup: 'Limpiar SABnzbd después',
-    usenetCleanupHint:
-      'Elimina la entrada del historial y la copia de SABnzbd cuando el archivo ya está en tus descargas.',
-    usenetIndexers: 'Indexadores Newznab',
-    usenetIndexersHint:
-      'Se busca en todos los indexadores activos en paralelo; gana el mejor lanzamiento.',
-    usenetIndexerName: 'Nombre',
-    usenetIndexerUrl: 'URL del indexador',
-    usenetIndexerKey: 'Clave de API',
-    usenetAddIndexer: 'Añadir indexador',
-    usenetRemoveIndexer: 'Eliminar',
-    usenetTimeout: 'Tiempo máximo total',
-    usenetMinScore: 'Puntuación mínima de coincidencia',
-    usenetDurationSeconds: 'Tolerancia de duración',
-    usenetDurationPercent: 'Tolerancia de duración %',
-    usenetIndexerType: 'Tipo',
-    usenetTypeNewznab: 'Indexador Newznab',
-    usenetTypeProwlarr: 'Prowlarr (API nativa)',
-    usenetFormats: 'Formatos preferidos',
-    usenetFormatsHint:
-      'El orden importa: los primeros formatos puntúan más alto al comparar lanzamientos.',
-    usenetMinBitrate: 'Bitrate mínimo',
-    usenetMaxBitrate: 'Bitrate máximo',
-    usenetPreferAlbums: 'Preferir álbumes completos',
-    usenetCleanupNow: 'Limpiar SABnzbd ahora',
-    usenetCleanupNowHint:
-      'Elimina todos los trabajos terminados y sus archivos de SABnzbd — incluidas las carpetas de álbumes guardadas para reutilizar.',
-    usenetCleanupDone:
-      'Removed {count} finished job(s) and {albums} cached album folder(s) from SABnzbd.',
-    usenetCleanupFailed:
-      'La limpieza de SABnzbd falló — revisa los ajustes de conexión.',
-    usenetPreferAlbumsHint:
-      "Usenet está orientado a álbumes: busca también lanzamientos 'Artista - Álbum', descarga el álbum y extrae la pista deseada. Los álbumes se priorizan.",
     slskdInPlace: 'Dejar los archivos en la carpeta de slskd',
     slskdInPlaceHint:
       'Etiquetarlos donde slskd los guardó en lugar de copiarlos a tu carpeta de descargas.',
@@ -1116,11 +1144,6 @@ export default {
       'Fuera de las descargas y de las carpetas de música extra. Se recrea aquí el mismo árbol relativo del audio.',
     lyricsLrcFolderPlaceholder: '/data/lyrics',
     lyricsProviders: 'Proveedores',
-    tagEditorGroup: 'Tag editor',
-    discogsToken: 'Discogs token',
-    discogsTokenHint:
-      'Personal access token for the tag editor’s Discogs search. MusicBrainz needs none.',
-    discogsTokenPlaceholder: 'Discogs personal access token',
     lyricsProvidersHint:
       'Cada canción prueba los proveedores activados en este orden hasta que uno tenga la letra. Lo que un proveedor no tenía se recuerda durante un mes, para no volver a consultarlo en cada descarga.',
     lyricsLrclibHint: 'Base comunitaria — letras simples y sincronizadas',
@@ -1155,19 +1178,6 @@ export default {
         'Esa dirección no es válida. Empieza con http:// o https://.',
       connection_tls:
         'El certificado HTTPS no es de confianza. Usa http://, o un certificado de una autoridad de confianza.',
-      connection_not_sabnzbd:
-        'Algo respondió en {url}, pero no parece SABnzbd. Revisa la dirección y el puerto.',
-      indexer_ok: 'El indexador {detail} respondió.',
-      indexer_missing:
-        'Rellena la URL y la clave de API del indexador ({detail}).',
-      indexer_bad_key: 'El indexador {detail} rechazó la clave de API.',
-      indexer_http_error: 'El indexador {detail} respondió con un error.',
-      indexer_unreachable:
-        'No se puede contactar con el indexador {detail}. Revisa la dirección y que esté en marcha.',
-      indexer_timeout: 'El indexador {detail} no respondió a tiempo.',
-      indexer_bad_url: 'La dirección del indexador no es válida ({detail}).',
-      indexer_tls:
-        'El certificado HTTPS del indexador no es de confianza ({detail}).',
       connection_not_slskd:
         'Algo respondió en {url}, pero no parece ser slskd. Revisa la dirección y el puerto.',
       connection_not_navidrome:
@@ -1189,6 +1199,22 @@ export default {
         'La cuenta de administrador indicada no es administradora, así que no puede iniciar escaneos de la biblioteca.',
       scan_bad_admin:
         'Navidrome rechazó el usuario o la contraseña del administrador.',
+      connection_not_sabnzbd:
+        'Algo respondió en {url}, pero no parece SABnzbd. Revisa la dirección y el puerto.',
+      indexer_ok: 'El indexador {detail} respondió.',
+      indexer_missing:
+        'Rellena la URL y la clave de API del indexador ({detail}).',
+      indexer_bad_key: 'El indexador {detail} rechazó la clave de API.',
+      indexer_http_error: 'El indexador {detail} respondió con un error.',
+      indexer_unreachable:
+        'No se puede contactar con el indexador {detail}. Revisa la dirección y que esté en marcha.',
+      indexer_timeout: 'El indexador {detail} no respondió a tiempo.',
+      indexer_bad_url: 'La dirección del indexador no es válida ({detail}).',
+      indexer_tls:
+        'El certificado HTTPS del indexador no es de confianza ({detail}).',
+      connection_not_deemix: 'The server is not a compatible Deemix instance.',
+      quality_unavailable:
+        'The Deezer account cannot stream the requested quality.',
     },
     navidromeSync: 'Crear playlists en Navidrome',
     navidromeSyncHint:
@@ -1283,6 +1309,89 @@ export default {
     experimental: 'Experimental',
     experimentalHint:
       'Las apps para móvil todavía se están construyendo. La app de Android aún no tiene ninguna versión publicada, y la forma de vincular y reproducir puede cambiar entre versiones de Downtify.',
+    themeEngine: 'Motor de temas',
+    themeEngineHint:
+      'Cambia los colores y la fuente de la interfaz y añade tu propio CSS. Se aplica a todas las cuentas y dispositivos; un campo vacío mantiene el diseño original.',
+    themeText: 'Color del texto',
+    themePrimary: 'Color primario',
+    themeSecondary: 'Color secundario',
+    themeBackground: 'Color de fondo',
+    themeFont: 'Tipografía',
+    themeFontHint:
+      "Cualquier font stack CSS, p. ej. 'Sora Variable', 'Segoe UI', sans-serif. Incluidas: Sora y DM Sans. Las demás deben estar instaladas en el dispositivo.",
+    themeCss: 'CSS personalizado',
+    themeCssHint:
+      'CSS añadido después de los tokens de diseño. Usa las variables de tokens.css (--c-bg, --c-accent, …) o cualquier selector. Se inyecta como CSS, nunca como HTML.',
+    themeReset: 'Restablecer tema',
+    themeResetField: 'Borrar este color',
+    sourceUsenet: 'Usenet (SABnzbd)',
+    sourceUsenetHint: 'Indexadores Newznab + SABnzbd — a menudo sin pérdida',
+    usenetTitle: 'Usenet',
+    usenetHint:
+      'Descarga de Usenet: busca en indexadores Newznab y descarga con SABnzbd. Lo que no encuentre pasa a la siguiente fuente.',
+    usenetEnabled: 'Usar Usenet',
+    usenetEnabledHint:
+      'Necesita SABnzbd y al menos un indexador Newznab con clave de API.',
+    usenetSabUrl: 'URL de SABnzbd',
+    usenetSabKey: 'Clave de API de SABnzbd',
+    usenetCategory: 'Categoría de SABnzbd',
+    usenetCompleteDir: 'Carpeta de descargas completadas',
+    usenetCompleteDirHint:
+      'La ruta dentro del contenedor de Downtify, no en el host.',
+    usenetCleanup: 'Limpiar SABnzbd después',
+    usenetCleanupHint:
+      'Elimina la entrada del historial y la copia de SABnzbd cuando el archivo ya está en tus descargas.',
+    usenetIndexers: 'Indexadores Newznab',
+    usenetIndexersHint:
+      'Se busca en todos los indexadores activos en paralelo; gana el mejor lanzamiento.',
+    usenetIndexerName: 'Nombre',
+    usenetIndexerUrl: 'URL del indexador',
+    usenetIndexerKey: 'Clave de API',
+    usenetAddIndexer: 'Añadir indexador',
+    usenetRemoveIndexer: 'Eliminar',
+    usenetTimeout: 'Tiempo máximo total',
+    usenetMinScore: 'Puntuación mínima de coincidencia',
+    usenetDurationSeconds: 'Tolerancia de duración',
+    usenetDurationPercent: 'Tolerancia de duración %',
+    usenetIndexerType: 'Tipo',
+    usenetTypeNewznab: 'Indexador Newznab',
+    usenetTypeProwlarr: 'Prowlarr (API nativa)',
+    usenetFormats: 'Formatos preferidos',
+    usenetFormatsHint:
+      'El orden importa: los primeros formatos puntúan más alto al comparar lanzamientos.',
+    usenetMinBitrate: 'Bitrate mínimo',
+    usenetMaxBitrate: 'Bitrate máximo',
+    usenetPreferAlbums: 'Preferir álbumes completos',
+    usenetCleanupNow: 'Limpiar SABnzbd ahora',
+    usenetCleanupNowHint:
+      'Elimina todos los trabajos terminados y sus archivos de SABnzbd — incluidas las carpetas de álbumes guardadas para reutilizar.',
+    usenetCleanupDone:
+      'Removed {count} finished job(s) and {albums} cached album folder(s) from SABnzbd.',
+    usenetCleanupFailed:
+      'La limpieza de SABnzbd falló — revisa los ajustes de conexión.',
+    usenetPreferAlbumsHint:
+      "Usenet está orientado a álbumes: busca también lanzamientos 'Artista - Álbum', descarga el álbum y extrae la pista deseada. Los álbumes se priorizan.",
+    tagEditorGroup: 'Tag editor',
+    discogsToken: 'Discogs token',
+    discogsTokenHint:
+      'Personal access token for the tag editor’s Discogs search. MusicBrainz needs none.',
+    discogsTokenPlaceholder: 'Discogs personal access token',
+    sourceSoundcloud: 'SoundCloud',
+    sourceSoundcloudHint:
+      'Subidas que faltan en otros sitios, y la propia canción de los enlaces de SoundCloud',
+    deemixTitle: 'Deemix',
+    deemixHint:
+      'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
+    deemixEnabled: 'Use Deemix',
+    deemixInPlace:
+      'Keep audio, artwork and lyrics in the shared Deemix folder, without rewriting its tags. Configure a private ARL file on the server; do not paste it here.',
+    deemixUrl: 'Deemix server URL',
+    deemixRemote: 'Download folder inside Deemix',
+    deemixLocal: 'Same folder inside Downtify (read-only is supported)',
+    deemixQuality: 'Audio quality',
+    primaryLibrary: 'Primary library folder',
+    primaryLibraryHint:
+      'Prefer this folder for matching artist, song and album. Files and saved playlist paths are preserved; nothing is deleted.',
   },
   shortcuts: {
     title: 'Atajos de teclado',
@@ -1302,6 +1411,7 @@ export default {
     goQueue: 'Ir a la cola',
     close: 'Cerrar reproducción actual',
     help: 'Ver atajos',
+    findInPlaylist: 'Buscar en la playlist (en su página)',
   },
   auth: {
     signInTitle: 'Inicia sesión en Downtify',
@@ -1377,7 +1487,7 @@ export default {
     body: '¿Canción o versión equivocada? Elige la correcta. El archivo conserva su nombre, etiquetas, portada y letra, y sigue en sus playlists.',
     current: 'Actual',
     search: 'Buscar',
-    searchHint: 'O pega un enlace de YouTube o YouTube Music.',
+    searchHint: 'O pega un enlace de YouTube, YouTube Music o SoundCloud.',
     searchButton: 'Buscar',
     results: 'Versiones para elegir',
     none: 'No se encontró nada. Prueba otras palabras o pega un enlace.',
@@ -1500,9 +1610,18 @@ export default {
     lastSignIn: 'entró {when}',
     neverSignedIn: 'nunca ha entrado',
     defaultPassword: 'contraseña predeterminada',
-    tracksStat: { one: '{count} pista', other: '{count} pistas' },
-    likesStat: { one: '{count} me gusta', other: '{count} me gusta' },
-    playlistsStat: { one: '{count} lista', other: '{count} listas' },
+    tracksStat: {
+      one: '{count} pista',
+      other: '{count} pistas',
+    },
+    likesStat: {
+      one: '{count} me gusta',
+      other: '{count} me gusta',
+    },
+    playlistsStat: {
+      one: '{count} lista',
+      other: '{count} listas',
+    },
     trafficStat: 'entrada {down} · salida {up}',
     usageTotal: 'Totales',
     deleteTitle: '¿Eliminar a {name}?',
@@ -1545,6 +1664,7 @@ export default {
       user_deleted: 'Usuarios eliminados',
       password_changed: 'Contraseñas cambiadas',
       settings_changed: 'Ajustes cambiados',
+      album_compilation: 'Recopilaciones marcadas',
     },
     did: {
       login: 'inició sesión',
@@ -1565,6 +1685,8 @@ export default {
       user_deleted: 'eliminó al usuario {what}',
       password_changed: 'cambió la contraseña de {what}',
       settings_changed: 'cambió ajustes: {what}',
+      album_compilation:
+        'cambió si {what} es una recopilación de Varios artistas',
     },
   },
   discover: {
@@ -1677,9 +1799,6 @@ export default {
     clearQueueTitle: '¿Vaciar la cola?',
     clearQueueBody:
       'Los elementos en espera y completados se quitan de la lista. Los archivos descargados se conservan.',
-    stopAllTitle: '?Detener todas las descargas?',
-    stopAllBody:
-      'Se detienen todas las descargas en curso y en cola, incluidas las tareas por lotes invisibles. Los archivos ya descargados se conservan.',
     stopWatchingTitle: '¿Dejar de vigilar «{name}»?',
     stopWatchingBody: 'Las canciones descargadas siguen en tu biblioteca.',
     removeEpisodeTitle: '¿Quitar la descarga de «{name}»?',
@@ -1693,6 +1812,9 @@ export default {
     removeArtistBannerTitle: '¿Quitar el banner de {name}?',
     removeArtistArtBody:
       'Esto solo elimina el archivo de imagen guardado — nada más se ve afectado.',
+    stopAllTitle: '?Detener todas las descargas?',
+    stopAllBody:
+      'Se detienen todas las descargas en curso y en cola, incluidas las tareas por lotes invisibles. Los archivos ya descargados se conservan.',
   },
   toast: {
     playingNext: {
@@ -1741,5 +1863,590 @@ export default {
   },
   source: {
     from: 'Descargado desde {source}',
+  },
+  tags: {
+    edit: 'Edit tags?',
+    title: 'Edit tags',
+    description:
+      'Fix the tags of "{title}", by hand or from MusicBrainz / Discogs.',
+    loading: 'Loading tags?',
+    fieldTitle: 'Title',
+    fieldArtist: 'Artist',
+    fieldAlbum: 'Album',
+    fieldAlbumArtist: 'Album artist',
+    fieldTrack: 'Track',
+    fieldTotal: 'Tracks total',
+    fieldDisc: 'Disc',
+    fieldDiscTotal: 'Discs total',
+    fieldDate: 'Date (YYYY-MM-DD)',
+    fieldGenre: 'Genre',
+    fieldComment: 'Comment',
+    fieldComposer: 'Composer',
+    fieldSource: 'Source',
+    changeCover: 'Choose image',
+    removeCover: 'Remove cover',
+    searchTitle: 'Fill from a tag source',
+    sourceMusicbrainz: 'MusicBrainz',
+    sourceDiscogs: 'Discogs',
+    searchPlaceholder: 'Artist, album or track',
+    search: 'Search',
+    noResults: 'Nothing found.',
+    use: 'Use',
+    filled: 'Fields filled from the source.',
+    save: 'Save tags',
+    saved: 'Tags saved.',
+  },
+  duplicates: {
+    title: 'Duplicates',
+    subtitle: 'The same song or album saved more than once.',
+    titles: 'Duplicate titles',
+    albums: 'Duplicate albums',
+    noneTitle: 'No duplicates',
+    noneBody: 'Every title and album in the library is unique.',
+    checkAgain: 'Check again',
+    checking: 'Checking?',
+    copyCount: {
+      one: '{count} copy',
+      other: '{count} copies',
+    },
+    trackCount: {
+      one: '{count} track',
+      other: '{count} tracks',
+    },
+    selectExtras: 'Select all but one',
+    selected: '{count} selected',
+    reasonMultipleFolders: 'Saved in more than one folder',
+    reasonRepeatedSong: 'The same song appears more than once',
+    deleteTitle: 'Delete the selected copies?',
+    deleteBody:
+      'The files are removed from disk, along with their playlists and covers.',
+    deleteSelected: 'Delete selected',
+    deleted: 'Deleted {count} file(s).',
+  },
+  artistSuggestions: {
+    title: 'Artistas para seguir',
+    listening: 'Según lo que escuchas',
+    library: 'Según tu biblioteca',
+    listeningHelp:
+      'Los artistas que más escuchas. Las escuchas recientes cuentan más: el peso de cada una se reduce a la mitad cada {days} días.',
+    libraryHelp:
+      'Los artistas con más pistas, y luego más álbumes, de tu biblioteca.',
+    listens: {
+      one: '{count} reproducción',
+      other: '{count} reproducciones',
+    },
+    tracks: {
+      one: '{count} pista',
+      other: '{count} pistas',
+    },
+    albums: {
+      one: '{count} álbum',
+      other: '{count} álbumes',
+    },
+    follow: 'Seguir',
+    more: 'Mostrar más',
+    loading: 'Cargando sugerencias…',
+    empty: 'Por ahora no hay más artistas que sugerir.',
+    failed: 'No se pudieron cargar las sugerencias.',
+    retry: 'Reintentar',
+    choose: '¿Qué artista es {name}?',
+    chooseHelp:
+      'Más de un artista de YouTube Music podría ser {name}. Compara las fotos o abre sus perfiles y sigue al correcto.',
+    notFound:
+      'No se encontró ningún artista llamado {name} en YouTube Music. Pega el enlace del artista.',
+    lookupFailed:
+      'La búsqueda de artistas no está disponible. Aún puedes pegar un enlace.',
+    followProfile: 'Seguir a este artista',
+    inspect: 'Abrir en YouTube Music',
+    manual: 'Pegar un enlace',
+    cancel: 'Cancelar',
+  },
+  trash: {
+    title: 'Papelera',
+    subtitle:
+      'Canciones sacadas de la biblioteca, guardadas {days} días después de moverlas. Puedes restaurarlas hasta entonces.',
+    adminOnly: 'Solo los administradores pueden ver esto',
+    adminOnlyHint:
+      'Pide a un administrador de este servidor que restaure una canción.',
+    off: 'La papelera está desactivada',
+    offHint:
+      'En este servidor las canciones se eliminan para siempre. La papelera se activa en la configuración del servidor (DOWNTIFY_TRASH).',
+    inTrash: 'En la papelera',
+    exclusions: 'Fuera de las descargas',
+    search: 'Buscar en la papelera',
+    restoreSelected: {
+      one: 'Restaurar {count} canción',
+      other: 'Restaurar {count} canciones',
+    },
+    summary: {
+      one: '{count} canción · {size}',
+      other: '{count} canciones · {size}',
+    },
+    empty: 'La papelera está vacía',
+    emptyHint:
+      'Las canciones que mueves de la biblioteca a la papelera aparecen aquí hasta que caducan.',
+    noMatch: 'Nada en la papelera coincide',
+    select: 'Seleccionar «{title}»',
+    keptUntil: 'Se guarda hasta el {date}',
+    restore: 'Restaurar',
+    retry: 'Reintentar',
+    previous: 'Anterior',
+    next: 'Siguiente',
+    exclusionsHint:
+      'Canciones cuyo plazo en la papelera terminó. Las descargas automáticas (Monitor de playlists, seguimientos) las siguen saltando hasta que las vuelvas a permitir.',
+    exclusionsEmpty: 'No hay nada fuera de las descargas',
+    allowDownload: 'Permitir descargas',
+    allowTitle: '¿Permitir que «{title}» se vuelva a descargar?',
+    allowBody:
+      'Las descargas automáticas pueden volver a bajarla. No se descarga nada ahora.',
+    move: 'Mover a la papelera',
+    preparing: 'Comprobando los archivos…',
+    confirmTitle: {
+      one: '¿Mover {count} canción a la papelera?',
+      other: '¿Mover {count} canciones a la papelera?',
+    },
+    confirmBody:
+      'Solo se mueven estos archivos, con sus archivos de letras. Salen de la biblioteca para todos y se pueden restaurar durante {days} días. Sus playlists y me gusta vuelven con ellos, y mientras tanto las descargas automáticas los saltan.',
+    confirmMore: {
+      one: 'y {count} más',
+      other: 'y {count} más',
+    },
+    pending: {
+      one: 'Moviendo {count} canción a la papelera',
+      other: 'Moviendo {count} canciones a la papelera',
+    },
+    downloadBlocked:
+      'En la papelera de música: un administrador tiene que volver a permitirla.',
+    states: {
+      preview: 'Esperando confirmación',
+      pending: 'Esperando para mover',
+      moving: 'Moviendo',
+      trashed: 'En la papelera',
+      restore_pending: 'Esperando para restaurar',
+      restoring: 'Restaurando',
+      restored: 'Restaurada',
+      purging: 'Caducando',
+      purged: 'Caducada',
+      error: 'Detenida — archivos conservados',
+    },
+    errors: {
+      unavailable: 'La papelera no está disponible ahora. No se movió nada.',
+      admin_required: 'Solo un administrador puede usar la papelera.',
+      admin_access_revoked: 'La cuenta que lo pidió ya no es administradora.',
+      atomic_move_unsupported:
+        'Este almacenamiento no puede mover archivos de forma segura. No se movió nada.',
+      confirmation_expired:
+        'La comprobación caducó. Elige las canciones de nuevo.',
+      confirmation_invalid:
+        'Esta confirmación no es de tu cuenta o de tu selección.',
+      file_changed:
+        'El archivo cambió después de comprobarlo. Se quedó donde estaba; elígelo de nuevo.',
+      file_changed_during_move:
+        'El archivo cambió mientras se movía. Se guarda en la papelera para que lo revises.',
+      file_missing:
+        'Falta un archivo. Revisa el almacenamiento y vuelve a intentarlo.',
+      filesystem_unavailable:
+        'El almacenamiento no está disponible. Revísalo y vuelve a intentarlo.',
+      identity_uncertain:
+        'Las etiquetas de esta canción no bastan para mantenerla fuera de las descargas automáticas. No se movió nada.',
+      invalid_path:
+        'Este archivo está fuera de las carpetas que cubre la papelera.',
+      invalid_selection: 'Elige entre 1 y 200 canciones.',
+      item_not_found: 'Esta canción ya no está en la biblioteca.',
+      library_task_active:
+        'La mejora de la biblioteca está en marcha. Espera o páusala antes.',
+      nas_marker_changed:
+        'El almacenamiento no es el que espera la papelera. No se movió nada.',
+      nas_marker_missing:
+        'El almacenamiento esperado no está montado. No se movió nada.',
+      operation_already_pending: 'Esta canción ya está en camino.',
+      operation_in_progress:
+        'El movimiento sigue en marcha. Espera antes de restaurar.',
+      operation_not_complete: 'Espera a que termine el paso actual.',
+      preview_busy: 'Hay otra comprobación en marcha. Espera a que termine.',
+      preview_unavailable:
+        'La comprobación se interrumpió. Elige las canciones de nuevo.',
+      restore_collision:
+        'Ya hay otro archivo ahí. No se sobrescribió nada; la canción sigue en la papelera.',
+      retention_expired: 'Su plazo en la papelera terminó.',
+      root_unavailable: 'La carpeta de música no está disponible.',
+      track_is_playing:
+        'Alguien está reproduciendo esta canción. Páusala antes.',
+      trash_file_changed: 'La copia de la papelera cambió. No se eliminará.',
+      trash_file_missing: 'Falta un archivo de la papelera.',
+      trash_ignore_invalid:
+        'El archivo .ignore de la carpeta de la papelera no está vacío. No se movió nada.',
+      trash_not_configured: 'La papelera está desactivada en este servidor.',
+      trash_permissions_unsafe:
+        'Otros pueden leer la carpeta de la papelera. Revisa sus permisos.',
+      unsafe_symlink: 'La ruta tiene un enlace simbólico, así que no se toca.',
+      unsupported_collection:
+        'La carpeta de esta canción no la cubre la papelera.',
+      unsupported_lyrics_location:
+        'La carpeta de letras no la cubre la papelera. No se movió nada.',
+    },
+  },
+  downloadPolicy: {
+    block: 'Stop downloading',
+    blocked: 'Downloads suspended for this track.',
+    confirm: 'Suspend downloads for this track?',
+    confirmHelp:
+      'New attempts will be blocked. A shared transfer already started may finish. Existing files will not be deleted.',
+    exclusions: 'Suspended tracks',
+    empty: 'No suspended tracks.',
+    resume: 'Allow again',
+    timeout: 'Attempt time limit reached',
+    manual: 'Suspended manually',
+    error: 'Could not change the suspension.',
+    alreadyActive: 'An attempt for this track is already in progress.',
+    budget: 'Cumulative attempt limit',
+    budgetHelp:
+      'Automatically suspend a track after this cumulative attempt time. Time between attempts is excluded. 0 disables the limit.',
+  },
+  playlistNames: {
+    restore: 'Restore source name',
+  },
+  libraryOnly: {
+    title: 'Library-only mode',
+    active: 'Only music in your server library is available.',
+    enable: 'Use only the library',
+    hint: 'Search and similar tracks use your library. External music, previews, downloads and automatic watches are disabled.',
+    serverHint:
+      'Applies to all accounts, browsers and Android clients. Wait for external work to finish before enabling it. The phone still needs access to the server unless tracks are downloaded.',
+    empty: 'No matching tracks in the accessible library.',
+    similar:
+      'Similar tracks from saved library tags. No external provider is contacted.',
+  },
+  playlistFavorites: {
+    title: 'Playlists favoritas',
+    add: 'Añadir playlist a favoritos',
+    remove: 'Quitar playlist de favoritos',
+  },
+  normalization: {
+    title: 'Normalización del volumen',
+    hint: 'Reproduce todas las canciones con un volumen parecido, sin cambiar tus archivos de audio.',
+    enable: 'Normalizar el volumen de reproducción',
+    enableHint:
+      'Usa el volumen medido de cada canción, sube como máximo 12 dB y evita que los picos saturen. Las canciones aún sin medir suenan a su nivel original.',
+    analysisHint:
+      'El análisis lee cada canción una vez en segundo plano; las siguientes pasadas solo miden archivos nuevos o modificados. Nunca empieza solo, ni siquiera tras un reinicio.',
+    progress: '{done} / {total} analizadas · {failed} con error',
+    analyze: 'Analizar biblioteca',
+    pause: 'Pausar análisis',
+    resume: 'Reanudar análisis',
+    pausing: 'Terminando los archivos actuales antes de pausar…',
+    states: {
+      ready: 'Volumen medido aplicado a la canción actual.',
+      silent: 'Canción en silencio: se mantiene el nivel original.',
+      unanalysed:
+        'Esta canción aún no se ha medido: se mantiene el nivel original.',
+      unavailable:
+        'Normalización no disponible: se mantiene el nivel original.',
+    },
+  },
+  externalPlaylistImport: {
+    open: 'Import folder playlists',
+    title: 'Playlists in your music folders',
+    hint: 'Select the playlists to add, up to 50 at a time. Only available tracks are referenced. Source files and audio are never changed.',
+    loading: 'Looking for playlist files…',
+    empty: 'No M3U or M3U8 playlist files found in the added folders.',
+    counts:
+      '{count} available · {missing} unavailable · {duplicates} repeated entries',
+    existing: 'Already added as {name}',
+    preview: 'Preview the first 30 tracks',
+    truncated: 'The scan reached its limit; this list is incomplete.',
+    add: 'Add selected playlists ({count})',
+    result:
+      '{added} added · {existing} already present · {failed} need a new preview or could not be imported',
+  },
+  collaboration: {
+    canEdit: 'Puede añadir y quitar canciones',
+    copyHint:
+      'Esta lista sigue a su origen, así que nadie más puede editar sus canciones. Comparte una copia editable: sigue siendo tuya y la original sigue a su origen.',
+    copy: 'Compartir una copia editable',
+    byEditor: 'de {owner} · puedes añadir y quitar canciones',
+  },
+  buy: {
+    menu: 'Apoyar al artista',
+    title: 'Apoyar al artista',
+    body: 'Compra la música o visita la web del propio artista.',
+    inStore: 'Abrir en la tienda',
+    search: 'Buscar “{query}”',
+    website: 'Web oficial',
+    failed: 'No se pudo consultar las tiendas.',
+    note: 'Bandcamp entrega al artista la mayor parte de cada venta. Son enlaces normales: Downtify no vende nada ni gana nada con ellos.',
+  },
+  playlistSearch: {
+    placeholder: 'Buscar en esta playlist',
+    all: 'Todas',
+    missing: 'Faltan',
+    failed: 'Fallidas',
+    notInNavidrome: 'Fuera de Navidrome',
+    fromFolders: 'Tus carpetas',
+    unknownSource: 'Origen desconocido',
+    showing: '{count} de {total}',
+    noMatch: 'Nada coincide',
+    noMatchHint: 'Prueba con otras palabras u otro filtro.',
+  },
+  usage: {
+    title: 'Almacenamiento y uso',
+    subtitle: 'Cuánto ocupa la biblioteca, cuánto crece y de dónde viene.',
+    adminOnly: 'Solo los administradores pueden ver esto',
+    adminOnlyHint:
+      'Pide las cifras de almacenamiento a un administrador de este servidor.',
+    loadFailed: 'No se pudieron cargar las cifras de almacenamiento.',
+    tileLibrary: 'Biblioteca',
+    tileAdded: {
+      one: 'Añadido en el último día',
+      other: 'Añadido en {count} días',
+    },
+    tileGrowth: 'Variación',
+    tileFree: 'Espacio libre',
+    tileDownloads: 'Descargadas',
+    tileCleanup: 'Se podría liberar',
+    songs: {
+      one: '{count} canción',
+      other: '{count} canciones',
+    },
+    files: {
+      one: '{count} archivo',
+      other: '{count} archivos',
+    },
+    perWeekRate: '{size} por semana',
+    ofTotal: 'de {total}',
+    daysLeft: {
+      one: 'de {total} · lleno en unos {count} día a este ritmo',
+      other: 'de {total} · lleno en unos {count} días a este ritmo',
+    },
+    downloadsShort: '{skipped} omitidas · {failed} con error',
+    growthTitle: 'Tamaño de la biblioteca',
+    growthHint:
+      'La biblioteca al final de cada día, sin las copias de trabajo de slskd.',
+    estimated: 'Estimado a partir de las fechas de los archivos',
+    estimatedNote:
+      'Antes del {date}, el tamaño se estima a partir de las fechas de las canciones que siguen en la biblioteca, así que las borradas desde entonces no cuentan.',
+    allEstimatedNote:
+      'Downtify anota el tamaño de la biblioteca cada hora a partir de ahora. Los días anteriores se estiman a partir de las fechas de las canciones que siguen en la biblioteca.',
+    addedPerDay: 'Añadido por día',
+    addedPerWeek: 'Añadido por semana',
+    sourcesTitle: 'Por fuente',
+    sourcesHint: {
+      one: 'De dónde vino el audio y qué añadió cada fuente en el último día.',
+      other:
+        'De dónde vino el audio y qué añadió cada fuente en los últimos {count} días.',
+    },
+    addedInPeriod: {
+      one: '+{size} · {count} canción en el periodo',
+      other: '+{size} · {count} canciones en el periodo',
+    },
+    emptyLibrary: 'La biblioteca está vacía.',
+    whereTitle: 'Dónde se guarda',
+    byLocation: 'Carpeta',
+    byFormat: 'Formato',
+    location: {
+      downloads: 'Carpeta de descargas',
+      slskd: 'Carpeta de slskd',
+      folders: 'Carpetas de música adicionales',
+    },
+    unknown: 'Desconocido',
+    downloadsTitle: 'Descargas',
+    downloadsHint: {
+      one: 'Cómo terminaron las descargas de la cola y del Monitor de playlists en el último día. Cada intento cuenta.',
+      other:
+        'Cómo terminaron las descargas de la cola y del Monitor de playlists en los últimos {count} días. Cada intento cuenta.',
+    },
+    outcome: {
+      completed: 'Completadas',
+      skipped: 'Omitidas',
+      failed: 'Con error',
+    },
+    perDay: 'Por día',
+    perWeek: 'Por semana',
+    downloadedBySource: 'Descargado por fuente · {size}',
+    noDownloads: 'No se descargó nada en este periodo.',
+    logEmptyNote:
+      'Todavía no se ha contado ninguna descarga: Downtify las cuenta a partir de esta versión.',
+    logSinceNote: 'Las descargas se cuentan desde el {date}.',
+    cleanupTitle: 'Se podría limpiar',
+    cleanupHint:
+      'Espacio que Downtify reconoce como redundante o sobrante. Desde aquí no se borra nada.',
+    duplicatesTitle: 'Canciones duplicadas',
+    duplicatesHint:
+      '{exact} guardadas dos veces como el mismo archivo, {likely} probablemente la misma canción de otra fuente. El tamaño es lo que liberaría quedarse solo con la copia más grande.',
+    duplicateKind: {
+      exact: 'Mismo archivo',
+      likely: 'Probablemente la misma canción',
+    },
+    workingTitle: 'Copias de trabajo de slskd',
+    workingHint:
+      'Transferencias de Soulseek que quedaron en la carpeta de slskd después de que Downtify las copiara a la biblioteca.',
+    workingInPlace:
+      'Los archivos de slskd se dejan donde están, así que la carpeta de slskd es parte de la biblioteca.',
+    leftoversTitle: 'Archivos temporales sobrantes',
+    leftoversHint: 'Descargas y conversiones a medias de hace más de una hora.',
+    orphansTitle: 'Archivos auxiliares huérfanos',
+    orphansHint:
+      'Archivos de letras y portadas de álbum cuyas canciones ya no están.',
+    foldersTitle: 'Carpetas',
+    foldersHint:
+      'Todo lo que hay en las carpetas donde escribe Downtify, por tipo.',
+    rescan: 'Volver a analizar',
+    scanFailed: 'No se pudieron analizar las carpetas.',
+    scanning: 'Analizando las carpetas…',
+    scannedAt: 'Analizado {when} en {seconds} s',
+    folder: {
+      downloads: 'Carpeta de descargas',
+      slskd: 'Carpeta de slskd',
+      lyrics: 'Carpeta de letras',
+    },
+    kind: {
+      audio: 'Canciones',
+      podcasts: 'Podcasts',
+      lyrics: 'Letras',
+      images: 'Imágenes',
+      playlists: 'Playlists',
+      metadata: 'Fotos y perfiles de artistas',
+      temporary: 'Archivos temporales',
+      other: 'Otros',
+    },
+  },
+  watchStats: {
+    colActivity: 'Actividad',
+    colStorage: 'Almacenamiento',
+    period: 'Periodo',
+    days: {
+      one: '{count} día',
+      other: '{count} días',
+    },
+    totalNew: {
+      one: 'Nuevas en el último día',
+      other: 'Nuevas en {count} días',
+    },
+    totalSongs: 'Canciones de las vigilancias',
+    totalSize: 'En disco',
+    totalShared: 'En más de una vigilancia',
+    statsFailed: 'No se pudieron cargar las estadísticas.',
+    rateWeekShort: '{rate}/semana',
+    sharedShort: '+{count} compartidas',
+    activityTooltip:
+      '{added} nuevas en los últimos {count} días · {rate} por semana · {trend}',
+    storageTooltip:
+      '{unique} solo en esta vigilancia · {shared} compartidos con otras vigilancias',
+    sortActivity: 'Actividad reciente',
+    sortRate: 'Ritmo medio',
+    sortGrowth: 'Crecimiento del almacenamiento',
+    sortStorage: 'Almacenamiento solo suyo',
+    sortContributed: 'Canciones descargadas',
+    details: 'Actividad y canciones',
+    openInLibrary: 'Abrir en la Biblioteca',
+    notFound: 'Vigilancia no encontrada',
+    notFoundHint: 'Puede que se haya eliminado o que sea de otra cuenta.',
+    since: 'Vigilada desde {date}',
+    tileSongs: 'Canciones en disco',
+    tileDownloaded: 'Descargadas por ella',
+    tileLinked: 'Ya en la biblioteca',
+    tileUnique: 'Solo en esta vigilancia',
+    tileUniqueHint: {
+      one: '{count} canción que ninguna otra vigilancia tiene',
+      other: '{count} canciones que ninguna otra vigilancia tiene',
+    },
+    tileShared: 'Compartidas',
+    tileSharedHint: '{size}, también en otras vigilancias, guardados una vez',
+    tileFailing: 'Con fallos',
+    unknownNote: {
+      one: '{count} canción se añadió antes de que Downtify registrara cómo entran las canciones en una vigilancia.',
+      other:
+        '{count} canciones se añadieron antes de que Downtify registrara cómo entran las canciones en una vigilancia.',
+    },
+    missingNote: {
+      one: '{count} canción registrada por esta vigilancia ya no está en el disco.',
+      other:
+        '{count} canciones registradas por esta vigilancia ya no están en el disco.',
+    },
+    activityTitle: 'Actividad',
+    activityHint:
+      'Canciones nuevas que añadió: no las que ya estaban en tu biblioteca, ni las de su primera comprobación.',
+    newSongsLabel: {
+      one: 'canción nueva añadida',
+      other: 'canciones nuevas añadidas',
+    },
+    rateDay: 'Al día',
+    rateWeek: 'A la semana',
+    rateMonth: 'Al mes',
+    trendUp: 'Añade más últimamente',
+    trendDown: 'Añade menos últimamente',
+    trendSteady: 'Ritmo estable',
+    trendIdle: 'Nada nuevo últimamente',
+    trendNew: 'Aún es pronto para saberlo',
+    periodGrowth: '{size} de audio nuevo',
+    periodLinked: {
+      one: '{count} más ya estaba en tu biblioteca',
+      other: '{count} más ya estaban en tu biblioteca',
+    },
+    periodInitial: {
+      one: '{count} llegó con su primera comprobación',
+      other: '{count} llegaron con su primera comprobación',
+    },
+    periodUnknown: {
+      one: '{count} de ellas se registró antes de que Downtify registrara cómo',
+      other:
+        '{count} de ellas se registraron antes de que Downtify registrara cómo',
+    },
+    barsPerDay: 'Canciones nuevas al día',
+    barsPerWeek: 'Canciones nuevas a la semana',
+    providersTitle: 'De dónde vino el audio',
+    failuresTitle: {
+      one: '{count} canción sigue fallando',
+      other: '{count} canciones siguen fallando',
+    },
+    attempts: {
+      one: '{count} intento',
+      other: '{count} intentos',
+    },
+    lastTried: 'último intento {when}',
+    songsTitle: 'Canciones de esta vigilancia',
+    songsHint:
+      'Las más recientes primero, incluidas las que ya salieron de la playlist. Selecciona algunas para reproducirlas, añadirlas a una playlist o eliminarlas.',
+    filter: {
+      all: 'Todas',
+      recent: {
+        one: 'Último día',
+        other: 'Últimos {count} días',
+      },
+      downloaded: 'Descargadas por ella',
+      linked: 'Ya en la biblioteca',
+      unknown: 'Antes del registro',
+    },
+    noSongs: 'Ninguna canción de esta vigilancia en el disco',
+    noSongsHint:
+      'Aparecen aquí cuando una comprobación las descarga o las encuentra en tu biblioteca.',
+  },
+  origin: {
+    menu: 'De dónde viene',
+    title: 'De dónde viene esta canción',
+    body: 'Las vigilancias del Monitor de playlists que la trajeron a tu biblioteca.',
+    failed: 'No se pudo cargar de dónde viene esta canción.',
+    firstTitle: 'Descargada primero por',
+    none: 'Ninguna vigilancia la descargó: se descargó a mano o antes de que Downtify lo registrara.',
+    otherAccount: 'Una vigilancia de otra cuenta',
+    backfill: 'Primera comprobación',
+    estimated: 'Probablemente',
+    gone: 'Esa vigilancia se eliminó o ahora sigue otro enlace.',
+    watchesTitle: {
+      one: 'En {count} vigilancia',
+      other: 'En {count} vigilancias',
+    },
+    noWatches: 'Ninguna vigilancia la tiene ahora.',
+    others: {
+      one: '{count} de ellas es de otra cuenta.',
+      other: '{count} de ellas son de otras cuentas.',
+    },
+    oneFile:
+      'Es un solo archivo: todas las vigilancias apuntan a la misma copia.',
+    outcome: {
+      downloaded: 'La descargó',
+      linked: 'Ya en la biblioteca',
+      unknown: 'Antes del registro',
+    },
   },
 }

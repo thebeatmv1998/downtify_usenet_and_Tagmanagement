@@ -3,6 +3,7 @@
     <RouterLink :to="linkTo" class="block" :aria-label="release.name">
       <CoverArt
         :src="deezerImage(release.cover_url)"
+        :fallback="fallback"
         :name="release.name"
         :round="round"
         :icon="round ? 'user' : 'disc'"
@@ -67,6 +68,7 @@
 
 <script setup>
 import { computed, ref } from 'vue'
+import { localCatalogRoute } from '/src/lib/library'
 import AppIcon from '../ui/AppIcon.vue'
 import CoverArt from '../ui/CoverArt.vue'
 // Display only (a Deezer cover at its medium size); the download below
@@ -81,6 +83,9 @@ import { useI18n } from '/src/i18n'
 const props = defineProps({
   release: { type: Object, required: true },
   round: { type: Boolean, default: false },
+  // A picture to show when `release.cover_url` doesn't load (see
+  // CoverArt's own `fallback`).
+  fallback: { type: String, default: '' },
   // Where the card opens; by default the release's link, resolved like a
   // pasted one (the Link page).
   to: { type: [String, Object], default: null },
@@ -89,11 +94,12 @@ const { t } = useI18n()
 const auth = useAuth()
 const dm = useDownloadManager()
 const ui = useUi()
-const queued = ref(false)
+const queued = ref(props.release.source === 'library')
 const discographyStarted = ref(false)
 
 const linkTo = computed(
   () =>
+    localCatalogRoute(props.release, props.round ? 'artist' : 'album') ||
     props.to || {
       name: 'Link',
       query: { url: props.release.url },

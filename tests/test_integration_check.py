@@ -819,8 +819,8 @@ def test_a_working_sabnzbd_with_a_read_folder_is_ok(monkeypatch, tmp_path):
 def _sabnzbd_mock_server():
     """A tiny SABnzbd-shaped HTTP server: /sabnzbd/api?mode=version."""
 
-    from http.server import BaseHTTPRequestHandler, HTTPServer
     import threading
+    from http.server import BaseHTTPRequestHandler, HTTPServer
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):

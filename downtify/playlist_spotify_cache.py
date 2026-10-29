@@ -12,8 +12,12 @@ from typing import Any, Callable, Optional
 
 from loguru import logger
 
-# Spotify entity ids are base62 only — never '-' or '_'. YouTube Music
-# playlist ids (RDCLAK5uy…, OLAK5uy…) carry underscores, and pasted YT
+from . import library_only, spotify
+from .sqlite_utils import connect_sqlite
+from .track_index import normalize_spotify_track_id
+
+# Spotify entity ids are base62 only ? never '-' or '_'. YouTube Music
+# playlist ids (RDCLAK5uy?, OLAK5uy?) carry underscores, and pasted YT
 # Music playlists live in the same stores; the cache warmer must never
 # feed those to the Spotify embed endpoint.
 _SPOTIFY_ID_RE = re.compile(r'^[0-9A-Za-z]+$')
@@ -23,9 +27,6 @@ def is_spotify_playlist_id(playlist_id: str) -> bool:
     """True when *playlist_id* looks like a Spotify playlist id."""
     return bool(_SPOTIFY_ID_RE.match(str(playlist_id or '').strip()))
 
-from . import spotify
-from .sqlite_utils import connect_sqlite
-from .track_index import normalize_spotify_track_id
 
 _TRACK_KEYS = (
     'song_id',
@@ -457,6 +458,7 @@ async def playlist_spotify_cache_loop(
     *,
     delay_seconds: float = 1.0,
     idle_seconds: float = 300.0,
+    settings: Optional[dict[str, Any]] = None,
 ) -> None:
     """Background task: keep known playlists cached from Spotify."""
 
@@ -465,11 +467,17 @@ async def playlist_spotify_cache_loop(
             # SQLite lookups across the batch store, catalog and monitor:
             # off the event loop.
             ids = await asyncio.to_thread(list_spotify_ids)
-            warmed = await warm_uncached_playlists(
-                cache,
-                ids,
-                delay_seconds=delay_seconds,
-            )
+            if library_only.enabled(settings or {}):
+                warmed = 0
+            else:
+                with library_only.policy.external(
+                    settings if settings is not None else {}
+                ):
+                    warmed = await warm_uncached_playlists(
+                        cache,
+                        ids,
+                        delay_seconds=delay_seconds,
+                    )
             if warmed:
                 logger.info('Spotify cache: stored {} playlist(s)', warmed)
         except Exception:

@@ -211,7 +211,9 @@ def _sabnzbd_version(data: Any) -> Optional[str]:
     return None
 
 
-def check_usenet(cfg: dict[str, Any]) -> dict[str, Any]:
+def check_usenet(  # noqa: PLR0914
+    cfg: dict[str, Any],
+) -> dict[str, Any]:
     """Test a normalized usenet configuration (``_effective_usenet_settings``).
 
     Probes SABnzbd with ``mode=version`` and each enabled Newznab indexer

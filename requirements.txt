@@ -10,7 +10,7 @@ anyio==4.15.1
     #   starlette
 bgutil-ytdlp-pot-provider==2.0.1
     # via downtify
-certifi==2026.10.19
+certifi==2026.10.23
     # via
     #   httpcore
     #   httpx
@@ -21,7 +21,7 @@ click==8.5.0
     # via uvicorn
 colorama==0.4.6 ; sys_platform == 'win32'
     # via loguru
-fastapi==0.156.8
+fastapi==0.162.0
     # via downtify
 feedparser==6.0.14
     # via downtify
@@ -58,7 +58,7 @@ python-dotenv==1.2.4
     # via load-dotenv
 requests==2.34.2
     # via ytmusicapi
-starlette==1.9.0
+starlette==1.10.0
     # via fastapi
 typing-extensions==4.16.0
     # via
@@ -79,9 +79,9 @@ uvicorn==0.54.0
     # via downtify
 websockets==17.3
     # via downtify
-win32-setctime==1.2.0 ; sys_platform == 'win32'
+win32-setctime==1.2.1 ; sys_platform == 'win32'
     # via loguru
-yt-dlp==2026.8.19
+yt-dlp==2026.10.26
     # via downtify
 ytmusicapi==1.12.3
     # via downtify

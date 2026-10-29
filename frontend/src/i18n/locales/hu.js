@@ -15,11 +15,21 @@ export default {
     show: 'Megjelenítés',
     hide: 'Elrejtés',
     unknownArtist: 'Ismeretlen előadó',
-    tracks: { one: '{count} szám', other: '{count} szám' },
-    albums: { one: '{count} album', other: '{count} album' },
-    artists: { one: '{count} előadó', other: '{count} előadó' },
+    tracks: {
+      one: '{count} szám',
+      other: '{count} szám',
+    },
+    albums: {
+      one: '{count} album',
+      other: '{count} album',
+    },
+    artists: {
+      one: '{count} előadó',
+      other: '{count} előadó',
+    },
     lengthMinutes: '{minutes} perc',
     lengthHours: '{hours} óra {minutes} perc',
+    undo: 'Visszavonás',
   },
   nav: {
     main: 'Fő',
@@ -76,7 +86,10 @@ export default {
     hintDeezer: 'Deezer számok, albumok, lejátszási listák és előadók',
     hintCsv: 'CSV importálása (Soundiiz, Exportify…)',
     downloading: 'Letöltés folyamatban',
-    waiting: { one: 'Még {count} vár', other: 'Még {count} vár' },
+    waiting: {
+      one: 'Még {count} vár',
+      other: 'Még {count} vár',
+    },
     openQueue: 'Sor megnyitása',
     yourLibrary: 'Könyvtárad',
     openLibrary: 'Könyvtár megnyitása',
@@ -99,6 +112,7 @@ export default {
     step3Title: 'Hallgasd bárhol',
     step3Body:
       'Játszd le itt, tartsd szinkronban a listákat a Figyelővel, vagy irányítsd a Jellyfint, Plexet vagy Navidrome-ot a könyvtáradra.',
+    hintSoundcloud: 'SoundCloud számok',
   },
   search: {
     title: 'Keresés',
@@ -116,7 +130,6 @@ export default {
     songs: 'Dalok',
     albums: 'Albumok',
     artists: 'Előadók',
-    downloadDiscography: 'Download full discography of {name}',
     artist: 'Előadó',
     showAllSongs: 'Mind a(z) {count} dal megjelenítése',
     recent: 'Legutóbbi keresések',
@@ -127,7 +140,7 @@ export default {
     typeSingle: 'Kislemez',
     typeEp: 'EP',
     unsupportedLink:
-      'A Downtify nem tudja letölteni ezt a linket. Illessz be Spotify számot, albumot vagy listát, vagy YouTube Music linket.',
+      'A Downtify nem tudja letölteni ezt a linket. Illessz be Spotify számot, albumot vagy listát, YouTube Music linket vagy SoundCloud számot.',
     tipSearchTitle: 'Keresés név szerint',
     tipSearchBody:
       'Írj be előadót, albumot vagy dalt — a találatok a YouTube Musicból jönnek.',
@@ -137,6 +150,7 @@ export default {
     tipYoutubeTitle: 'YouTube Music link beillesztése',
     tipYoutubeBody:
       'Dalok, albumok, listák — vagy egy előadó oldala az összes kiadásához.',
+    downloadDiscography: 'Download full discography of {name}',
   },
   charts: {
     title: 'Toplisták',
@@ -213,9 +227,18 @@ export default {
       playlist: 'Lejátszási lista',
       artist: 'Előadó',
     },
-    releases: { one: '{count} kiadás', other: '{count} kiadás' },
-    downloadAll: { one: 'Letöltés', other: 'Mind a(z) {count} letöltése' },
-    downloadNew: { one: '{count} új letöltése', other: '{count} új letöltése' },
+    releases: {
+      one: '{count} kiadás',
+      other: '{count} kiadás',
+    },
+    downloadAll: {
+      one: 'Letöltés',
+      other: 'Mind a(z) {count} letöltése',
+    },
+    downloadNew: {
+      one: '{count} új letöltése',
+      other: '{count} új letöltése',
+    },
     redownloadAll: 'Összes újratöltése',
     downloadSelected: 'Kijelöltek letöltése',
     allInLibrary: 'Mind a könyvtárban van',
@@ -237,6 +260,12 @@ export default {
     selectAll: 'Összes kijelölése',
     playCountSpotify: 'Lejátszások a Spotifyon',
     playCountYoutubeMusic: 'Lejátszások a YouTube Musicon (hozzávetőleges)',
+    allHandled: 'Már a könyvtárban vagy a sorban',
+    addPlaylist: 'Hozzáadás a lejátszási listáimhoz',
+    noAvailableTracks: 'Még nincsenek hozzáadható letöltött számok.',
+    saveAvailableHint:
+      '{count} elérhető szám a(z) {total} számból. A meglévő hangfájlokat használjuk; a hiányzó számokat nem töltjük le.',
+    openSoundcloud: 'Megnyitás a SoundCloudon',
   },
   queue: {
     title: 'Sor',
@@ -249,17 +278,17 @@ export default {
       one: '{count} letöltés alatt',
       other: '{count} letöltés alatt',
     },
-    countQueued: { one: '{count} várakozik', other: '{count} várakozik' },
-    countFailed: { one: '{count} sikertelen', other: '{count} sikertelen' },
+    countQueued: {
+      one: '{count} várakozik',
+      other: '{count} várakozik',
+    },
+    countFailed: {
+      one: '{count} sikertelen',
+      other: '{count} sikertelen',
+    },
     retryFailed: 'Sikertelenek újra ({count})',
     clearDone: 'Készek törlése ({count})',
     clearAll: 'Sor ürítése',
-    stopAll: '?sszes let?lt?s le?ll?t?sa',
-    stopped: '{count} let?lt?s le?ll?tva.',
-    stopFailed: 'Nem siker?lt le?ll?tani a let?lt?seket.',
-    skipSource: 'K?vetkez? forr?s',
-    skipRequested: 'V?lt?s a k?vetkez? hangforr?sra.',
-    skipFailed: 'A forr?s kihagy?sa nem siker?lt.',
     emptyTitle: 'A sor üres',
     emptyBody:
       'Keress zenét vagy illessz be egy linket — a letöltések itt jelennek meg.',
@@ -281,7 +310,8 @@ export default {
     retry: 'Újra',
     remove: 'Eltávolítás a sorból',
     failedGeneric: 'A letöltés nem sikerült.',
-    overridePlaceholder: 'Illessz be egy YouTube linket hangforrásként',
+    overridePlaceholder:
+      'Illessz be egy YouTube vagy SoundCloud linket hangforrásként',
     useLink: 'Link használata',
     invalidYoutube: 'Ez nem tűnik YouTube videólinknek.',
     playlistDownloads: 'Lejátszásilista-letöltések',
@@ -292,6 +322,27 @@ export default {
       'CSV export a Soundiiz, TuneMyMusic, Exportify vagy hasonló szolgáltatásból.',
     importButton: 'CSV fájl kiválasztása',
     importFailed: 'Nem sikerült importálni a CSV-t.',
+    stopAll: '?sszes let?lt?s le?ll?t?sa',
+    stopped: '{count} let?lt?s le?ll?tva.',
+    stopFailed: 'Nem siker?lt le?ll?tani a let?lt?seket.',
+    skipSource: 'K?vetkez? forr?s',
+    skipRequested: 'V?lt?s a k?vetkez? hangforr?sra.',
+    skipFailed: 'A forr?s kihagy?sa nem siker?lt.',
+    pause: 'Letöltések szüneteltetése',
+    resume: 'Letöltések folytatása',
+    pauseFailed: 'Nem sikerült módosítani a sort. Próbáld újra.',
+    pausingTitle: 'Letöltések szüneteltetése…',
+    pausingBody: {
+      one: 'Várakozás {count} letöltés befejezésére. Új letöltés nem indul.',
+      other: 'Várakozás {count} letöltés befejezésére. Új letöltés nem indul.',
+    },
+    pausedTitle: 'Letöltések szüneteltetve',
+    pausedBody: 'A folytatásig nem indul új letöltés.',
+    pausedKept:
+      'A várakozó dalok a sorban maradnak, akkor is, ha a Downtify újraindul vagy frissül.',
+    statusPaused: 'Szüneteltetve',
+    invalidAudioLink:
+      'Ez nem tűnik YouTube videó- vagy SoundCloud számlinknek.',
   },
   library: {
     title: 'Könyvtár',
@@ -339,11 +390,15 @@ export default {
     selectTrack: '{title} kijelölése',
     select: 'Kijelölés',
     deselect: 'Kijelölés megszüntetése',
-    selectedCount: { one: '{count} kijelölve', other: '{count} kijelölve' },
+    selectedCount: {
+      one: '{count} kijelölve',
+      other: '{count} kijelölve',
+    },
     clearSelection: 'Kijelölés törlése',
     downloadZip: 'Letöltés ZIP-ként',
     saveToDevice: 'Mentés erre az eszközre',
     upgrade: 'Könyvtár feljavítása',
+    storage: 'Tárhely és használat',
   },
   likes: {
     like: 'Hozzáadás a Kedvelt számokhoz',
@@ -373,7 +428,10 @@ export default {
     scanning: 'A könyvtár átvizsgálása',
     scanProgress: '{total} számból {done} ellenőrizve',
     scanResult: 'Az átvizsgálás eredménye',
-    libraryCount: { one: '{count} szám', other: '{count} szám' },
+    libraryCount: {
+      one: '{count} szám',
+      other: '{count} szám',
+    },
     librarySize: 'Könyvtár mérete',
     nothingTitle: 'Nincs mit feljavítani',
     nothingBody:
@@ -396,7 +454,10 @@ export default {
     metadata: 'Címkék frissítése',
     metadataHint:
       'Kitölti az albumot, az albumelőadót, a megjelenés dátumát és a sorszámot a Spotifyról. Csak azoknál a számoknál, amelyek Spotify-felvételét a Downtify még ismeri.',
-    tracksAffected: { one: '{count} szám', other: '{count} szám' },
+    tracksAffected: {
+      one: '{count} szám',
+      other: '{count} szám',
+    },
     options: 'Beállítások',
     artworkMin: 'Borítók feljavítása ez alatt',
     artworkMinHint:
@@ -409,57 +470,11 @@ export default {
     recheck: 'Egy szám ne kerüljön újra sorra',
     recheckHint:
       'A nemrég ellenőrzött szám kimarad a következő átvizsgálásból. Egy újabb Downtify mindig mindent újra megnéz.',
-    recheckDays: { one: '{count} napig', other: '{count} napig' },
+    recheckDays: {
+      one: '{count} napig',
+      other: '{count} napig',
+    },
     recheckNever: 'Mindig minden számot ellenőrizzen',
-    metadataMode: 'Metadata mode',
-    metadataModeFill: 'Fill in missing tags',
-    metadataModeFillHint:
-      'Only empty or placeholder tags (like "Unknown album") are completed. Values already in the file are kept.',
-    metadataModeVerify: 'Verify and correct tags',
-    metadataModeVerifyHint:
-      'Every track is compared with Spotify or Apple Music and wrong values are corrected. Slower: one remote lookup per track.',
-    album_cover: 'Add album folder covers',
-    album_coverHint:
-      'Write a cover.jpg into an album folder that has audio but no cover image, using the artwork already embedded in its tracks.',
-    mergeTitle: 'Merge split albums',
-    mergeStagereading: 'Reading library tags…',
-    mergeStagematching: 'Matching singles to albums…',
-    mergeStagegrouping: 'Comparing editions and quality…',
-    mergeStagerehoming: 'Ismeretlen számok besorolása…',
-    mergeStagemerging: 'Moving tracks and removing duplicates…',
-    mergeStageplaylists: 'Updating playlists…',
-    mergeHint:
-      'Albums kept as separate singles or as standard and deluxe editions are merged into one folder. The edition with the most songs wins; duplicate songs keep the best-quality file and the other copies are deleted.',
-    mergeEditions: 'Editions: {editions}',
-    mergeDuplicates: {
-      one: '{count} duplicate file will be removed',
-      other: '{count} duplicate files will be removed',
-    },
-    mergeScanned: 'Checked {tracks} tracks in {seconds}s.',
-    mergeFind: 'Find split albums',
-    tidyAction: 'Ismeretlenek besorolása és tisztítás',
-    tidyHint:
-      'Az unknown mappák zenéit a valódi albumukba mozgatja (Spotify, Deezer vagy iTunes keresés), eltávolítja a duplikátumokat és az üres mappákat.',
-    tidyDone: '{rehomed} szám besorolva, {duplicates} duplikátum törölve, {folders} üres mappa törölve.',
-    tidyRemaining: '{count} számot nem sikerült albumhoz rendelni.',
-    mergeSearching: 'Looking for split albums\u2026',
-    mergeNone: 'No split albums found.',
-    mergeFound: {
-      one: '{count} album to merge',
-      other: '{count} albums to merge',
-    },
-    mergeApply: { one: 'Merge {count} album', other: 'Merge {count} albums' },
-    mergeApplying: 'Merging\u2026',
-    mergeDone: 'Merged {moved} track(s), removed {deleted} duplicate(s).',
-    mergeStats:
-      '{resolved} of {looked_up} tracks were matched to an album by a tag source.',
-    mergeLimited:
-      'Some tracks could not be checked because a tag source was unavailable (rate limit). Wait a few minutes and try again.',
-    playlistsTitle: 'Rebuild playlist files',
-    playlistsHint:
-      'Rewrite every playlist\u2019s .m3u from what is already on disk, so songs you downloaded earlier are listed too \u2014 not just the last batch.',
-    playlistsRebuild: 'Rebuild playlists',
-    playlistsDone: 'Rebuilt {rebuilt} playlists, {linked} track(s) linked.',
     start: 'Indítás',
     startCount: {
       one: '{count} szám feljavítása',
@@ -490,59 +505,81 @@ export default {
     stageLyrics: 'Dalszöveg keresése',
     stageWriting: 'Fájl írása',
     loadFailed: 'A könyvtár feljavítása nem tölthető be',
-  },
-  tags: {
-    edit: 'Edit tags?',
-    title: 'Edit tags',
-    description:
-      'Fix the tags of "{title}", by hand or from MusicBrainz / Discogs.',
-    loading: 'Loading tags?',
-    fieldTitle: 'Title',
-    fieldArtist: 'Artist',
-    fieldAlbum: 'Album',
-    fieldAlbumArtist: 'Album artist',
-    fieldTrack: 'Track',
-    fieldTotal: 'Tracks total',
-    fieldDisc: 'Disc',
-    fieldDiscTotal: 'Discs total',
-    fieldDate: 'Date (YYYY-MM-DD)',
-    fieldGenre: 'Genre',
-    fieldComment: 'Comment',
-    fieldComposer: 'Composer',
-    fieldSource: 'Source',
-    changeCover: 'Choose image',
-    removeCover: 'Remove cover',
-    searchTitle: 'Fill from a tag source',
-    sourceMusicbrainz: 'MusicBrainz',
-    sourceDiscogs: 'Discogs',
-    searchPlaceholder: 'Artist, album or track',
-    search: 'Search',
-    noResults: 'Nothing found.',
-    use: 'Use',
-    filled: 'Fields filled from the source.',
-    save: 'Save tags',
-    saved: 'Tags saved.',
-  },
-  duplicates: {
-    title: 'Duplicates',
-    subtitle: 'The same song or album saved more than once.',
-    titles: 'Duplicate titles',
-    albums: 'Duplicate albums',
-    noneTitle: 'No duplicates',
-    noneBody: 'Every title and album in the library is unique.',
-    checkAgain: 'Check again',
-    checking: 'Checking?',
-    copyCount: { one: '{count} copy', other: '{count} copies' },
-    trackCount: { one: '{count} track', other: '{count} tracks' },
-    selectExtras: 'Select all but one',
-    selected: '{count} selected',
-    reasonMultipleFolders: 'Saved in more than one folder',
-    reasonRepeatedSong: 'The same song appears more than once',
-    deleteTitle: 'Delete the selected copies?',
-    deleteBody:
-      'The files are removed from disk, along with their playlists and covers.',
-    deleteSelected: 'Delete selected',
-    deleted: 'Deleted {count} file(s).',
+    metadataMode: 'Metadata mode',
+    metadataModeFill: 'Fill in missing tags',
+    metadataModeFillHint:
+      'Only empty or placeholder tags (like "Unknown album") are completed. Values already in the file are kept.',
+    metadataModeVerify: 'Verify and correct tags',
+    metadataModeVerifyHint:
+      'Every track is compared with Spotify or Apple Music and wrong values are corrected. Slower: one remote lookup per track.',
+    album_cover: 'Add album folder covers',
+    album_coverHint:
+      'Write a cover.jpg into an album folder that has audio but no cover image, using the artwork already embedded in its tracks.',
+    mergeTitle: 'Merge split albums',
+    mergeStagereading: 'Reading library tags…',
+    mergeStagematching: 'Matching singles to albums…',
+    mergeStagegrouping: 'Comparing editions and quality…',
+    mergeStagerehoming: 'Ismeretlen számok besorolása…',
+    mergeStagemerging: 'Moving tracks and removing duplicates…',
+    mergeStageplaylists: 'Updating playlists…',
+    mergeHint:
+      'Albums kept as separate singles or as standard and deluxe editions are merged into one folder. The edition with the most songs wins; duplicate songs keep the best-quality file and the other copies are deleted.',
+    mergeEditions: 'Editions: {editions}',
+    mergeDuplicates: {
+      one: '{count} duplicate file will be removed',
+      other: '{count} duplicate files will be removed',
+    },
+    mergeScanned: 'Checked {tracks} tracks in {seconds}s.',
+    mergeFind: 'Find split albums',
+    tidyAction: 'Ismeretlenek besorolása és tisztítás',
+    tidyHint:
+      'Az unknown mappák zenéit a valódi albumukba mozgatja (Spotify, Deezer vagy iTunes keresés), eltávolítja a duplikátumokat és az üres mappákat.',
+    tidyDone:
+      '{rehomed} szám besorolva, {duplicates} duplikátum törölve, {folders} üres mappa törölve.',
+    tidyRemaining: '{count} számot nem sikerült albumhoz rendelni.',
+    mergeSearching: 'Looking for split albums…',
+    mergeNone: 'No split albums found.',
+    mergeFound: {
+      one: '{count} album to merge',
+      other: '{count} albums to merge',
+    },
+    mergeApply: {
+      one: 'Merge {count} album',
+      other: 'Merge {count} albums',
+    },
+    mergeApplying: 'Merging…',
+    mergeDone: 'Merged {moved} track(s), removed {deleted} duplicate(s).',
+    mergeStats:
+      '{resolved} of {looked_up} tracks were matched to an album by a tag source.',
+    mergeLimited:
+      'Some tracks could not be checked because a tag source was unavailable (rate limit). Wait a few minutes and try again.',
+    playlistsTitle: 'Rebuild playlist files',
+    playlistsHint:
+      'Rewrite every playlist’s .m3u from what is already on disk, so songs you downloaded earlier are listed too — not just the last batch.',
+    playlistsRebuild: 'Rebuild playlists',
+    playlistsDone: 'Rebuilt {rebuilt} playlists, {linked} track(s) linked.',
+    chooseRecording: 'Choose a Deezer recording',
+    chooseRecordingHint:
+      'Review an exact recording when old album tags do not match. The artist and full title must still match.',
+    recordingLink: 'Deezer track link',
+    previewRecording: 'Preview',
+    recordingReviewHint:
+      'Review the album and duration. This prepares a single-track scan; replacement starts only after you confirm the scan.',
+    analyzeRecording: 'Analyze this choice',
+    recordingPreviewFailed: 'Unable to preview this Deezer track.',
+    replacementRescan: 'Options changed: scan again before starting.',
+    deemixTitle: 'Replace recordings with Deemix',
+    replaceAudio: 'Use verified Deemix recordings',
+    replaceAudioHint:
+      'Match the exact artist, title and album. Keep music in the Deemix folder. Ambiguous matches leave originals untouched. This scan replaces audio instead of retagging it.',
+    deleteOriginals: 'Remove old Downtify audio after import',
+    deleteOriginalsHint:
+      'Only remove each verified original after playlists, likes and playback references are updated. External files and sidecars are never removed.',
+    replacementProgress:
+      'Awaiting publication or cleanup: {pending}. Old copies removed: {removed}. Originals kept: {kept}.',
+    audio: 'Deemix recordings',
+    audioHint:
+      'Verify catalog duration and decoded audio before updating playlists and removing an old copy.',
   },
   album: {
     kicker: 'Album',
@@ -550,22 +587,29 @@ export default {
     moreBy: 'Továbbiak tőle: {artist}',
     searchMore: 'Keresés a YouTube Musicban',
     delete: 'Album törlése',
+    markCompilation: 'Megjelölés: Különböző előadók',
+    unmarkCompilation: 'Különböző előadók jelölés törlése',
+    markedCompilation: 'Az album Különböző előadók jelölést kapott',
+    unmarkedCompilation: 'Az album már nem Különböző előadók',
+    compilationPartial: 'Néhány számot nem sikerült módosítani',
+    compilationFailed: 'Nem sikerült módosítani az albumot',
   },
   artist: {
     kicker: 'Előadó',
     notFound: 'Az előadó nem található',
     findMore: 'Továbbiak keresése',
+    relatedArtists: 'A rajongók ezt is szeretik',
+    topSongsLink: 'További népszerű számok',
+    linksTab: 'Linkek',
+    linksPlatforms: 'Streaming platformok',
+    linksSocial: 'Közösségi hálózatok',
     downloadDiscography: 'Download full discography',
     discographyStarted:
       'Downloading the complete discography of {name} in the background. Manage it under Monitor.',
     discographyChecking:
       'Checking {name} for missing releases in the background.',
     discographyFailed: 'Could not start the discography download.',
-    relatedArtists: 'A rajongók ezt is szeretik',
-    topSongsLink: 'További népszerű számok',
-    linksTab: 'Linkek',
-    linksPlatforms: 'Streaming platformok',
-    linksSocial: 'Közösségi hálózatok',
+    guest: 'Közreműködő',
   },
   artistArt: {
     editPhoto: 'Fotó szerkesztése',
@@ -625,7 +669,10 @@ export default {
     kicker: 'Lejátszási lista',
     notFound: 'A lista nem található',
     progress: '{total} számból {have} letöltve',
-    missingShort: { one: '{count} hiányzik', other: '{count} hiányzik' },
+    missingShort: {
+      one: '{count} hiányzik',
+      other: '{count} hiányzik',
+    },
     missingTitle: {
       one: '{count} szám még nincs letöltve',
       other: '{count} szám még nincs letöltve',
@@ -670,6 +717,19 @@ export default {
     nothingYet: 'Még nincs letöltött szám',
     nothingYetHint: 'A számok letöltés után itt jelennek meg.',
     nothingYetManualHint: 'Adj hozzá számokat a könyvtárból.',
+    hideTrack: 'Elrejtés a listáról',
+    hiddenTrack: 'Elrejtve: „{name}”',
+    hiddenTitle: {
+      one: '{count} elrejtett szám',
+      other: '{count} elrejtett szám',
+    },
+    hiddenHint:
+      'A listáról elrejtett számaid. Kimaradnak, amikor a lista szinkronizál a forrásával, és a könyvtáradban maradnak.',
+    hiddenGone: 'Már nincs a könyvtáradban',
+    unhide: 'Megjelenítés újra',
+    unhidden: 'Újra itt: „{name}”',
+    unhiddenLater:
+      'Visszakerül ide: „{name}”, amikor a lista letölti, ami hiányzik belőle',
   },
   track: {
     title: 'Cím',
@@ -710,7 +770,6 @@ export default {
       artist: 'Lejátszás előadótól',
       library: 'Lejátszás a könyvtáradból',
       search: 'Lejátszás a keresésből',
-
       podcast: 'Lejátszás podcastról',
     },
     goToAlbum: 'Album',
@@ -724,7 +783,10 @@ export default {
     lyricsNotSynced: 'Ez a dalszöveg nincs időzítve.',
     cannotPlay: 'Ez a fájl nem játszható le.',
     sleepTimer: 'Elalvási időzítő',
-    sleepMinutes: { one: '{count} perc múlva', other: '{count} perc múlva' },
+    sleepMinutes: {
+      one: '{count} perc múlva',
+      other: '{count} perc múlva',
+    },
     sleepEndOfTrack: 'A szám végén',
     sleepEndOfTrackShort: 'Szám vége',
     sleepOff: 'Időzítő kikapcsolása',
@@ -763,7 +825,11 @@ export default {
   monitor: {
     releaseTypes: 'Letöltés',
     releaseTypesAtLeastOne: 'Legalább egy megjelenéstípus maradjon',
-    release: { album: 'Albumok', single: 'Kislemezek', ep: 'EP-k' },
+    release: {
+      album: 'Albumok',
+      single: 'Kislemezek',
+      ep: 'EP-k',
+    },
     newOnly: 'Csak új megjelenések',
     newOnlyHint:
       'Kihagyja, amit az előadó már kiadott; csak a követés kezdete után megjelenők töltődnek le.',
@@ -799,20 +865,38 @@ export default {
     kindPlaylist: 'Lista',
     kindArtist: 'Előadó',
     never: 'Még nem ellenőrizve',
-    releases: { one: '{count} kiadás', other: '{count} kiadás' },
+    releases: {
+      one: '{count} kiadás',
+      other: '{count} kiadás',
+    },
     pause: 'Szüneteltetés',
     resume: 'Folytatás',
     stop: 'Figyelés leállítása',
     openSource: 'Eredeti megnyitása',
-    everyMinutes: { one: 'Percenként', other: '{count} percenként' },
-    everyHours: { one: 'Óránként', other: '{count} óránként' },
-    everyDays: { one: 'Naponta', other: '{count} naponta' },
-    everyWeeks: { one: 'Hetente', other: '{count} hetente' },
-    everyMonths: { one: 'Havonta', other: '{count} havonta' },
+    everyMinutes: {
+      one: 'Percenként',
+      other: '{count} percenként',
+    },
+    everyHours: {
+      one: 'Óránként',
+      other: '{count} óránként',
+    },
+    everyDays: {
+      one: 'Naponta',
+      other: '{count} naponta',
+    },
+    everyWeeks: {
+      one: 'Hetente',
+      other: '{count} hetente',
+    },
+    everyMonths: {
+      one: 'Havonta',
+      other: '{count} havonta',
+    },
     urlLabelPlaylist: 'Lista linkje',
     urlLabelArtist: 'Előadó linkje',
     urlPlaceholderPlaylist:
-      'Illessz be egy Spotify vagy YouTube Music lista linket',
+      'Illessz be egy Spotify, Deezer vagy YouTube Music lista linket',
     urlPlaceholderArtist:
       'Illessz be egy Spotify vagy YouTube Music előadó linket',
     watchPlaylist: 'Lista figyelése',
@@ -860,10 +944,12 @@ export default {
     save: 'Mentés',
     saved: 'Figyelés frissítve',
     retargeted: 'Most figyelve: {name}',
+    tableColumns: 'Oszlopok',
+    resetTableColumns: 'Oszlopok visszaállítása',
   },
   sharing: {
     title: '„{name}” megosztása',
-    hint: 'Akikkel megosztod, lejátszhatják, követhetik és másolatot menthetnek róla, de nem módosíthatják.',
+    hint: 'Akikkel megosztod, lejátszhatják, követhetik és másolatot menthetnek róla. Számokat csak azok adhatnak hozzá vagy távolíthatnak el, akiknek megengeded a szerkesztést.',
     private: 'Privát',
     privateHint: 'Csak te látod.',
     shared: 'Meghatározott személyek',
@@ -900,7 +986,7 @@ export default {
     },
     sharedWithMe: 'Velem megosztott',
     sharedWithMeHint:
-      'Mások által veled megosztott listák. Lejátszhatod őket, de nem módosíthatod.',
+      'Mások által veled megosztott listák. Lejátszhatod őket, és ahol a tulajdonos engedi, számokat adhatsz hozzá vagy távolíthatsz el.',
     publicPlaylists: 'Nyilvános listák',
     publicPlaylistsHint:
       'A szerver mindenkivel megosztva. Kövess egyet, hogy az oldalsávban maradjon.',
@@ -935,18 +1021,6 @@ export default {
     themeSystem: 'Rendszer',
     language: 'Nyelv',
     languageHint: 'A teljes felületen használatos.',
-    themeEngine: 'Téma motor',
-    themeEngineHint: 'A felület színei és betűtípusa módosítható, saját CSS hozzáadható. Minden fiókra és eszközre érvényes; üres mező az eredeti dizájnt tartja.',
-    themeText: 'Szövegszín',
-    themePrimary: 'Elsődleges szín',
-    themeSecondary: 'Másodlagos szín',
-    themeBackground: 'Háttérszín',
-    themeFont: 'Betűtípus',
-    themeFontHint: 'Bármilyen CSS font stack, pl. \'Sora Variable\', \'Segoe UI\', sans-serif. Beépített: Sora és DM Sans. Más betűtípusnak telepítve kell lennie az eszközön.',
-    themeCss: 'Saját CSS',
-    themeCssHint: 'A design tokenek után beszúrt CSS. Használd a tokens.css változóit (--c-bg, --c-accent, …) vagy más szelektorokat. CSS-ként kerül be, soha nem HTML-ként.',
-    themeReset: 'Téma visszaállítása',
-    themeResetField: 'Szín törlése',
     playerGroup: 'Lejátszó',
     showLyrics: 'Dalszövegek megjelenítése a lejátszóban',
     showLyricsHint:
@@ -976,8 +1050,6 @@ export default {
     sourceYtmHint: 'Legjobb metaadat-egyezések',
     sourceYt: 'YouTube',
     sourceYtHint: 'Tartalék a YouTube Musicból hiányzó dalokhoz',
-    sourceUsenet: 'Usenet (SABnzbd)',
-    sourceUsenetHint: 'Newznab indexerek + SABnzbd — gyakran veszteségmentes',
     slskdTitle: 'slskd',
     slskdHint:
       'Letöltés a Soulseekről a slskd szervereden át. A nem talált számok a következő forráshoz kerülnek.',
@@ -990,51 +1062,6 @@ export default {
       'Az útvonal a Downtify konténeren belül, nem a gazdagépen.',
     slskdTimeout: 'Teljes időkorlát',
     slskdQueuedTimeout: 'Sorban állási időkorlát',
-    usenetTitle: 'Usenet',
-    usenetHint:
-      'Letöltés Usenetről: keresés Newznab indexerekben, letöltés SABnzbd-vel. Ami nem található, a következő forrásra kerül.',
-    usenetEnabled: 'Usenet használata',
-    usenetEnabledHint:
-      'SABnzbd és legalább egy API-kulcsos Newznab indexer szükséges.',
-    usenetSabUrl: 'SABnzbd címe',
-    usenetSabKey: 'SABnzbd API-kulcs',
-    usenetCategory: 'SABnzbd kategória',
-    usenetCompleteDir: 'Kész letöltések mappája',
-    usenetCompleteDirHint:
-      'Az útvonal a Downtify konténeren belül, nem a gazdagépen.',
-    usenetCleanup: 'SABnzbd takarítása utána',
-    usenetCleanupHint:
-      'Törli az előzménybejegyzést és a SABnzbd másolatát, amint a fájl a letöltéseidben van.',
-    usenetIndexers: 'Newznab indexerek',
-    usenetIndexersHint:
-      'Minden engedélyezett indexer párhuzamosan keres; a legjobb kiadás nyer.',
-    usenetIndexerName: 'Név',
-    usenetIndexerUrl: 'Indexer címe',
-    usenetIndexerKey: 'API-kulcs',
-    usenetAddIndexer: 'Indexer hozzáadása',
-    usenetRemoveIndexer: 'Eltávolítás',
-    usenetTimeout: 'Teljes időkorlát',
-    usenetMinScore: 'Minimális találati pontszám',
-    usenetDurationSeconds: 'Hossztűrés',
-    usenetDurationPercent: 'Hossztűrés %',
-    usenetIndexerType: 'Típus',
-    usenetTypeNewznab: 'Newznab indexelő',
-    usenetTypeProwlarr: 'Prowlarr (natív API)',
-    usenetFormats: 'Előnyben részesített formátumok',
-    usenetFormatsHint:
-      'A sorrend számít: a korábbi formátumok magasabb pontszámot kapnak egyezéskor.',
-    usenetMinBitrate: 'Minimális bitsebesség',
-    usenetMaxBitrate: 'Maximális bitsebesség',
-    usenetPreferAlbums: 'Album kiadások előnyben részesítése',
-    usenetCleanupNow: 'SABnzbd takarítása most',
-    usenetCleanupNowHint:
-      'Törli az összes befejezett feladatot és fájljait a SABnzbd-ből — beleértve az újrahasznosításhoz megőrzött albummappákat is.',
-    usenetCleanupDone:
-      'Removed {count} finished job(s) and {albums} cached album folder(s) from SABnzbd.',
-    usenetCleanupFailed:
-      'A SABnzbd takarítás sikertelen — ellenőrizze a kapcsolat beállításait.',
-    usenetPreferAlbumsHint:
-      "A Usenet albumközpontú: keress 'Előadó - Album' kiadásokat is, töltsd le az albumot, és nyerd ki a kívánt számot. Az albumok előre kerülnek.",
     slskdInPlace: 'Fájlok hagyása az slskd mappában',
     slskdInPlaceHint:
       'Ott címkézi őket, ahová az slskd mentette, ahelyett hogy a letöltési mappába másolná.',
@@ -1114,11 +1141,6 @@ export default {
       'A letöltéseken és az extra zenemappákon kívül. Itt jön létre ugyanaz a relatív fa, mint a hangfájlnál.',
     lyricsLrcFolderPlaceholder: '/data/lyrics',
     lyricsProviders: 'Szolgáltatók',
-    tagEditorGroup: 'Tag editor',
-    discogsToken: 'Discogs token',
-    discogsTokenHint:
-      'Personal access token for the tag editor’s Discogs search. MusicBrainz needs none.',
-    discogsTokenPlaceholder: 'Discogs personal access token',
     lyricsProvidersHint:
       'Minden szám ebben a sorrendben próbálja az engedélyezett szolgáltatókat, amíg valamelyiknél nincs dalszöveg. Amit egy szolgáltató nem talált, azt egy hónapig megjegyzi, így nem kérdezi meg minden letöltésnél.',
     lyricsLrclibHint: 'Közösségi adatbázis — sima és időzített dalszöveg',
@@ -1151,17 +1173,6 @@ export default {
         'Ez a cím érvénytelen. http://-vel vagy https://-sel kezdődjön.',
       connection_tls:
         'A HTTPS-tanúsítvány nem megbízható. Használj http://-t, vagy megbízható hatóság tanúsítványát.',
-      connection_not_sabnzbd:
-        'Valami válaszolt a(z) {url} címen, de nem SABnzbd-nek tűnik. Ellenőrizd a címet és a portot.',
-      indexer_ok: 'A(z) {detail} indexer válaszolt.',
-      indexer_missing: 'Töltsd ki az indexer címét és API-kulcsát ({detail}).',
-      indexer_bad_key: 'A(z) {detail} indexer elutasította az API-kulcsot.',
-      indexer_http_error: 'A(z) {detail} indexer hibával válaszolt.',
-      indexer_unreachable:
-        'A(z) {detail} indexer nem érhető el. Ellenőrizd a címet és hogy fut-e.',
-      indexer_timeout: 'A(z) {detail} indexer nem válaszolt időben.',
-      indexer_bad_url: 'Az indexer címe érvénytelen ({detail}).',
-      indexer_tls: 'Az indexer HTTPS-tanúsítványa nem megbízható ({detail}).',
       connection_not_slskd:
         'A(z) {url} címen válaszolt valami, de nem úgy néz ki, mint a slskd. Ellenőrizd a címet és a portot.',
       connection_not_navidrome:
@@ -1184,6 +1195,20 @@ export default {
         'A megadott admin fiók nem adminisztrátor, ezért nem indíthat könyvtárvizsgálatot.',
       scan_bad_admin:
         'A Navidrome elutasította az admin felhasználónevet vagy jelszót.',
+      connection_not_sabnzbd:
+        'Valami válaszolt a(z) {url} címen, de nem SABnzbd-nek tűnik. Ellenőrizd a címet és a portot.',
+      indexer_ok: 'A(z) {detail} indexer válaszolt.',
+      indexer_missing: 'Töltsd ki az indexer címét és API-kulcsát ({detail}).',
+      indexer_bad_key: 'A(z) {detail} indexer elutasította az API-kulcsot.',
+      indexer_http_error: 'A(z) {detail} indexer hibával válaszolt.',
+      indexer_unreachable:
+        'A(z) {detail} indexer nem érhető el. Ellenőrizd a címet és hogy fut-e.',
+      indexer_timeout: 'A(z) {detail} indexer nem válaszolt időben.',
+      indexer_bad_url: 'Az indexer címe érvénytelen ({detail}).',
+      indexer_tls: 'Az indexer HTTPS-tanúsítványa nem megbízható ({detail}).',
+      connection_not_deemix: 'The server is not a compatible Deemix instance.',
+      quality_unavailable:
+        'The Deezer account cannot stream the requested quality.',
     },
     navidromeSync: 'Listák létrehozása a Navidrome-ban',
     navidromeSyncHint:
@@ -1278,6 +1303,89 @@ export default {
     experimental: 'Kísérleti',
     experimentalHint:
       'A mobilalkalmazások még készülnek. Az Android-alkalmazásnak még nincs kiadott verziója, és a párosítás és a lejátszás módja még változhat a Downtify verziói között.',
+    themeEngine: 'Téma motor',
+    themeEngineHint:
+      'A felület színei és betűtípusa módosítható, saját CSS hozzáadható. Minden fiókra és eszközre érvényes; üres mező az eredeti dizájnt tartja.',
+    themeText: 'Szövegszín',
+    themePrimary: 'Elsődleges szín',
+    themeSecondary: 'Másodlagos szín',
+    themeBackground: 'Háttérszín',
+    themeFont: 'Betűtípus',
+    themeFontHint:
+      "Bármilyen CSS font stack, pl. 'Sora Variable', 'Segoe UI', sans-serif. Beépített: Sora és DM Sans. Más betűtípusnak telepítve kell lennie az eszközön.",
+    themeCss: 'Saját CSS',
+    themeCssHint:
+      'A design tokenek után beszúrt CSS. Használd a tokens.css változóit (--c-bg, --c-accent, …) vagy más szelektorokat. CSS-ként kerül be, soha nem HTML-ként.',
+    themeReset: 'Téma visszaállítása',
+    themeResetField: 'Szín törlése',
+    sourceUsenet: 'Usenet (SABnzbd)',
+    sourceUsenetHint: 'Newznab indexerek + SABnzbd — gyakran veszteségmentes',
+    usenetTitle: 'Usenet',
+    usenetHint:
+      'Letöltés Usenetről: keresés Newznab indexerekben, letöltés SABnzbd-vel. Ami nem található, a következő forrásra kerül.',
+    usenetEnabled: 'Usenet használata',
+    usenetEnabledHint:
+      'SABnzbd és legalább egy API-kulcsos Newznab indexer szükséges.',
+    usenetSabUrl: 'SABnzbd címe',
+    usenetSabKey: 'SABnzbd API-kulcs',
+    usenetCategory: 'SABnzbd kategória',
+    usenetCompleteDir: 'Kész letöltések mappája',
+    usenetCompleteDirHint:
+      'Az útvonal a Downtify konténeren belül, nem a gazdagépen.',
+    usenetCleanup: 'SABnzbd takarítása utána',
+    usenetCleanupHint:
+      'Törli az előzménybejegyzést és a SABnzbd másolatát, amint a fájl a letöltéseidben van.',
+    usenetIndexers: 'Newznab indexerek',
+    usenetIndexersHint:
+      'Minden engedélyezett indexer párhuzamosan keres; a legjobb kiadás nyer.',
+    usenetIndexerName: 'Név',
+    usenetIndexerUrl: 'Indexer címe',
+    usenetIndexerKey: 'API-kulcs',
+    usenetAddIndexer: 'Indexer hozzáadása',
+    usenetRemoveIndexer: 'Eltávolítás',
+    usenetTimeout: 'Teljes időkorlát',
+    usenetMinScore: 'Minimális találati pontszám',
+    usenetDurationSeconds: 'Hossztűrés',
+    usenetDurationPercent: 'Hossztűrés %',
+    usenetIndexerType: 'Típus',
+    usenetTypeNewznab: 'Newznab indexelő',
+    usenetTypeProwlarr: 'Prowlarr (natív API)',
+    usenetFormats: 'Előnyben részesített formátumok',
+    usenetFormatsHint:
+      'A sorrend számít: a korábbi formátumok magasabb pontszámot kapnak egyezéskor.',
+    usenetMinBitrate: 'Minimális bitsebesség',
+    usenetMaxBitrate: 'Maximális bitsebesség',
+    usenetPreferAlbums: 'Album kiadások előnyben részesítése',
+    usenetCleanupNow: 'SABnzbd takarítása most',
+    usenetCleanupNowHint:
+      'Törli az összes befejezett feladatot és fájljait a SABnzbd-ből — beleértve az újrahasznosításhoz megőrzött albummappákat is.',
+    usenetCleanupDone:
+      'Removed {count} finished job(s) and {albums} cached album folder(s) from SABnzbd.',
+    usenetCleanupFailed:
+      'A SABnzbd takarítás sikertelen — ellenőrizze a kapcsolat beállításait.',
+    usenetPreferAlbumsHint:
+      "A Usenet albumközpontú: keress 'Előadó - Album' kiadásokat is, töltsd le az albumot, és nyerd ki a kívánt számot. Az albumok előre kerülnek.",
+    tagEditorGroup: 'Tag editor',
+    discogsToken: 'Discogs token',
+    discogsTokenHint:
+      'Personal access token for the tag editor’s Discogs search. MusicBrainz needs none.',
+    discogsTokenPlaceholder: 'Discogs personal access token',
+    sourceSoundcloud: 'SoundCloud',
+    sourceSoundcloudHint:
+      'Máshol hiányzó feltöltések, és a SoundCloud linkek saját száma',
+    deemixTitle: 'Deemix',
+    deemixHint:
+      'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
+    deemixEnabled: 'Use Deemix',
+    deemixInPlace:
+      'Keep audio, artwork and lyrics in the shared Deemix folder, without rewriting its tags. Configure a private ARL file on the server; do not paste it here.',
+    deemixUrl: 'Deemix server URL',
+    deemixRemote: 'Download folder inside Deemix',
+    deemixLocal: 'Same folder inside Downtify (read-only is supported)',
+    deemixQuality: 'Audio quality',
+    primaryLibrary: 'Primary library folder',
+    primaryLibraryHint:
+      'Prefer this folder for matching artist, song and album. Files and saved playlist paths are preserved; nothing is deleted.',
   },
   shortcuts: {
     title: 'Billentyűparancsok',
@@ -1297,6 +1405,7 @@ export default {
     goQueue: 'Ugrás a sorhoz',
     close: 'Most szóló bezárása',
     help: 'Billentyűparancsok',
+    findInPlaylist: 'Keresés a listában (a lista oldalán)',
   },
   auth: {
     signInTitle: 'Bejelentkezés a Downtify-ba',
@@ -1372,7 +1481,8 @@ export default {
     body: 'Rossz dal vagy változat? Válaszd ki a jót. A fájl megtartja a nevét, címkéit, borítóját és dalszövegét, és a lejátszási listákban marad.',
     current: 'Jelenlegi',
     search: 'Keresés',
-    searchHint: 'Vagy illessz be egy YouTube vagy YouTube Music linket.',
+    searchHint:
+      'Vagy illessz be egy YouTube, YouTube Music vagy SoundCloud linket.',
     searchButton: 'Keresés',
     results: 'Választható változatok',
     none: 'Nincs találat. Próbálj más szavakat, vagy illessz be egy linket.',
@@ -1495,8 +1605,14 @@ export default {
     lastSignIn: 'bejelentkezett: {when}',
     neverSignedIn: 'még nem jelentkezett be',
     defaultPassword: 'alapértelmezett jelszó',
-    tracksStat: { one: '{count} szám', other: '{count} szám' },
-    likesStat: { one: '{count} kedvenc', other: '{count} kedvenc' },
+    tracksStat: {
+      one: '{count} szám',
+      other: '{count} szám',
+    },
+    likesStat: {
+      one: '{count} kedvenc',
+      other: '{count} kedvenc',
+    },
     playlistsStat: {
       one: '{count} lejátszási lista',
       other: '{count} lejátszási lista',
@@ -1543,6 +1659,7 @@ export default {
       user_deleted: 'Törölt felhasználók',
       password_changed: 'Jelszóváltások',
       settings_changed: 'Beállítás-módosítások',
+      album_compilation: 'Megjelölt válogatások',
     },
     did: {
       login: 'bejelentkezett',
@@ -1563,6 +1680,8 @@ export default {
       user_deleted: 'felhasználót törölt: {what}',
       password_changed: 'jelszót változtatott: {what}',
       settings_changed: 'beállításokat módosított: {what}',
+      album_compilation:
+        'módosította, hogy a(z) {what} Különböző előadók válogatás-e',
     },
   },
   discover: {
@@ -1675,9 +1794,6 @@ export default {
     clearQueueTitle: 'Üríted a sort?',
     clearQueueBody:
       'A várakozó és kész elemek lekerülnek a listáról. A letöltött fájlok megmaradnak.',
-    stopAllTitle: 'Le?ll?tod az ?sszes let?lt?st?',
-    stopAllBody:
-      'Minden fut? ?s v?rakoz? let?lt?s le?ll, a l?thatatlan k?tegelt feladatokkal egy?tt. A m?r let?lt?tt f?jlok megmaradnak.',
     stopWatchingTitle: 'Leállítod „{name}” figyelését?',
     stopWatchingBody: 'A letöltött számok a könyvtáradban maradnak.',
     removeEpisodeTitle: 'Eltávolítod „{name}” letöltését?',
@@ -1691,6 +1807,9 @@ export default {
     removeArtistBannerTitle: '{name} bannerének eltávolítása?',
     removeArtistArtBody:
       'Ez csak a mentett képfájlt távolítja el — semmi mást nem érint.',
+    stopAllTitle: 'Le?ll?tod az ?sszes let?lt?st?',
+    stopAllBody:
+      'Minden fut? ?s v?rakoz? let?lt?s le?ll, a l?thatatlan k?tegelt feladatokkal egy?tt. A m?r let?lt?tt f?jlok megmaradnak.',
   },
   toast: {
     playingNext: {
@@ -1701,7 +1820,10 @@ export default {
       one: 'Hozzáadva a sorhoz',
       other: '{count} szám hozzáadva a sorhoz',
     },
-    deleted: { one: 'Szám törölve', other: '{count} szám törölve' },
+    deleted: {
+      one: 'Szám törölve',
+      other: '{count} szám törölve',
+    },
     releasedShared: {
       one: '{count} dal a megosztott könyvtárban marad (más is letöltötte)',
       other:
@@ -1736,5 +1858,584 @@ export default {
   },
   source: {
     from: 'Letöltve innen: {source}',
+  },
+  tags: {
+    edit: 'Edit tags?',
+    title: 'Edit tags',
+    description:
+      'Fix the tags of "{title}", by hand or from MusicBrainz / Discogs.',
+    loading: 'Loading tags?',
+    fieldTitle: 'Title',
+    fieldArtist: 'Artist',
+    fieldAlbum: 'Album',
+    fieldAlbumArtist: 'Album artist',
+    fieldTrack: 'Track',
+    fieldTotal: 'Tracks total',
+    fieldDisc: 'Disc',
+    fieldDiscTotal: 'Discs total',
+    fieldDate: 'Date (YYYY-MM-DD)',
+    fieldGenre: 'Genre',
+    fieldComment: 'Comment',
+    fieldComposer: 'Composer',
+    fieldSource: 'Source',
+    changeCover: 'Choose image',
+    removeCover: 'Remove cover',
+    searchTitle: 'Fill from a tag source',
+    sourceMusicbrainz: 'MusicBrainz',
+    sourceDiscogs: 'Discogs',
+    searchPlaceholder: 'Artist, album or track',
+    search: 'Search',
+    noResults: 'Nothing found.',
+    use: 'Use',
+    filled: 'Fields filled from the source.',
+    save: 'Save tags',
+    saved: 'Tags saved.',
+  },
+  duplicates: {
+    title: 'Duplicates',
+    subtitle: 'The same song or album saved more than once.',
+    titles: 'Duplicate titles',
+    albums: 'Duplicate albums',
+    noneTitle: 'No duplicates',
+    noneBody: 'Every title and album in the library is unique.',
+    checkAgain: 'Check again',
+    checking: 'Checking?',
+    copyCount: {
+      one: '{count} copy',
+      other: '{count} copies',
+    },
+    trackCount: {
+      one: '{count} track',
+      other: '{count} tracks',
+    },
+    selectExtras: 'Select all but one',
+    selected: '{count} selected',
+    reasonMultipleFolders: 'Saved in more than one folder',
+    reasonRepeatedSong: 'The same song appears more than once',
+    deleteTitle: 'Delete the selected copies?',
+    deleteBody:
+      'The files are removed from disk, along with their playlists and covers.',
+    deleteSelected: 'Delete selected',
+    deleted: 'Deleted {count} file(s).',
+  },
+  artistSuggestions: {
+    title: 'Követhető előadók',
+    listening: 'A hallgatásaid alapján',
+    library: 'A könyvtárad alapján',
+    listeningHelp:
+      'Az előadók, akiket a legtöbbet hallgatsz. A friss lejátszások többet számítanak: egy lejátszás súlya {days} naponta a felére csökken.',
+    libraryHelp:
+      'Az előadók a könyvtáradban, a legtöbb szám, majd album szerint.',
+    listens: {
+      one: '{count} lejátszás',
+      other: '{count} lejátszás',
+    },
+    tracks: {
+      one: '{count} szám',
+      other: '{count} szám',
+    },
+    albums: {
+      one: '{count} album',
+      other: '{count} album',
+    },
+    follow: 'Követés',
+    more: 'Több megjelenítése',
+    loading: 'Javaslatok betöltése…',
+    empty: 'Egyelőre nincs több javasolható előadó.',
+    failed: 'A javaslatokat nem sikerült betölteni.',
+    retry: 'Újra',
+    choose: 'Melyik előadó a(z) {name}?',
+    chooseHelp:
+      'Több YouTube Music-előadó is lehet a(z) {name}. Hasonlítsd össze a fotókat, vagy nyisd meg a profiljukat, és kövesd a megfelelőt.',
+    notFound:
+      'Nem található {name} nevű előadó a YouTube Musicon. Inkább illeszd be az előadó linkjét.',
+    lookupFailed:
+      'Az előadókeresés nem érhető el. Linket továbbra is beilleszthetsz.',
+    followProfile: 'Előadó követése',
+    inspect: 'Megnyitás a YouTube Musicon',
+    manual: 'Link beillesztése',
+    cancel: 'Mégse',
+  },
+  trash: {
+    title: 'Kuka',
+    subtitle:
+      'A könyvtárból kivett számok, az áthelyezés után {days} napig megmaradnak. Addig visszaállíthatod őket.',
+    adminOnly: 'Ezt csak adminisztrátorok láthatják',
+    adminOnlyHint:
+      'Kérd meg a szerver egyik adminisztrátorát, hogy állítson vissza egy számot.',
+    off: 'A kuka ki van kapcsolva',
+    offHint:
+      'Ezen a szerveren a számok véglegesen törlődnek. A kukát a szerver beállításaiban lehet bekapcsolni (DOWNTIFY_TRASH).',
+    inTrash: 'A kukában',
+    exclusions: 'Letöltésekből kizárva',
+    search: 'Keresés a kukában',
+    restoreSelected: {
+      one: '{count} szám visszaállítása',
+      other: '{count} szám visszaállítása',
+    },
+    summary: {
+      one: '{count} szám · {size}',
+      other: '{count} szám · {size}',
+    },
+    empty: 'A kuka üres',
+    emptyHint:
+      'A könyvtárból a kukába tett számok itt látszanak, amíg le nem járnak.',
+    noMatch: 'Semmi sem egyezik a kukában',
+    select: '„{title}” kijelölése',
+    keptUntil: 'Megőrizve eddig: {date}',
+    restore: 'Visszaállítás',
+    retry: 'Újrapróbálás',
+    previous: 'Előző',
+    next: 'Következő',
+    exclusionsHint:
+      'Számok, amelyek ideje lejárt a kukában. Az automatikus letöltések (lejátszásilista-figyelő, követések) továbbra is kihagyják őket, amíg újra nem engedélyezed.',
+    exclusionsEmpty: 'Semmi sincs kizárva a letöltésekből',
+    allowDownload: 'Letöltés engedélyezése',
+    allowTitle: 'Újra letölthető legyen ez: „{title}”?',
+    allowBody:
+      'Az automatikus letöltések újra letölthetik. Most semmi sem töltődik le.',
+    move: 'Áthelyezés a kukába',
+    preparing: 'Fájlok ellenőrzése…',
+    confirmTitle: {
+      one: 'Áthelyezel {count} számot a kukába?',
+      other: 'Áthelyezel {count} számot a kukába?',
+    },
+    confirmBody:
+      'Csak ezek a fájlok kerülnek át, a dalszövegfájljaikkal együtt. Mindenkinél eltűnnek a könyvtárból, és {days} napig visszaállíthatók. A lejátszási listáik és kedvenceik velük együtt térnek vissza, az automatikus letöltések addig kihagyják őket.',
+    confirmMore: {
+      one: 'és még {count}',
+      other: 'és még {count}',
+    },
+    pending: {
+      one: '{count} szám áthelyezése a kukába',
+      other: '{count} szám áthelyezése a kukába',
+    },
+    downloadBlocked:
+      'A zenekukában van: egy adminisztrátornak újra engedélyeznie kell.',
+    states: {
+      preview: 'Megerősítésre vár',
+      pending: 'Áthelyezésre vár',
+      moving: 'Áthelyezés',
+      trashed: 'A kukában',
+      restore_pending: 'Visszaállításra vár',
+      restoring: 'Visszaállítás',
+      restored: 'Visszaállítva',
+      purging: 'Lejár',
+      purged: 'Lejárt',
+      error: 'Leállt — a fájlok megmaradtak',
+    },
+    errors: {
+      unavailable: 'A kuka most nem érhető el. Semmi sem került át.',
+      admin_required: 'Csak adminisztrátor használhatja a kukát.',
+      admin_access_revoked: 'A kérést indító fiók már nem adminisztrátor.',
+      atomic_move_unsupported:
+        'Ez a tárhely nem tud biztonságosan fájlokat áthelyezni. Semmi sem került át.',
+      confirmation_expired: 'Az ellenőrzés lejárt. Válaszd ki újra a számokat.',
+      confirmation_invalid:
+        'Ez a megerősítés nem a te fiókodhoz vagy kijelölésedhez tartozik.',
+      file_changed:
+        'A fájl az ellenőrzés után megváltozott. A helyén maradt; válaszd ki újra.',
+      file_changed_during_move:
+        'A fájl áthelyezés közben megváltozott. A kukában marad, hogy ellenőrizhesd.',
+      file_missing:
+        'Hiányzik egy fájl. Ellenőrizd a tárhelyet, majd próbáld újra.',
+      filesystem_unavailable:
+        'A tárhely nem érhető el. Ellenőrizd, majd próbáld újra.',
+      identity_uncertain:
+        'Ennek a számnak a címkéi kevesek ahhoz, hogy kimaradjon az automatikus letöltésekből. Semmi sem került át.',
+      invalid_path: 'Ez a fájl a kuka által lefedett mappákon kívül van.',
+      invalid_selection: 'Válassz 1 és 200 közötti számot.',
+      item_not_found: 'Ez a szám már nincs a könyvtárban.',
+      library_task_active:
+        'A könyvtár feljavítása fut. Várd meg, vagy előbb szüneteltesd.',
+      nas_marker_changed:
+        'A tárhely nem az, amire a kuka számít. Semmi sem került át.',
+      nas_marker_missing: 'A várt tárhely nincs csatolva. Semmi sem került át.',
+      operation_already_pending: 'Ez a szám már úton van.',
+      operation_in_progress:
+        'Az áthelyezés még fut. Várd meg a visszaállítás előtt.',
+      operation_not_complete: 'Várd meg, amíg a mostani lépés befejeződik.',
+      preview_busy: 'Egy másik ellenőrzés fut. Várd meg, amíg befejeződik.',
+      preview_unavailable:
+        'Az ellenőrzés megszakadt. Válaszd ki újra a számokat.',
+      restore_collision:
+        'Ott már van egy másik fájl. Semmi sem lett felülírva; a szám a kukában marad.',
+      retention_expired: 'Lejárt az ideje a kukában.',
+      root_unavailable: 'A zenemappa nem érhető el.',
+      track_is_playing:
+        'Valaki épp ezt a számot hallgatja. Előbb szüneteltesd.',
+      trash_file_changed:
+        'A kukában lévő másolat megváltozott. Nem lesz törölve.',
+      trash_file_missing: 'Hiányzik egy fájl a kukából.',
+      trash_ignore_invalid:
+        'A kukamappa .ignore fájlja nem üres. Semmi sem került át.',
+      trash_not_configured: 'A kuka ki van kapcsolva ezen a szerveren.',
+      trash_permissions_unsafe:
+        'Mások is olvashatják a kukamappát. Ellenőrizd a jogosultságait.',
+      unsafe_symlink:
+        'Az útvonalban szimbolikus link van, ezért érintetlen marad.',
+      unsupported_collection: 'Ennek a számnak a mappáját nem fedi le a kuka.',
+      unsupported_lyrics_location:
+        'A dalszövegmappát nem fedi le a kuka. Semmi sem került át.',
+    },
+  },
+  downloadPolicy: {
+    block: 'Stop downloading',
+    blocked: 'Downloads suspended for this track.',
+    confirm: 'Suspend downloads for this track?',
+    confirmHelp:
+      'New attempts will be blocked. A shared transfer already started may finish. Existing files will not be deleted.',
+    exclusions: 'Suspended tracks',
+    empty: 'No suspended tracks.',
+    resume: 'Allow again',
+    timeout: 'Attempt time limit reached',
+    manual: 'Suspended manually',
+    error: 'Could not change the suspension.',
+    alreadyActive: 'An attempt for this track is already in progress.',
+    budget: 'Cumulative attempt limit',
+    budgetHelp:
+      'Automatically suspend a track after this cumulative attempt time. Time between attempts is excluded. 0 disables the limit.',
+  },
+  playlistNames: {
+    restore: 'Restore source name',
+  },
+  libraryOnly: {
+    title: 'Library-only mode',
+    active: 'Only music in your server library is available.',
+    enable: 'Use only the library',
+    hint: 'Search and similar tracks use your library. External music, previews, downloads and automatic watches are disabled.',
+    serverHint:
+      'Applies to all accounts, browsers and Android clients. Wait for external work to finish before enabling it. The phone still needs access to the server unless tracks are downloaded.',
+    empty: 'No matching tracks in the accessible library.',
+    similar:
+      'Similar tracks from saved library tags. No external provider is contacted.',
+  },
+  playlistFavorites: {
+    title: 'Kedvenc lejátszási listák',
+    add: 'Lista hozzáadása a kedvencekhez',
+    remove: 'Lista eltávolítása a kedvencekből',
+  },
+  normalization: {
+    title: 'Hangerő-normalizálás',
+    hint: 'Minden dal hasonló hangerővel szól, a hangfájlok módosítása nélkül.',
+    enable: 'Lejátszási hangerő normalizálása',
+    enableHint:
+      'Az egyes dalok mért hangosságát használja, legfeljebb 12 dB-lel erősít, és megakadályozza a csúcsok torzítását. A még nem mért dalok eredeti hangerővel szólnak.',
+    analysisHint:
+      'Az elemzés minden dalt egyszer olvas be a háttérben; a későbbi futások csak az új vagy módosult fájlokat mérik. Soha nem indul el magától, újraindítás után sem.',
+    progress: '{done} / {total} elemezve · {failed} sikertelen',
+    analyze: 'Könyvtár elemzése',
+    pause: 'Elemzés szüneteltetése',
+    resume: 'Elemzés folytatása',
+    pausing: 'Az aktuális fájlok befejezése a szünet előtt…',
+    states: {
+      ready: 'A mért hangerő alkalmazva az aktuális dalra.',
+      silent: 'Néma dal: az eredeti hangerő megmarad.',
+      unanalysed: 'Ez a dal még nincs megmérve: az eredeti hangerő megmarad.',
+      unavailable: 'A normalizálás nem érhető el: az eredeti hangerő megmarad.',
+    },
+  },
+  externalPlaylistImport: {
+    open: 'Import folder playlists',
+    title: 'Playlists in your music folders',
+    hint: 'Select the playlists to add, up to 50 at a time. Only available tracks are referenced. Source files and audio are never changed.',
+    loading: 'Looking for playlist files…',
+    empty: 'No M3U or M3U8 playlist files found in the added folders.',
+    counts:
+      '{count} available · {missing} unavailable · {duplicates} repeated entries',
+    existing: 'Already added as {name}',
+    preview: 'Preview the first 30 tracks',
+    truncated: 'The scan reached its limit; this list is incomplete.',
+    add: 'Add selected playlists ({count})',
+    result:
+      '{added} added · {existing} already present · {failed} need a new preview or could not be imported',
+  },
+  collaboration: {
+    canEdit: 'Adhat hozzá és távolíthat el számokat',
+    copyHint:
+      'Ez a lista a forrását követi, ezért mások nem szerkeszthetik a számait. Ossz meg inkább egy szerkeszthető másolatot: az a tiéd marad, az eredeti pedig továbbra is követi a forrását.',
+    copy: 'Szerkeszthető másolat megosztása',
+    byEditor: '{owner} listája · hozzáadhatsz és eltávolíthatsz számokat',
+  },
+  buy: {
+    menu: 'Az előadó támogatása',
+    title: 'Az előadó támogatása',
+    body: 'Vásárold meg a zenét, vagy látogasd meg az előadó saját weboldalát.',
+    inStore: 'Megnyitás a boltban',
+    search: 'Keresés: „{query}”',
+    website: 'Hivatalos weboldal',
+    failed: 'Nem sikerült lekérdezni a boltokat.',
+    note: 'A Bandcamp minden eladás nagy részét az előadónak adja. Ezek egyszerű linkek: a Downtify nem árul semmit, és nem keres rajtuk.',
+  },
+  playlistSearch: {
+    placeholder: 'Keresés ebben a listában',
+    all: 'Mind',
+    missing: 'Hiányzó',
+    failed: 'Sikertelen',
+    notInNavidrome: 'Nincs a Navidrome-ban',
+    fromFolders: 'A mappáid',
+    unknownSource: 'Ismeretlen forrás',
+    showing: '{count} / {total}',
+    noMatch: 'Nincs találat',
+    noMatchHint: 'Próbálj más szavakat vagy másik szűrőt.',
+  },
+  usage: {
+    title: 'Tárhely és használat',
+    subtitle: 'Mekkora a könyvtár, milyen gyorsan nő, és honnan származik.',
+    adminOnly: 'Ezt csak adminisztrátorok láthatják',
+    adminOnlyHint:
+      'Kérd el a tárhelyadatokat a szerver egyik adminisztrátorától.',
+    loadFailed: 'Nem sikerült betölteni a tárhelyadatokat.',
+    tileLibrary: 'Könyvtár',
+    tileAdded: {
+      one: 'Az utolsó napon hozzáadva',
+      other: '{count} nap alatt hozzáadva',
+    },
+    tileGrowth: 'Nettó változás',
+    tileFree: 'Szabad hely',
+    tileDownloads: 'Letöltve',
+    tileCleanup: 'Felszabadítható',
+    songs: {
+      one: '{count} dal',
+      other: '{count} dal',
+    },
+    files: {
+      one: '{count} fájl',
+      other: '{count} fájl',
+    },
+    perWeekRate: 'Hetente {size}',
+    ofTotal: '{total} összesből',
+    daysLeft: {
+      one: '{total} összesből · ilyen ütemben kb. {count} nap múlva megtelik',
+      other: '{total} összesből · ilyen ütemben kb. {count} nap múlva megtelik',
+    },
+    downloadsShort: '{skipped} kihagyva · {failed} sikertelen',
+    growthTitle: 'A könyvtár mérete',
+    growthHint: 'A könyvtár minden nap végén, az slskd munkapéldányai nélkül.',
+    estimated: 'A fájlok dátumából becsülve',
+    estimatedNote:
+      '{date} előtt a méret a könyvtárban még meglévő dalok dátumából becsült, így az azóta törölt dalok kimaradnak belőle.',
+    allEstimatedNote:
+      'A Downtify mostantól óránként feljegyzi a könyvtár méretét. A korábbi napok a könyvtárban még meglévő dalok dátumából becsültek.',
+    addedPerDay: 'Naponta hozzáadva',
+    addedPerWeek: 'Hetente hozzáadva',
+    sourcesTitle: 'Forrás szerint',
+    sourcesHint: {
+      one: 'Honnan származik a hang, és mit adott hozzá az egyes források az utolsó napon.',
+      other:
+        'Honnan származik a hang, és mit adott hozzá az egyes források az utolsó {count} napban.',
+    },
+    addedInPeriod: {
+      one: '+{size} · {count} dal az időszakban',
+      other: '+{size} · {count} dal az időszakban',
+    },
+    emptyLibrary: 'A könyvtár üres.',
+    whereTitle: 'Hol tárolódik',
+    byLocation: 'Mappa',
+    byFormat: 'Formátum',
+    location: {
+      downloads: 'Letöltések mappa',
+      slskd: 'slskd mappa',
+      folders: 'További zenei mappák',
+    },
+    unknown: 'Ismeretlen',
+    downloadsTitle: 'Letöltések',
+    downloadsHint: {
+      one: 'Hogyan végződtek a sorból és a Lejátszási lista figyelőből indított letöltések az utolsó napon. Minden próbálkozás számít.',
+      other:
+        'Hogyan végződtek a sorból és a Lejátszási lista figyelőből indított letöltések az utolsó {count} napban. Minden próbálkozás számít.',
+    },
+    outcome: {
+      completed: 'Kész',
+      skipped: 'Kihagyva',
+      failed: 'Sikertelen',
+    },
+    perDay: 'Naponta',
+    perWeek: 'Hetente',
+    downloadedBySource: 'Letöltve forrás szerint · {size}',
+    noDownloads: 'Ebben az időszakban semmi sem lett letöltve.',
+    logEmptyNote:
+      'Még nincs számolt letöltés: a Downtify ettől a verziótól számolja őket.',
+    logSinceNote: 'A letöltések számolása {date} óta tart.',
+    cleanupTitle: 'Takarítható',
+    cleanupHint:
+      'Tárhely, amelyről a Downtify felismeri, hogy felesleges vagy ottmaradt. Innen semmi sem törlődik.',
+    duplicatesTitle: 'Ismétlődő dalok',
+    duplicatesHint:
+      '{exact} kétszer tárolva ugyanazzal a fájllal, {likely} valószínűleg ugyanaz a dal egy másik forrásból. A méret azt mutatja, mennyi szabadulna fel, ha csak a legnagyobb példány maradna.',
+    duplicateKind: {
+      exact: 'Ugyanaz a fájl',
+      likely: 'Valószínűleg ugyanaz a dal',
+    },
+    workingTitle: 'slskd munkapéldányok',
+    workingHint:
+      'Soulseek-átvitelek, amelyek az slskd mappában maradtak, miután a Downtify a könyvtárba másolta őket.',
+    workingInPlace:
+      'Az slskd fájlok a helyükön maradnak, így az slskd mappa a könyvtár része.',
+    leftoversTitle: 'Ottmaradt ideiglenes fájlok',
+    leftoversHint: 'Egy óránál régebbi félbemaradt letöltések és átalakítások.',
+    orphansTitle: 'Árva kísérőfájlok',
+    orphansHint:
+      'Dalszövegfájlok és albumborítók, amelyek dalai már nincsenek meg.',
+    foldersTitle: 'Mappák',
+    foldersHint:
+      'Minden, ami a Downtify által írt mappákban van, típus szerint.',
+    rescan: 'Újbóli átvizsgálás',
+    scanFailed: 'Nem sikerült átvizsgálni a mappákat.',
+    scanning: 'Mappák átvizsgálása…',
+    scannedAt: 'Átvizsgálva {when}, {seconds} mp alatt',
+    folder: {
+      downloads: 'Letöltések mappa',
+      slskd: 'slskd mappa',
+      lyrics: 'Dalszövegek mappa',
+    },
+    kind: {
+      audio: 'Dalok',
+      podcasts: 'Podcastok',
+      lyrics: 'Dalszövegek',
+      images: 'Képek',
+      playlists: 'Lejátszási listák',
+      metadata: 'Előadói fotók és profilok',
+      temporary: 'Ideiglenes fájlok',
+      other: 'Egyéb',
+    },
+  },
+  watchStats: {
+    colActivity: 'Aktivitás',
+    colStorage: 'Tárhely',
+    period: 'Időszak',
+    days: {
+      one: '{count} nap',
+      other: '{count} nap',
+    },
+    totalNew: {
+      one: 'Új az elmúlt napon',
+      other: 'Új {count} nap alatt',
+    },
+    totalSongs: 'Számok a figyelésekből',
+    totalSize: 'A lemezen',
+    totalShared: 'Több figyelésben',
+    statsFailed: 'Nem sikerült betölteni a statisztikákat.',
+    rateWeekShort: '{rate}/hét',
+    sharedShort: '+{count} közös',
+    activityTooltip:
+      '{added} új az elmúlt {count} napban · hetente {rate} · {trend}',
+    storageTooltip:
+      '{unique} csak ebben a figyelésben · {shared} közös más figyelésekkel',
+    sortActivity: 'Legutóbbi aktivitás',
+    sortRate: 'Átlagos tempó',
+    sortGrowth: 'Tárhely növekedése',
+    sortStorage: 'Saját tárhely',
+    sortContributed: 'Letöltött számok',
+    details: 'Aktivitás és számok',
+    openInLibrary: 'Megnyitás a könyvtárban',
+    notFound: 'A figyelés nem található',
+    notFoundHint: 'Lehet, hogy törölték, vagy egy másik fiókhoz tartozik.',
+    since: 'Figyelve ekkor óta: {date}',
+    tileSongs: 'Számok a lemezen',
+    tileDownloaded: 'Általa letöltve',
+    tileLinked: 'Már a könyvtárban',
+    tileUnique: 'Csak ebben a figyelésben',
+    tileUniqueHint: {
+      one: '{count} szám, amely más figyelésben nincs',
+      other: '{count} szám, amely más figyelésben nincs',
+    },
+    tileShared: 'Közös',
+    tileSharedHint: '{size}, más figyelésekben is, egyszer tárolva',
+    tileFailing: 'Sikertelen',
+    unknownNote: {
+      one: '{count} szám még azelőtt került be, hogy a Downtify rögzítette volna, hogyan kerülnek számok egy figyelésbe.',
+      other:
+        '{count} szám még azelőtt került be, hogy a Downtify rögzítette volna, hogyan kerülnek számok egy figyelésbe.',
+    },
+    missingNote: {
+      one: '{count} szám, amelyet ez a figyelés rögzített, már nincs a lemezen.',
+      other:
+        '{count} szám, amelyet ez a figyelés rögzített, már nincs a lemezen.',
+    },
+    activityTitle: 'Aktivitás',
+    activityHint:
+      'Az általa hozzáadott új számok: nem azok, amelyek már a könyvtáradban voltak, és nem az első ellenőrzésé.',
+    newSongsLabel: {
+      one: 'új szám hozzáadva',
+      other: 'új szám hozzáadva',
+    },
+    rateDay: 'Naponta',
+    rateWeek: 'Hetente',
+    rateMonth: 'Havonta',
+    trendUp: 'Mostanában többet ad hozzá',
+    trendDown: 'Mostanában kevesebbet ad hozzá',
+    trendSteady: 'Egyenletes tempó',
+    trendIdle: 'Mostanában semmi új',
+    trendNew: 'Még túl új',
+    periodGrowth: '{size} új hanganyag',
+    periodLinked: {
+      one: 'további {count} már a könyvtáradban volt',
+      other: 'további {count} már a könyvtáradban volt',
+    },
+    periodInitial: {
+      one: '{count} az első ellenőrzéssel jött',
+      other: '{count} az első ellenőrzéssel jött',
+    },
+    periodUnknown: {
+      one: 'ebből {count} még azelőtt lett rögzítve, hogy a Downtify rögzítette volna, hogyan',
+      other:
+        'ebből {count} még azelőtt lett rögzítve, hogy a Downtify rögzítette volna, hogyan',
+    },
+    barsPerDay: 'Új számok naponta',
+    barsPerWeek: 'Új számok hetente',
+    providersTitle: 'Honnan jött a hanganyag',
+    failuresTitle: {
+      one: '{count} szám továbbra is sikertelen',
+      other: '{count} szám továbbra is sikertelen',
+    },
+    attempts: {
+      one: '{count} próbálkozás',
+      other: '{count} próbálkozás',
+    },
+    lastTried: 'utoljára {when}',
+    songsTitle: 'Számok ebből a figyelésből',
+    songsHint:
+      'A legújabbak elöl, azokkal együtt, amelyek azóta kikerültek a listából. Jelölj ki néhányat a lejátszáshoz, listához adáshoz vagy törléshez.',
+    filter: {
+      all: 'Mind',
+      recent: {
+        one: 'Elmúlt nap',
+        other: 'Elmúlt {count} nap',
+      },
+      downloaded: 'Általa letöltve',
+      linked: 'Már a könyvtárban',
+      unknown: 'A rögzítés előtt',
+    },
+    noSongs: 'Ebből a figyelésből nincs szám a lemezen',
+    noSongsHint:
+      'Akkor jelennek meg itt, amikor egy ellenőrzés letölti vagy megtalálja őket a könyvtáradban.',
+  },
+  origin: {
+    menu: 'Honnan jött',
+    title: 'Honnan jött ez a szám',
+    body: 'A lejátszásilista-figyelések, amelyek a könyvtáradba hozták.',
+    failed: 'Nem sikerült betölteni, honnan jött ez a szám.',
+    firstTitle: 'Először letöltötte',
+    none: 'Egyik figyelés sem töltötte le: kézzel töltötték le, vagy mielőtt a Downtify ezt rögzítette volna.',
+    otherAccount: 'Egy másik fiók figyelése',
+    backfill: 'Első ellenőrzés',
+    estimated: 'Valószínűleg',
+    gone: 'Ezt a figyelést törölték, vagy már egy másik linket követ.',
+    watchesTitle: {
+      one: '{count} figyelésben',
+      other: '{count} figyelésben',
+    },
+    noWatches: 'Most egyik figyelésben sincs.',
+    others: {
+      one: 'Ebből {count} egy másik fiókhoz tartozik.',
+      other: 'Ebből {count} más fiókokhoz tartozik.',
+    },
+    oneFile: 'Ez egyetlen fájl: minden figyelés ugyanarra a példányra mutat.',
+    outcome: {
+      downloaded: 'Letöltötte',
+      linked: 'Már a könyvtárban',
+      unknown: 'A rögzítés előtt',
+    },
   },
 }

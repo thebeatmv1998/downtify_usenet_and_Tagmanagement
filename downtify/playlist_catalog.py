@@ -21,6 +21,26 @@ def _norm_path(filename: str) -> str:
     return str(filename or '').strip().replace('\\', '/')
 
 
+def _catalog_track_id(song: dict[str, Any]) -> Optional[str]:
+    """Stable playlist membership key; never put Deezer in TrackIndex.
+
+    The legacy column name is ``track_spotify_id``, but its TEXT key can
+    also hold the Deezer resolver's explicitly namespaced track identity.
+    """
+    spotify_id = normalize_spotify_track_id(song)
+    if spotify_id:
+        return spotify_id
+    track_id = str(song.get('song_id') or '')
+    if (
+        song.get('source') == 'deezer'
+        and track_id.startswith('deezer-')
+        and track_id.removeprefix('deezer-').isascii()
+        and track_id.removeprefix('deezer-').isdigit()
+    ):
+        return track_id
+    return None
+
+
 def _chunked(values: list[str], size: int):
     for index in range(0, len(values), size):
         chunk = values[index : index + size]
@@ -28,8 +48,8 @@ def _chunked(values: list[str], size: int):
             yield chunk
 
 
-class PlaylistCatalog:
-    """Maps playlist names to ordered Spotify tracks and library paths."""
+class PlaylistCatalog:  # noqa: PLR0904
+    """Maps playlist names to ordered track identities and library paths."""
 
     def __init__(self, db_path: Path) -> None:
         self._path = str(db_path)
@@ -122,7 +142,7 @@ class PlaylistCatalog:
         track_order: int = 0,
     ) -> None:
         pl_name = str(playlist_name or '').strip()
-        tid = normalize_spotify_track_id(song)
+        tid = _catalog_track_id(song)
         name = _norm_path(filename)
         if not pl_name or not tid or not name:
             return
@@ -458,21 +478,28 @@ class PlaylistCatalog:
             conn.execute('DELETE FROM playlists WHERE name = ?', (pl_name,))
         return filenames
 
-    def remove_tracks_for_filename(self, filename: str) -> list[str]:
-        """Delete rows pointing at *filename*; return affected playlist names."""
+    def remove_tracks_for_filename(
+        self, filename: str, playlist_name: Optional[str] = None
+    ) -> list[str]:
+        """Delete rows pointing at *filename* - only *playlist_name*'s
+        when given (a song hidden from it); return affected playlist
+        names."""
 
         name = _norm_path(filename)
         if not name:
             return []
+        where = 'filename = ?'
+        params: tuple[str, ...] = (name,)
+        if playlist_name is not None:
+            where += ' AND playlist_name = ?'
+            params = (name, str(playlist_name))
         with self._connect() as conn:
             rows = conn.execute(
-                """SELECT DISTINCT playlist_name FROM playlist_tracks
-                   WHERE filename = ?""",
-                (name,),
+                f'SELECT DISTINCT playlist_name FROM playlist_tracks '
+                f'WHERE {where}',
+                params,
             ).fetchall()
-            conn.execute(
-                'DELETE FROM playlist_tracks WHERE filename = ?', (name,)
-            )
+            conn.execute(f'DELETE FROM playlist_tracks WHERE {where}', params)
         return [str(row['playlist_name']) for row in rows]
 
     def all_track_rows(self) -> list[dict[str, Any]]:

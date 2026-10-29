@@ -2,7 +2,7 @@
   <ProviderOrder
     :model-value="modelValue"
     :providers="providers"
-    :first-when-enabled="['slskd', 'usenet']"
+    :first-when-enabled="['slskd', 'usenet', 'deemix']"
     @update:model-value="(value) => $emit('update:modelValue', value)"
     @enabled="onEnabled"
   >
@@ -19,16 +19,27 @@ import SourceBadge from '../ui/SourceBadge.vue'
 import { useI18n } from '/src/i18n'
 
 defineProps({ modelValue: { type: Array, required: true } })
-const emit = defineEmits(['update:modelValue', 'enable-slskd', 'enable-usenet'])
+const emit = defineEmits([
+  'update:modelValue',
+  'enable-slskd',
+  'enable-usenet',
+  'enable-deemix',
+])
 const { t } = useI18n()
 
 function onEnabled(id) {
   if (id === 'slskd') emit('enable-slskd')
   if (id === 'usenet') emit('enable-usenet')
+  if (id === 'deemix') emit('enable-deemix')
 }
 
-// slskd and usenet first: the lossless sources lead when they're on.
+// Optional local services lead only when explicitly enabled.
 const providers = computed(() => [
+  {
+    id: 'deemix',
+    title: t('settings.deemixTitle'),
+    description: t('settings.deemixHint'),
+  },
   {
     id: 'slskd',
     title: t('settings.sourceSlskd'),
@@ -48,6 +59,11 @@ const providers = computed(() => [
     id: 'youtube',
     title: t('settings.sourceYt'),
     description: t('settings.sourceYtHint'),
+  },
+  {
+    id: 'soundcloud',
+    title: t('settings.sourceSoundcloud'),
+    description: t('settings.sourceSoundcloudHint'),
   },
 ])
 </script>

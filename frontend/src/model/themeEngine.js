@@ -57,7 +57,9 @@ function parseRgb(value) {
             .map((part) => part + part)
             .join('')
         : hex[1]
-    return [0, 2, 4].map((offset) => parseInt(raw.slice(offset, offset + 2), 16))
+    return [0, 2, 4].map((offset) =>
+      parseInt(raw.slice(offset, offset + 2), 16)
+    )
   }
   const rgb = text.match(/^rgba?\(([^)]+)\)$/i)
   if (rgb) {
@@ -65,7 +67,9 @@ function parseRgb(value) {
       .split(/[,\s/]+/)
       .filter(Boolean)
       .slice(0, 3)
-      .map((part) => (part.endsWith('%') ? (parseFloat(part) * 255) / 100 : parseFloat(part)))
+      .map((part) =>
+        part.endsWith('%') ? (parseFloat(part) * 255) / 100 : parseFloat(part)
+      )
     if (parts.length === 3 && parts.every((part) => Number.isFinite(part))) {
       return parts
     }
@@ -123,33 +127,22 @@ export function themeVariables(theme = {}) {
 
   if (text) {
     values['--c-text'] = text
-    values['--c-text-2'] =
-      'color-mix(in srgb, var(--c-text) 86%, var(--c-bg))'
-    values['--c-text-3'] =
-      'color-mix(in srgb, var(--c-text) 72%, var(--c-bg))'
-    values['--c-muted'] =
-      'color-mix(in srgb, var(--c-text) 60%, var(--c-bg))'
-    values['--c-faint'] =
-      'color-mix(in srgb, var(--c-text) 44%, var(--c-bg))'
+    values['--c-text-2'] = 'color-mix(in srgb, var(--c-text) 86%, var(--c-bg))'
+    values['--c-text-3'] = 'color-mix(in srgb, var(--c-text) 72%, var(--c-bg))'
+    values['--c-muted'] = 'color-mix(in srgb, var(--c-text) 60%, var(--c-bg))'
+    values['--c-faint'] = 'color-mix(in srgb, var(--c-text) 44%, var(--c-bg))'
   }
   if (background) {
     values['--c-bg'] = background
-    values['--c-side'] =
-      'color-mix(in srgb, var(--c-bg) 97%, var(--c-text))'
-    values['--c-surface'] =
-      'color-mix(in srgb, var(--c-bg) 94%, var(--c-text))'
+    values['--c-side'] = 'color-mix(in srgb, var(--c-bg) 97%, var(--c-text))'
+    values['--c-surface'] = 'color-mix(in srgb, var(--c-bg) 94%, var(--c-text))'
     values['--c-surface-2'] =
       'color-mix(in srgb, var(--c-bg) 90%, var(--c-text))'
-    values['--c-raised'] =
-      'color-mix(in srgb, var(--c-bg) 84%, var(--c-text))'
-    values['--c-line'] =
-      'color-mix(in srgb, var(--c-bg) 92%, var(--c-text))'
-    values['--c-line-2'] =
-      'color-mix(in srgb, var(--c-bg) 90%, var(--c-text))'
-    values['--c-line-3'] =
-      'color-mix(in srgb, var(--c-bg) 86%, var(--c-text))'
-    values['--c-glass'] =
-      'color-mix(in srgb, var(--c-bg) 86%, transparent)'
+    values['--c-raised'] = 'color-mix(in srgb, var(--c-bg) 84%, var(--c-text))'
+    values['--c-line'] = 'color-mix(in srgb, var(--c-bg) 92%, var(--c-text))'
+    values['--c-line-2'] = 'color-mix(in srgb, var(--c-bg) 90%, var(--c-text))'
+    values['--c-line-3'] = 'color-mix(in srgb, var(--c-bg) 86%, var(--c-text))'
+    values['--c-glass'] = 'color-mix(in srgb, var(--c-bg) 86%, transparent)'
   }
   if (primary) {
     values['--c-accent'] = primary
