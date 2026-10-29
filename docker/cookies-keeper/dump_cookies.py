@@ -31,6 +31,8 @@ _AUTH_COOKIE_NAMES = {
     '__Secure-1PSID', '__Secure-3PSID',
     '__Secure-1PAPISID', '__Secure-3PAPISID',
 }
+_MAX_COOKIE_EXPIRES = 253402300799
+
 _KEEP_DOMAINS = ('youtube.com', 'google.com')
 
 
@@ -42,7 +44,7 @@ def _cdp_get_cookies() -> list[dict]:
 
     # Small dependency (websocket-client): the browser-level socket is the
     # only way to call Storage.getCookies without attaching to a page.
-    from websocket import create_connection
+    from websocket import create_connection  # noqa: PLC0415
 
     ws = create_connection(ws_url, timeout=15)
     try:
@@ -63,7 +65,10 @@ def _wanted(cookie: dict) -> bool:
 
 def _netscape_lines(cookies: list[dict]) -> list[str]:
     lines = ['# Netscape HTTP Cookie File', '']
-    for c in sorted(cookies, key=lambda c: (c.get('domain') or '', c.get('name') or '')):
+    for c in sorted(
+        cookies,
+        key=lambda c: (c.get('domain') or '', c.get('name') or ''),
+    ):
         domain = str(c.get('domain') or '')
         expires = c.get('expires') or 0
         # CDP reports session cookies as ~-1 / huge floats; Netscape uses
@@ -72,7 +77,7 @@ def _netscape_lines(cookies: list[dict]) -> list[str]:
             expires = int(float(expires))
         except (TypeError, ValueError):
             expires = 0
-        if expires < 0 or expires > 253402300799:
+        if expires < 0 or expires > _MAX_COOKIE_EXPIRES:
             expires = 0
         lines.append('\t'.join([
             domain,
@@ -124,7 +129,11 @@ def main() -> int:
         try:
             dump()
         except Exception as exc:
-            print(f'dump failed: {type(exc).__name__}: {exc}', file=sys.stderr, flush=True)
+            print(
+                f'dump failed: {type(exc).__name__}: {exc}',
+                file=sys.stderr,
+                flush=True,
+            )
         time.sleep(max(60, interval))
 
 

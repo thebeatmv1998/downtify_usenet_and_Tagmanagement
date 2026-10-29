@@ -30,7 +30,10 @@ from pathlib import Path
 try:
     import browser_cookie3
 except ImportError:  # pragma: no cover
-    print('browser-cookie3 missing: pip install browser-cookie3', file=sys.stderr)
+    print(
+        'browser-cookie3 missing: pip install browser-cookie3',
+        file=sys.stderr,
+    )
     raise SystemExit(1)
 
 # Cookies YouTube/Google actually authenticate with; everything else in
@@ -120,7 +123,9 @@ def main() -> int:
 
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text('\n'.join(_netscape_lines(cookies)) + '\n', encoding='utf-8')
+    out.write_text(
+        '\n'.join(_netscape_lines(cookies)) + '\n', encoding='utf-8'
+    )
     names = sorted({c.name for c in cookies})
     print(f'{len(cookies)} cookies from {used} -> {out}')
     print(f'auth cookies present: {", ".join(names[:12])}')
