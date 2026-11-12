@@ -37,6 +37,10 @@ export const NAV = [
         title: 'Collaborative playlists',
         page: 'features/collaborative-playlists.md',
       },
+      {
+        title: 'Playlist order & repeated songs',
+        page: 'features/playlist-order.md',
+      },
       { title: 'Top Songs', page: 'features/top-songs.md' },
       { title: 'Library Import (CSV)', page: 'features/library-import.md' },
       { title: 'Built-in Player', page: 'features/player.md' },
@@ -50,6 +54,7 @@ export const NAV = [
       { title: 'Users & Sign-in', page: 'features/users.md' },
       { title: 'Mobile Apps', page: 'features/mobile-apps.md' },
       { title: 'Server Settings', page: 'features/server.md' },
+      { title: 'Outbound Proxy', page: 'features/outbound-proxy.md' },
       { title: 'Library-only mode', page: 'features/library-only.md' },
       { title: 'slskd & Navidrome', page: 'features/slskd-navidrome.md' },
       { title: 'Deemix', page: 'features/deemix.md' },

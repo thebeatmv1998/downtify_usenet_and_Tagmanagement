@@ -482,6 +482,17 @@ function createLibraryPlaylist(name) {
   return API.post('/api/library/playlists', { name })
 }
 
+function uploadLibraryPlaylistCover(name, file, contentType) {
+  return API.put('/api/library/playlists/cover', file, {
+    params: { name },
+    headers: { 'Content-Type': contentType },
+  })
+}
+
+function removeLibraryPlaylistCover(name) {
+  return API.delete('/api/library/playlists/cover', { params: { name } })
+}
+
 function discoverExternalPlaylists() {
   return API.get('/api/library/playlists/external')
 }
@@ -506,16 +517,32 @@ function controlLoudness(action) {
   return API.post(`/api/library/loudness/${action}`)
 }
 
+// `removeEntries`: [{file, occurrence}], one copy each of a song the
+// playlist repeats (`remove` takes every copy). `allowDuplicates` adds
+// a song the playlist already has again.
 function editLibraryPlaylistTracks(
   name,
-  { add = [], remove = [], sourcePlaylistUrl = '' } = {}
+  {
+    add = [],
+    remove = [],
+    removeEntries = [],
+    allowDuplicates = false,
+    sourcePlaylistUrl = '',
+  } = {}
 ) {
   return API.post('/api/library/playlists/tracks', {
     name,
     add,
     remove,
+    ...(removeEntries.length ? { remove_entries: removeEntries } : {}),
+    ...(allowDuplicates ? { allow_duplicates: true } : {}),
     ...(sourcePlaylistUrl ? { source_playlist_url: sourcePlaylistUrl } : {}),
   })
+}
+
+// Every song of the playlist, repeats included, in its new place.
+function reorderLibraryPlaylist(name, files) {
+  return API.put('/api/library/playlists/order', { name, files })
 }
 
 function renameLibraryPlaylist(name, newName, resetDisplayName = false) {
@@ -556,6 +583,10 @@ function detachLibraryPlaylist(name) {
 // Navidrome hasn't matched - see downtify/file_providers.py.
 function getPlaylistDetails(name) {
   return API.get('/api/library/playlists/details', { params: { name } })
+}
+
+function getPlaylistDiagnostics(name) {
+  return API.get('/api/library/playlists/diagnostics', { params: { name } })
 }
 
 // Songs hidden from an imported playlist (they stay out when its watch
@@ -1108,18 +1139,22 @@ export default {
   deleteDownloadsBatch,
   deleteLibraryPlaylist,
   createLibraryPlaylist,
+  uploadLibraryPlaylistCover,
+  removeLibraryPlaylistCover,
   discoverExternalPlaylists,
   importExternalPlaylists,
   getTrackLoudness,
   getLoudnessStatus,
   controlLoudness,
   editLibraryPlaylistTracks,
+  reorderLibraryPlaylist,
   renameLibraryPlaylist,
   setPlaylistVisibility,
   setPlaylistFavorite,
   copyLibraryPlaylist,
   detachLibraryPlaylist,
   getPlaylistDetails,
+  getPlaylistDiagnostics,
   getHiddenPlaylistSongs,
   changeHiddenPlaylistSongs,
   followPlaylist,

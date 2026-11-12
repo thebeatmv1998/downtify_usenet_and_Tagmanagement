@@ -57,6 +57,7 @@ from mutagen import File as MutagenFile
 
 from . import album_covers, cover_sources, itunes, library_catalog, spotify
 from . import lyrics as lyrics_mod
+from .download_queue import queue_pause
 from .downloader import embed_lyrics, embed_metadata
 from .library_cache_keys import file_content_key
 from .library_catalog import (
@@ -1254,6 +1255,8 @@ class LibraryUpgradeRunner:
 
     # -- running --
     def start(self, categories: tuple[str, ...]) -> dict[str, Any]:
+        if queue_pause.paused:
+            raise RuntimeError('Resume the global queue before upgrading')
         with self._lock:
             if self.busy():
                 raise RuntimeError('A library upgrade is already running')
@@ -1430,6 +1433,9 @@ class LibraryUpgradeRunner:
         if run['state'] != STATE_RUNNING:
             return
         requeued = self.db.requeue_running(run_id)
+        if queue_pause.paused:
+            self.db.set_state(run_id, STATE_PAUSED)
+            return
         options = replace(
             options_from(run['options']),
             categories=normalize_categories(run['categories']),

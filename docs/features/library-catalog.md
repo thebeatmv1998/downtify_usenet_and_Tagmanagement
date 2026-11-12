@@ -14,7 +14,7 @@ Downtify keeps a small **catalog** of the files under `/downloads` (the slskd fo
 | **Playlist catalog** | `/data/downtify_library.db` | Which tracks belong to each downloaded Spotify playlist |
 | **Playlist downloads** | `/data/downtify_library.db` | Tracked Spotify playlist downloads and a cache of their Spotify track lists |
 | **Navidrome index** | `/data/downtify_library.db` | Navidrome song IDs per file |
-| **Library metadata cache** | `/data/downtify_library.db` | Title, artist, every credited artist, album, album artist, track number, year, length and cover size per file for `GET /tracks`, re-read only when a file's modification time or size changes |
+| **Library metadata cache** | `/data/downtify_library.db` | Title, artist, every credited artist, album, album artist, track number, year, full release date, length and cover size per file for `GET /tracks`, re-read only when a file's modification time or size changes |
 | **Upgrade runs** | `/data/downtify_library.db` | The [library upgrade](library-upgrade.md) queue and when each track was last checked, so a run survives a restart |
 | **Path scan cache** | RAM, plus a snapshot in `/data/downtify_library.db` | Folded `GET /tracks` rows, playlist listings and path pairs. UI routes serve this snapshot without walking the disk. Each finished download is **merged into the snapshot immediately** (so a new artist shows up without waiting). A delete **drops those files from the snapshot immediately** (so an album disappears from the grid without waiting). A full tree walk runs in the background a few seconds after the download queue is idle — not on a fixed timer. `GET /list?refresh=true` drops the snapshot and rescans now. |
 | **Hidden items** | `/data/downtify_library.db` | The songs, albums and artists an admin [hid from users](users.md#hiding-from-users) |
@@ -64,6 +64,8 @@ The Library page has four tabs — **Albums**, **Artists**, **Playlists** and **
 - **Playlists** are the downloaded playlists with an [M3U file](m3u-export.md), playlists you create with **New playlist** (editable), plus tracked [playlist downloads](slskd-navidrome.md#playlist-downloads) that don't have an M3U yet. Imported Spotify/YouTube playlists stay read-only until you [detach](#detach-an-imported-playlist) them. Playlists other people [share with you](users.md#sharing-playlists) are listed under the grid, apart from your own. Once you have [liked](liked-songs.md) a song, *Liked songs* is listed first. A playlist you created uses a mosaic of up to four track covers; imported playlists keep the artwork saved with the M3U.
 - **Tracks** is a sortable table (title, album, format, date added, length) with a text filter, a format filter, and checkboxes — click one, then Shift-click another to select a range. Sort it by clicking a column heading, or with the **Sort by** menu above the table (the only way on a phone, where the headings are hidden): recently added or oldest first, title, artist or album A–Z or Z–A, longest or shortest first. The choice is remembered.
 
+On wide screens, the **Tracks** table also shows a sortable **Release date** column. Dates come from the audio tags; files with only a year show that year. The **Sort by** menu offers newest or oldest release first on every screen size.
+
 A playlist's songs have the same **Sort by** menu, with **Playlist order** (the playlist's own order, which is where it starts) added to the choices; clicking a column heading works too. **Play** and the song list follow the order you picked, and the choice is remembered, for every playlist.
 
 Opening an album, artist or playlist shows its tracks with **Play**, **Shuffle** and **Add to queue**. **Download as ZIP** is a button on a playlist's page and in the **⋯** menu on an album's. A playlist you created also has **Add songs**, **Rename** and **Share…** (see [sharing playlists](users.md#sharing-playlists)); an imported one has **Share…** and **Detach from source** (below); a downloaded playlist page shows how many of its tracks are downloaded, lists the missing ones under the **Missing** filter (below) with **Download missing**, and offers **Watch for new tracks**. **Delete playlist** is in the **⋯** menu: imported playlists delete the audio; a playlist you created only removes the playlist.
@@ -83,6 +85,8 @@ Next to it, filters narrow the list. Each shows how many songs it holds, and app
 | **Not in Navidrome** | With [Navidrome sync](slskd-navidrome.md) on, the songs Downtify hasn't matched to a Navidrome song yet |
 
 The search and a filter work together, and the number of songs shown appears under them. Each song keeps its number in the playlist, and sorting, playing and each song's menu work on what is shown.
+
+Downloaded Spotify playlists also have a **Playlist diagnostics** panel. Choose **Check** to compare the cached Spotify tracklist with the playlist catalog, files on disk, TrackIndex, the current user's Monitor history and the synced Navidrome playlist. Select a count to see the tracks or files behind that metric. Navidrome checks run only when requested; unavailable history or Navidrome data is shown as unavailable rather than as zero. Admin-hidden tracks are not shown to other users.
 
 ### Detach an imported playlist
 

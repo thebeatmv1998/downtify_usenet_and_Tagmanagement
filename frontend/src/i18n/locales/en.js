@@ -1,6 +1,265 @@
 export default {
+  artistSuggestions: {
+    title: 'Artists to follow',
+    listening: 'Based on your listening',
+    library: 'Based on your library',
+    listeningHelp:
+      'Artists you play the most. Recent plays count more: a play’s weight halves every {days} days.',
+    libraryHelp: 'Artists with the most tracks, then albums, in your library.',
+    listens: {
+      one: '{count} listen',
+      other: '{count} listens',
+    },
+    tracks: {
+      one: '{count} track',
+      other: '{count} tracks',
+    },
+    albums: {
+      one: '{count} album',
+      other: '{count} albums',
+    },
+    follow: 'Follow',
+    more: 'Show more',
+    loading: 'Loading suggestions…',
+    empty: 'No more artists to suggest yet.',
+    failed: 'Suggestions could not be loaded.',
+    retry: 'Retry',
+    choose: 'Which artist is {name}?',
+    chooseHelp:
+      'More than one YouTube Music artist could be {name}. Compare the photos or open their profiles, then follow the right one.',
+    notFound:
+      'No YouTube Music artist named {name} was found. Paste the artist’s link instead.',
+    lookupFailed: 'Artist lookup is unavailable. You can still paste a link.',
+    followProfile: 'Follow this artist',
+    inspect: 'Open on YouTube Music',
+    manual: 'Paste a link',
+    cancel: 'Cancel',
+  },
+  trash: {
+    title: 'Trash',
+    subtitle:
+      'Songs taken out of the library, kept for {days} days after they move. Restore them until then.',
+    adminOnly: 'Only admins can see this',
+    adminOnlyHint: 'Ask an admin of this server to restore a song.',
+    off: 'The trash is off',
+    offHint:
+      'Songs are deleted for good on this server. The trash is turned on in the server’s configuration (DOWNTIFY_TRASH).',
+    inTrash: 'In the trash',
+    exclusions: 'Kept out of downloads',
+    search: 'Search the trash',
+    restoreSelected: {
+      one: 'Restore {count} song',
+      other: 'Restore {count} songs',
+    },
+    summary: {
+      one: '{count} song · {size}',
+      other: '{count} songs · {size}',
+    },
+    empty: 'The trash is empty',
+    emptyHint:
+      'Songs moved to the trash from the library show up here until they expire.',
+    noMatch: 'Nothing in the trash matches',
+    select: 'Select “{title}”',
+    keptUntil: 'Kept until {date}',
+    restore: 'Restore',
+    retry: 'Try again',
+    previous: 'Previous',
+    next: 'Next',
+    exclusionsHint:
+      'Songs whose time in the trash ran out. Automatic downloads (Playlist Monitor, watches) still skip them until you allow them again.',
+    exclusionsEmpty: 'Nothing is kept out of downloads',
+    allowDownload: 'Allow downloads',
+    allowTitle: 'Allow “{title}” to be downloaded again?',
+    allowBody:
+      'Automatic downloads may fetch it again. Nothing is downloaded right now.',
+    move: 'Move to trash',
+    preparing: 'Checking the files…',
+    confirmTitle: {
+      one: 'Move {count} song to the trash?',
+      other: 'Move {count} songs to the trash?',
+    },
+    confirmBody:
+      'Only these files move, with their lyrics files. They leave the library for everyone and can be restored for {days} days. Their playlists and likes come back with them, and automatic downloads skip them meanwhile.',
+    confirmMore: {
+      one: 'and {count} more',
+      other: 'and {count} more',
+    },
+    pending: {
+      one: 'Moving {count} song to the trash',
+      other: 'Moving {count} songs to the trash',
+    },
+    downloadBlocked: 'In the music trash: an admin has to allow it again.',
+    states: {
+      preview: 'Waiting for confirmation',
+      pending: 'Waiting to move',
+      moving: 'Moving',
+      trashed: 'In the trash',
+      restore_pending: 'Waiting to restore',
+      restoring: 'Restoring',
+      restored: 'Restored',
+      purging: 'Expiring',
+      purged: 'Expired',
+      error: 'Stopped — files kept',
+    },
+    errors: {
+      unavailable: 'The trash isn’t available right now. Nothing was moved.',
+      admin_required: 'Only an admin can use the trash.',
+      admin_access_revoked: 'The account that asked is no longer an admin.',
+      atomic_move_unsupported:
+        'This storage can’t move files safely. Nothing was moved.',
+      confirmation_expired: 'The check expired. Choose the songs again.',
+      confirmation_invalid:
+        'This confirmation isn’t for your account or selection.',
+      file_changed:
+        'The file changed after it was checked. It stayed where it was; choose it again.',
+      file_changed_during_move:
+        'The file changed while it moved. It is kept in the trash for you to check.',
+      file_missing: 'A file is missing. Check the storage, then try again.',
+      filesystem_unavailable:
+        'The storage isn’t available. Check it, then try again.',
+      identity_uncertain:
+        'This song’s tags are too thin to keep it out of automatic downloads. Nothing was moved.',
+      invalid_path: 'This file is outside the folders the trash covers.',
+      invalid_selection: 'Choose between 1 and 200 songs.',
+      item_not_found: 'This song is no longer in the library.',
+      library_task_active:
+        'The library upgrade is running. Wait for it or pause it first.',
+      nas_marker_changed:
+        'The storage isn’t the one the trash expects. Nothing was moved.',
+      nas_marker_missing:
+        'The expected storage isn’t mounted. Nothing was moved.',
+      operation_already_pending: 'This song is already on its way.',
+      operation_in_progress:
+        'The move is still running. Wait for it before restoring.',
+      operation_not_complete: 'Wait for the current step to finish.',
+      preview_busy: 'Another check is running. Wait for it to finish.',
+      preview_unavailable: 'The check was interrupted. Choose the songs again.',
+      restore_collision:
+        'Another file is already there. Nothing was overwritten; the song stays in the trash.',
+      retention_expired: 'Its time in the trash ran out.',
+      root_unavailable: 'The music folder isn’t available.',
+      track_is_playing: 'Someone is playing this song. Pause it first.',
+      trash_file_changed: 'The copy in the trash changed. It won’t be deleted.',
+      trash_file_missing: 'A file in the trash is missing.',
+      trash_ignore_invalid:
+        'The trash folder’s .ignore file isn’t empty. Nothing was moved.',
+      trash_not_configured: 'The trash is off on this server.',
+      trash_permissions_unsafe:
+        'Others can read the trash folder. Check its permissions.',
+      unsafe_symlink: 'The path has a symbolic link, so it isn’t touched.',
+      unsupported_collection: 'This song’s folder isn’t covered by the trash.',
+      unsupported_lyrics_location:
+        'The lyrics folder isn’t covered by the trash. Nothing was moved.',
+    },
+  },
+  downloadPolicy: {
+    block: 'Stop downloading',
+    blocked: 'Downloads suspended for this track.',
+    confirm: 'Suspend downloads for this track?',
+    confirmHelp:
+      'New attempts will be blocked. A shared transfer already started may finish. Existing files will not be deleted.',
+    exclusions: 'Suspended tracks',
+    empty: 'No suspended tracks.',
+    resume: 'Allow again',
+    timeout: 'Attempt time limit reached',
+    manual: 'Suspended manually',
+    error: 'Could not change the suspension.',
+    alreadyActive: 'An attempt for this track is already in progress.',
+    budget: 'Cumulative attempt limit',
+    budgetHelp:
+      'Automatically suspend a track after this cumulative attempt time. Time between attempts is excluded. 0 disables the limit.',
+  },
+  playlistNames: {
+    restore: 'Restore source name',
+  },
+  libraryOnly: {
+    title: 'Library-only mode',
+    active: 'Only music in your server library is available.',
+    enable: 'Use only the library',
+    hint: 'Search and similar tracks use your library. External music, previews, downloads and automatic watches are disabled.',
+    serverHint:
+      'Applies to all accounts, browsers and Android clients. Wait for external work to finish before enabling it. The phone still needs access to the server unless tracks are downloaded.',
+    empty: 'No matching tracks in the accessible library.',
+    similar:
+      'Similar tracks from saved library tags. No external provider is contacted.',
+  },
+  playlistFavorites: {
+    title: 'Favorite playlists',
+    add: 'Add playlist to favorites',
+    remove: 'Remove playlist from favorites',
+  },
+  normalization: {
+    title: 'Volume normalization',
+    hint: 'Play every song at a similar loudness without changing your audio files.',
+    enable: 'Normalize playback volume',
+    enableHint:
+      'Uses the measured loudness of each song, boosts by at most 12 dB and keeps peaks from clipping. Songs not measured yet play at their original level.',
+    analysisHint:
+      'Analysis reads each song once in the background; later runs only measure new or changed files. It never starts on its own, not even after a restart.',
+    progress: '{done} / {total} analyzed · {failed} failed',
+    analyze: 'Analyze library',
+    pause: 'Pause analysis',
+    resume: 'Resume analysis',
+    pausing: 'Finishing the current files before pausing…',
+    states: {
+      ready: 'Measured volume applied to the current song.',
+      silent: 'Silent song: original level kept.',
+      unanalysed: 'No measurement for this song yet: original level kept.',
+      unavailable: 'Normalization unavailable: original level kept.',
+    },
+    level: 'Playback level',
+    levelNormal: 'Normal',
+    levelLouder: 'Louder',
+    levelMaximum: 'Maximum',
+    levelHint:
+      'Volume increases within each track’s measured limits. Your files stay unchanged.',
+  },
+  externalPlaylistImport: {
+    open: 'Import folder playlists',
+    title: 'Playlists in your music folders',
+    hint: 'Select the playlists to add, up to 50 at a time. Only available tracks are referenced. Source files and audio are never changed.',
+    loading: 'Looking for playlist files…',
+    empty: 'No M3U or M3U8 playlist files found in the added folders.',
+    counts:
+      '{count} available · {missing} unavailable · {duplicates} repeated entries',
+    existing: 'Already added as {name}',
+    preview: 'Preview the first 30 tracks',
+    truncated: 'The scan reached its limit; this list is incomplete.',
+    add: 'Add selected playlists ({count})',
+    result:
+      '{added} added · {existing} already present · {failed} need a new preview or could not be imported',
+  },
+  collaboration: {
+    canEdit: 'Can add and remove songs',
+    copyHint:
+      'This playlist follows its source, so others can’t edit its songs. Share an editable copy instead: it stays yours, and the original keeps following its source.',
+    copy: 'Share an editable copy',
+    byEditor: 'by {owner} · you can add and remove songs',
+  },
   language: {
     name: 'English',
+  },
+  buy: {
+    menu: 'Support the artist',
+    title: 'Support the artist',
+    body: 'Buy the music, or visit the artist’s own website.',
+    inStore: 'Open it in the store',
+    search: 'Search for “{query}”',
+    website: 'Official website',
+    failed: 'Couldn’t look it up in the stores.',
+    note: 'Bandcamp passes most of each sale on to the artist. These are plain links: Downtify doesn’t sell anything or earn from them.',
+  },
+  playlistSearch: {
+    placeholder: 'Search this playlist',
+    all: 'All',
+    missing: 'Missing',
+    failed: 'Failed',
+    notInNavidrome: 'Not in Navidrome',
+    fromFolders: 'Your folders',
+    unknownSource: 'Unknown source',
+    showing: '{count} of {total}',
+    noMatch: 'Nothing here matches',
+    noMatchHint: 'Try other words, or another filter.',
   },
   common: {
     cancel: 'Cancel',
@@ -14,6 +273,7 @@ export default {
     seeAll: 'See all',
     show: 'Show',
     hide: 'Hide',
+    undo: 'Undo',
     unknownArtist: 'Unknown artist',
     tracks: {
       one: '{count} track',
@@ -29,7 +289,6 @@ export default {
     },
     lengthMinutes: '{minutes} min',
     lengthHours: '{hours} h {minutes} min',
-    undo: 'Undo',
   },
   nav: {
     main: 'Main',
@@ -84,6 +343,7 @@ export default {
     hintSpotify: 'Tracks, albums, playlists and artists',
     hintYoutube: 'YouTube Music songs, albums, playlists and artists',
     hintDeezer: 'Deezer tracks, albums, playlists and artists',
+    hintSoundcloud: 'SoundCloud tracks',
     hintCsv: 'Import a CSV (Soundiiz, Exportify…)',
     downloading: 'Downloading now',
     waiting: {
@@ -112,7 +372,6 @@ export default {
     step3Title: 'Listen anywhere',
     step3Body:
       'Play it here, keep playlists in sync with Playlist Monitor, or point Jellyfin, Plex or Navidrome at your library.',
-    hintSoundcloud: 'SoundCloud tracks',
   },
   search: {
     title: 'Search',
@@ -241,11 +500,17 @@ export default {
     redownloadAll: 'Download all again',
     downloadSelected: 'Download selected',
     allInLibrary: 'All in your library',
+    allHandled: 'Already in your library or queue',
+    addPlaylist: 'Add to my playlists',
+    noAvailableTracks: 'No downloaded tracks are available to add yet.',
+    saveAvailableHint:
+      '{count} of {total} tracks are available. Audio files are reused; missing tracks will not be downloaded.',
     watchPlaylist: 'Watch for new tracks',
     watchArtist: 'Watch for new releases',
     openSpotify: 'Open on Spotify',
     openYoutube: 'Open on YouTube Music',
     openDeezer: 'Open on Deezer',
+    openSoundcloud: 'Open on SoundCloud',
     filterAll: 'All',
     filterNew: 'New',
     filterLibrary: 'In library',
@@ -259,12 +524,6 @@ export default {
     selectAll: 'Select all',
     playCountSpotify: 'Plays on Spotify',
     playCountYoutubeMusic: 'Plays on YouTube Music (approximate)',
-    allHandled: 'Already in your library or queue',
-    addPlaylist: 'Add to my playlists',
-    noAvailableTracks: 'No downloaded tracks are available to add yet.',
-    saveAvailableHint:
-      '{count} of {total} tracks are available. Audio files are reused; missing tracks will not be downloaded.',
-    openSoundcloud: 'Open on SoundCloud',
   },
   queue: {
     title: 'Queue',
@@ -288,6 +547,19 @@ export default {
     retryFailed: 'Retry failed ({count})',
     clearDone: 'Clear done ({count})',
     clearAll: 'Clear queue',
+    pause: 'Pause downloads',
+    resume: 'Resume downloads',
+    pauseFailed: "Couldn't change the queue. Try again.",
+    pausingTitle: 'Pausing downloads…',
+    pausingBody: {
+      one: 'Waiting for {count} download to finish. No new downloads will start.',
+      other:
+        'Waiting for {count} downloads to finish. No new downloads will start.',
+    },
+    pausedTitle: 'Downloads paused',
+    pausedBody: 'No new downloads will start until resumed.',
+    pausedKept:
+      'Waiting songs stay in the queue, even if Downtify restarts or is updated.',
     emptyTitle: 'Nothing in the queue',
     emptyBody: 'Search for music or paste a link — downloads show up here.',
     emptyAction: 'Find music',
@@ -304,6 +576,7 @@ export default {
     },
     showMore: 'Show {count} more',
     statusQueued: 'Waiting',
+    statusPaused: 'Paused',
     statusDone: 'Downloaded',
     retry: 'Retry',
     remove: 'Remove from queue',
@@ -311,7 +584,8 @@ export default {
     overridePlaceholder:
       'Paste a YouTube or SoundCloud link to use as the audio',
     useLink: 'Use this link',
-    invalidYoutube: "That doesn't look like a YouTube video link.",
+    invalidAudioLink:
+      "That doesn't look like a YouTube video or SoundCloud track link.",
     playlistDownloads: 'Playlist downloads',
     sources: 'Downloaded from',
     noSourcesYet: 'Finished downloads show their source here.',
@@ -320,28 +594,24 @@ export default {
       'A CSV export from Soundiiz, TuneMyMusic, Exportify and similar.',
     importButton: 'Choose CSV file',
     importFailed: "Couldn't import that CSV file.",
+    invalidYoutube: "That doesn't look like a YouTube video link.",
     stopAll: 'Stop all downloads',
     stopped: '{count} download(s) stopped.',
     stopFailed: 'Could not stop the downloads.',
     skipSource: 'Skip to next source',
     skipRequested: 'Skipping to the next audio source.',
     skipFailed: 'Could not skip the source.',
-    pause: 'Pause downloads',
-    resume: 'Resume downloads',
-    pauseFailed: "Couldn't change the queue. Try again.",
-    pausingTitle: 'Pausing downloads…',
-    pausingBody: {
-      one: 'Waiting for {count} download to finish. No new downloads will start.',
-      other:
-        'Waiting for {count} downloads to finish. No new downloads will start.',
-    },
-    pausedTitle: 'Downloads paused',
-    pausedBody: 'No new downloads will start until resumed.',
-    pausedKept:
-      'Waiting songs stay in the queue, even if Downtify restarts or is updated.',
-    statusPaused: 'Paused',
-    invalidAudioLink:
-      "That doesn't look like a YouTube video or SoundCloud track link.",
+    globalPause: 'Pause downloads and watches',
+    globalResume: 'Resume downloads and watches',
+    globalTitle: 'Server activity',
+    globalHint:
+      'New downloads and checks wait. Active work finishes; the queue is kept.',
+    globalPaused: 'Downloads and watches are paused.',
+    globalDraining: 'Finishing active work…',
+    globalRetry: 'Retry status',
+    globalFailed: 'Unable to confirm the change.',
+    globalAdmin: 'Web administrator access required.',
+    globalExpired: 'Session expired. Sign in again.',
   },
   library: {
     title: 'Library',
@@ -370,6 +640,8 @@ export default {
       albumDesc: 'Album (Z–A)',
       longest: 'Longest first',
       shortest: 'Shortest first',
+      releaseNewest: 'Newest release first',
+      releaseOldest: 'Oldest release first',
     },
     viewGrid: 'Grid',
     viewList: 'List',
@@ -413,6 +685,28 @@ export default {
     failed: "Couldn't update the like",
   },
   upgrade: {
+    chooseRecording: 'Choose a Deezer recording',
+    chooseRecordingHint:
+      'Review an exact recording when old album tags do not match. The artist and full title must still match.',
+    recordingLink: 'Deezer track link',
+    previewRecording: 'Preview',
+    recordingReviewHint:
+      'Review the album and duration. This prepares a single-track scan; replacement starts only after you confirm the scan.',
+    analyzeRecording: 'Analyze this choice',
+    recordingPreviewFailed: 'Unable to preview this Deezer track.',
+    replacementRescan: 'Options changed: scan again before starting.',
+    deemixTitle: 'Replace recordings with Deemix',
+    replaceAudio: 'Use verified Deemix recordings',
+    replaceAudioHint:
+      'Match the exact artist, title and album. Keep music in the Deemix folder. Ambiguous matches leave originals untouched. This scan replaces audio instead of retagging it.',
+    deleteOriginals: 'Remove old Downtify audio after import',
+    deleteOriginalsHint:
+      'Only remove each verified original after playlists, likes and playback references are updated. External files and sidecars are never removed.',
+    replacementProgress:
+      'Awaiting publication or cleanup: {pending}. Old copies removed: {removed}. Originals kept: {kept}.',
+    audio: 'Deemix recordings',
+    audioHint:
+      'Verify catalog duration and decoded audio before updating playlists and removing an old copy.',
     title: 'Upgrade library',
     subtitle:
       'Improve music you already downloaded, instead of downloading it again.',
@@ -556,28 +850,126 @@ export default {
       'Rewrite every playlist’s .m3u from what is already on disk, so songs you downloaded earlier are listed too — not just the last batch.',
     playlistsRebuild: 'Rebuild playlists',
     playlistsDone: 'Rebuilt {rebuilt} playlists, {linked} track(s) linked.',
-    chooseRecording: 'Choose a Deezer recording',
-    chooseRecordingHint:
-      'Review an exact recording when old album tags do not match. The artist and full title must still match.',
-    recordingLink: 'Deezer track link',
-    previewRecording: 'Preview',
-    recordingReviewHint:
-      'Review the album and duration. This prepares a single-track scan; replacement starts only after you confirm the scan.',
-    analyzeRecording: 'Analyze this choice',
-    recordingPreviewFailed: 'Unable to preview this Deezer track.',
-    replacementRescan: 'Options changed: scan again before starting.',
-    deemixTitle: 'Replace recordings with Deemix',
-    replaceAudio: 'Use verified Deemix recordings',
-    replaceAudioHint:
-      'Match the exact artist, title and album. Keep music in the Deemix folder. Ambiguous matches leave originals untouched. This scan replaces audio instead of retagging it.',
-    deleteOriginals: 'Remove old Downtify audio after import',
-    deleteOriginalsHint:
-      'Only remove each verified original after playlists, likes and playback references are updated. External files and sidecars are never removed.',
-    replacementProgress:
-      'Awaiting publication or cleanup: {pending}. Old copies removed: {removed}. Originals kept: {kept}.',
-    audio: 'Deemix recordings',
-    audioHint:
-      'Verify catalog duration and decoded audio before updating playlists and removing an old copy.',
+  },
+  usage: {
+    title: 'Storage and usage',
+    subtitle:
+      'How big the library is, how fast it grows and where it came from.',
+    adminOnly: 'Only admins can see this',
+    adminOnlyHint: 'Ask an admin of this server for the storage figures.',
+    loadFailed: "Couldn't load the storage figures.",
+    tileLibrary: 'Library',
+    tileAdded: {
+      one: 'Added in the last day',
+      other: 'Added in {count} days',
+    },
+    tileGrowth: 'Net change',
+    tileFree: 'Free space',
+    tileDownloads: 'Downloaded',
+    tileCleanup: 'Could be freed',
+    songs: {
+      one: '{count} song',
+      other: '{count} songs',
+    },
+    files: {
+      one: '{count} file',
+      other: '{count} files',
+    },
+    perWeekRate: '{size} a week',
+    ofTotal: 'of {total}',
+    daysLeft: {
+      one: 'of {total} · full in about {count} day at this rate',
+      other: 'of {total} · full in about {count} days at this rate',
+    },
+    downloadsShort: '{skipped} skipped · {failed} failed',
+    growthTitle: 'Library size',
+    growthHint:
+      'The library at the end of each day, without slskd working copies.',
+    estimated: 'Estimated from file dates',
+    estimatedNote:
+      'Before {date}, the size is estimated from the dates of the songs still in the library, so songs deleted since are left out.',
+    allEstimatedNote:
+      'Downtify notes the library size every hour from now on. Earlier days are estimated from the dates of the songs still in the library.',
+    addedPerDay: 'Added per day',
+    addedPerWeek: 'Added per week',
+    sourcesTitle: 'By source',
+    sourcesHint: {
+      one: 'Where the audio came from, and what each source added in the last day.',
+      other:
+        'Where the audio came from, and what each source added in the last {count} days.',
+    },
+    addedInPeriod: {
+      one: '+{size} · {count} song in the period',
+      other: '+{size} · {count} songs in the period',
+    },
+    emptyLibrary: 'The library is empty.',
+    whereTitle: 'Where it is stored',
+    byLocation: 'Folder',
+    byFormat: 'Format',
+    location: {
+      downloads: 'Downloads folder',
+      slskd: 'slskd folder',
+      folders: 'Extra music folders',
+    },
+    unknown: 'Unknown',
+    downloadsTitle: 'Downloads',
+    downloadsHint: {
+      one: 'How downloads from the queue and the Playlist Monitor ended in the last day. Every attempt counts.',
+      other:
+        'How downloads from the queue and the Playlist Monitor ended in the last {count} days. Every attempt counts.',
+    },
+    outcome: {
+      completed: 'Completed',
+      skipped: 'Skipped',
+      failed: 'Failed',
+    },
+    perDay: 'Per day',
+    perWeek: 'Per week',
+    downloadedBySource: 'Downloaded by source · {size}',
+    noDownloads: 'Nothing was downloaded in this period.',
+    logEmptyNote:
+      'No download has been counted yet: Downtify counts them from this version on.',
+    logSinceNote: 'Downloads are counted since {date}.',
+    cleanupTitle: 'Could be cleaned up',
+    cleanupHint:
+      'Storage Downtify can tell is redundant or left over. Nothing is deleted from here.',
+    duplicatesTitle: 'Duplicate songs',
+    duplicatesHint:
+      '{exact} stored twice as the same file, {likely} likely the same song from another source. The size is what keeping only the largest copy would free.',
+    duplicateKind: {
+      exact: 'Same file',
+      likely: 'Likely the same song',
+    },
+    workingTitle: 'slskd working copies',
+    workingHint:
+      'Soulseek transfers left in the slskd folder after Downtify copied them into the library.',
+    workingInPlace:
+      'slskd files are left in place, so the slskd folder is part of the library.',
+    leftoversTitle: 'Leftover temporary files',
+    leftoversHint: 'Partial downloads and conversions older than an hour.',
+    orphansTitle: 'Orphaned sidecars',
+    orphansHint: 'Lyrics files and album covers whose songs are gone.',
+    foldersTitle: 'Folders',
+    foldersHint: 'Everything in the folders Downtify writes to, by kind.',
+    rescan: 'Scan again',
+    scanFailed: "Couldn't scan the folders.",
+    scanning: 'Scanning the folders…',
+    scannedAt: 'Scanned {when} in {seconds} s',
+    folder: {
+      downloads: 'Downloads folder',
+      slskd: 'slskd folder',
+      lyrics: 'Lyrics folder',
+    },
+    kind: {
+      audio: 'Songs',
+      podcasts: 'Podcasts',
+      lyrics: 'Lyrics',
+      images: 'Images',
+      playlists: 'Playlists',
+      metadata: 'Artist photos and profiles',
+      temporary: 'Temporary files',
+      other: 'Other',
+    },
   },
   album: {
     kicker: 'Album',
@@ -593,6 +985,7 @@ export default {
     compilationFailed: "Couldn't change the album",
   },
   artist: {
+    guest: 'Guest',
     kicker: 'Artist',
     notFound: 'Artist not found',
     findMore: 'Find more',
@@ -607,7 +1000,6 @@ export default {
     discographyChecking:
       'The discography of {name} is now queued album by album. See Download Queue.',
     discographyFailed: 'Could not start the discography download.',
-    guest: 'Guest',
   },
   artistArt: {
     editPhoto: 'Edit photo',
@@ -706,14 +1098,6 @@ export default {
     },
     alreadyIn: 'Already in “{name}”',
     removedTrack: 'Removed from “{name}”',
-    created: 'Created “{name}”',
-    rename: 'Rename',
-    renameTitle: 'Rename playlist',
-    renameHint: 'This only changes the playlist name, not the songs.',
-    renamed: 'Renamed to “{name}”',
-    nothingYet: 'No tracks yet',
-    nothingYetHint: 'Tracks appear here as they finish downloading.',
-    nothingYetManualHint: 'Add songs from your library.',
     hideTrack: 'Hide from playlist',
     hiddenTrack: 'Hidden from “{name}”',
     hiddenTitle: {
@@ -727,6 +1111,55 @@ export default {
     unhidden: 'Back in “{name}”',
     unhiddenLater:
       'It returns to “{name}” when the playlist downloads what it’s missing',
+    created: 'Created “{name}”',
+    rename: 'Rename',
+    renameTitle: 'Rename playlist',
+    renameHint: 'This only changes the playlist name, not the songs.',
+    renamed: 'Renamed to “{name}”',
+    nothingYet: 'No tracks yet',
+    nothingYetHint: 'Tracks appear here as they finish downloading.',
+    nothingYetManualHint: 'Add songs from your library.',
+    diagnostics: {
+      title: 'Playlist diagnostics',
+      check: 'Check',
+      refresh: 'Refresh',
+      unavailable: 'Diagnostics are unavailable for this playlist.',
+      items: {
+        spotify_tracks: 'Spotify tracks',
+        downloaded: 'Downtify downloaded',
+        physical_files: 'Physical files found',
+        track_index: 'TrackIndex mappings',
+        monitor_history: 'Monitor history',
+        navidrome_matched: 'Navidrome matched',
+        navidrome_rows: 'Navidrome playlist rows',
+        missing_files: 'Missing files',
+        orphan_files: 'Orphan files',
+      },
+    },
+    reorder: 'Reorder',
+    reorderHint: 'Drag the songs or use the arrows, then save the new order.',
+    reorderSave: 'Save order',
+    reordered: 'Order saved',
+    reorderStale:
+      'Someone changed this playlist meanwhile. It was reloaded: arrange it again.',
+    moveUp: 'Move up',
+    moveDown: 'Move down',
+    moveTop: 'Move to top',
+    moveBottom: 'Move to bottom',
+    repeatTitle: 'Already in this playlist',
+    repeatBody: {
+      one: 'This song is already in “{name}”. Add it again?',
+      other: '{count} of these songs are already in “{name}”. Add them again?',
+    },
+    repeatConfirm: 'Add anyway',
+    repeatCancel: 'Don’t add',
+    inPlaylist: 'Already added',
+    uploadCover: 'Upload cover',
+    removeCover: 'Remove cover',
+    coverSaved: 'Playlist cover saved',
+    coverRemoved: 'Playlist cover removed',
+    coverInvalid: 'Choose a JPEG, PNG or WebP image.',
+    coverTooLarge: 'Cover images must be 10 MiB or smaller.',
   },
   track: {
     title: 'Title',
@@ -739,6 +1172,7 @@ export default {
     size: 'Size',
     added: 'Added',
     file: 'File',
+    releaseDate: 'Release date',
   },
   player: {
     nowPlaying: 'Now playing',
@@ -819,6 +1253,8 @@ export default {
       "The equalizer couldn't start. Playback continues without it.",
   },
   monitor: {
+    tableColumns: 'Columns',
+    resetTableColumns: 'Reset columns',
     releaseTypes: 'Download',
     releaseTypesAtLeastOne: 'Keep at least one kind of release',
     release: {
@@ -936,8 +1372,142 @@ export default {
     save: 'Save',
     saved: 'Watch updated',
     retargeted: 'Now watching {name}',
-    tableColumns: 'Columns',
-    resetTableColumns: 'Reset columns',
+  },
+  watchStats: {
+    colActivity: 'Activity',
+    colStorage: 'Storage',
+    period: 'Period',
+    days: {
+      one: '{count} day',
+      other: '{count} days',
+    },
+    totalNew: {
+      one: 'New in the last day',
+      other: 'New in {count} days',
+    },
+    totalSongs: 'Songs from watches',
+    totalSize: 'On disk',
+    totalShared: 'In more than one watch',
+    statsFailed: "Couldn't load the statistics.",
+    rateWeekShort: '{rate}/week',
+    sharedShort: '+{count} shared',
+    activityTooltip:
+      '{added} new in the last {count} days · {rate} a week · {trend}',
+    storageTooltip:
+      '{unique} only in this watch · {shared} shared with other watches',
+    sortActivity: 'Recent activity',
+    sortRate: 'Average rate',
+    sortGrowth: 'Storage growth',
+    sortStorage: 'Storage only in it',
+    sortContributed: 'Songs downloaded',
+    details: 'Activity and songs',
+    openInLibrary: 'Open in Library',
+    notFound: 'Watch not found',
+    notFoundHint: 'It may have been removed, or belong to another account.',
+    since: 'Watched since {date}',
+    tileSongs: 'Songs on disk',
+    tileDownloaded: 'Downloaded by it',
+    tileLinked: 'Already in library',
+    tileUnique: 'Only in this watch',
+    tileUniqueHint: {
+      one: '{count} song no other watch has',
+      other: '{count} songs no other watch has',
+    },
+    tileShared: 'Shared',
+    tileSharedHint: '{size}, also in other watches, stored once',
+    tileFailing: 'Failing',
+    unknownNote: {
+      one: '{count} song was added before Downtify kept track of how songs got into a watch.',
+      other:
+        '{count} songs were added before Downtify kept track of how songs got into a watch.',
+    },
+    missingNote: {
+      one: '{count} song this watch recorded is no longer on disk.',
+      other: '{count} songs this watch recorded are no longer on disk.',
+    },
+    activityTitle: 'Activity',
+    activityHint:
+      "New songs it added: not the ones it found already in your library, and not its first check's backfill.",
+    newSongsLabel: {
+      one: 'new song added',
+      other: 'new songs added',
+    },
+    rateDay: 'A day',
+    rateWeek: 'A week',
+    rateMonth: 'A month',
+    trendUp: 'Adding more lately',
+    trendDown: 'Adding less lately',
+    trendSteady: 'Steady pace',
+    trendIdle: 'Nothing new lately',
+    trendNew: 'Too new to tell',
+    periodGrowth: '{size} of new audio',
+    periodLinked: {
+      one: '{count} more was already in your library',
+      other: '{count} more were already in your library',
+    },
+    periodInitial: {
+      one: '{count} came with its first check',
+      other: '{count} came with its first check',
+    },
+    periodUnknown: {
+      one: '{count} of them was recorded before Downtify kept track of how',
+      other: '{count} of them were recorded before Downtify kept track of how',
+    },
+    barsPerDay: 'New songs per day',
+    barsPerWeek: 'New songs per week',
+    providersTitle: 'Where the audio came from',
+    failuresTitle: {
+      one: '{count} song keeps failing',
+      other: '{count} songs keep failing',
+    },
+    attempts: {
+      one: '{count} try',
+      other: '{count} tries',
+    },
+    lastTried: 'last tried {when}',
+    songsTitle: 'Songs from this watch',
+    songsHint:
+      'Newest first, including songs that have since left the playlist. Select some to play them, add them to a playlist or delete them.',
+    filter: {
+      all: 'All',
+      recent: {
+        one: 'Last day',
+        other: 'Last {count} days',
+      },
+      downloaded: 'Downloaded by it',
+      linked: 'Already in library',
+      unknown: 'Before tracking',
+    },
+    noSongs: 'No songs from this watch on disk',
+    noSongsHint:
+      'They show up here once a check downloads them or finds them in your library.',
+  },
+  origin: {
+    menu: 'Where it came from',
+    title: 'Where this song came from',
+    body: 'The Playlist Monitor watches that brought it into your library.',
+    failed: "Couldn't load where this song came from.",
+    firstTitle: 'First downloaded by',
+    none: 'No watch downloaded it: it was downloaded by hand, or before Downtify kept track.',
+    otherAccount: 'A watch of another account',
+    backfill: 'First check',
+    estimated: 'Probably',
+    gone: 'That watch was removed or now follows another link.',
+    watchesTitle: {
+      one: 'In {count} watch',
+      other: 'In {count} watches',
+    },
+    noWatches: 'No watch holds it right now.',
+    others: {
+      one: '{count} of them belongs to another account.',
+      other: '{count} of them belong to other accounts.',
+    },
+    oneFile: "It's one file: every watch points at the same copy.",
+    outcome: {
+      downloaded: 'Downloaded it',
+      linked: 'Already in library',
+      unknown: 'Before tracking',
+    },
   },
   sharing: {
     title: 'Share “{name}”',
@@ -1042,6 +1612,19 @@ export default {
     sourceYtmHint: 'Best metadata matches',
     sourceYt: 'YouTube',
     sourceYtHint: 'Fallback for songs missing from YouTube Music',
+    sourceSoundcloud: 'SoundCloud',
+    sourceSoundcloudHint:
+      "Uploads missing elsewhere, and SoundCloud links' own tracks",
+    deemixTitle: 'Deemix',
+    deemixHint:
+      'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
+    deemixEnabled: 'Use Deemix',
+    deemixInPlace:
+      'Keep audio, artwork and lyrics in the shared Deemix folder, without rewriting its tags. Configure a private ARL file on the server; do not paste it here.',
+    deemixUrl: 'Deemix server URL',
+    deemixRemote: 'Download folder inside Deemix',
+    deemixLocal: 'Same folder inside Downtify (read-only is supported)',
+    deemixQuality: 'Audio quality',
     slskdTitle: 'slskd',
     slskdHint:
       'Download from Soulseek through your slskd server. Tracks it can’t find fall through to the next source.',
@@ -1055,7 +1638,7 @@ export default {
     slskdQueuedTimeout: 'Queued timeout',
     slskdInPlace: 'Leave files in the slskd folder',
     slskdInPlaceHint:
-      'Tag them where slskd saved them instead of copying into your downloads folder.',
+      'On: tag files in place and keep them. Off: copy and tag in Downloads, then remove the source after a successful import. Copy, tagging or verification failures keep the source.',
     youtubeTitle: 'YouTube',
     cookies: 'YouTube cookies',
     cookiesHint:
@@ -1147,6 +1730,9 @@ export default {
     navidromeAdminHint:
       'Optional — lets Downtify start a library scan so new songs show up sooner.',
     test: {
+      connection_not_deemix: 'The server is not a compatible Deemix instance.',
+      quality_unavailable:
+        'The Deezer account cannot stream the requested quality.',
       button: 'Test connection',
       testing: 'Testing…',
       needFields: 'Fill in the fields above first.',
@@ -1192,14 +1778,14 @@ export default {
       indexer_timeout: "Indexer {detail} didn't answer in time.",
       indexer_bad_url: 'The indexer address is not valid ({detail}).',
       indexer_tls: "The indexer's HTTPS certificate isn't trusted ({detail}).",
-      connection_not_deemix: 'The server is not a compatible Deemix instance.',
-      quality_unavailable:
-        'The Deezer account cannot stream the requested quality.',
     },
     navidromeSync: 'Create playlists in Navidrome',
     navidromeSyncHint:
       'After playlist downloads and monitor checks, keep a Navidrome playlist with the same name.',
     navidromePublic: 'Make Navidrome playlists public',
+    primaryLibrary: 'Primary library folder',
+    primaryLibraryHint:
+      'Prefer this folder for matching artist, song and album. Files and saved playlist paths are preserved; nothing is deleted.',
     libraryGroup: 'Library',
     coverCache: 'Cache cover art',
     coverCacheHint:
@@ -1356,22 +1942,25 @@ export default {
     discogsTokenHint:
       'Personal access token for the tag editor’s Discogs search. MusicBrainz needs none.',
     discogsTokenPlaceholder: 'Discogs personal access token',
-    sourceSoundcloud: 'SoundCloud',
-    sourceSoundcloudHint:
-      "Uploads missing elsewhere, and SoundCloud links' own tracks",
-    deemixTitle: 'Deemix',
-    deemixHint:
-      'Download from your own Deemix server. Requested quality requires the matching Deezer entitlement.',
-    deemixEnabled: 'Use Deemix',
-    deemixInPlace:
-      'Keep audio, artwork and lyrics in the shared Deemix folder, without rewriting its tags. Configure a private ARL file on the server; do not paste it here.',
-    deemixUrl: 'Deemix server URL',
-    deemixRemote: 'Download folder inside Deemix',
-    deemixLocal: 'Same folder inside Downtify (read-only is supported)',
-    deemixQuality: 'Audio quality',
-    primaryLibrary: 'Primary library folder',
-    primaryLibraryHint:
-      'Prefer this folder for matching artist, song and album. Files and saved playlist paths are preserved; nothing is deleted.',
+    slskdFormats: 'Format priority',
+    slskdFormatsHint:
+      'Comma-separated extensions, highest priority first (for example, flac, mp3).',
+    slskdMinBitrate: 'Minimum lossy bitrate',
+    slskdMinBitrateHint:
+      'In strict mode, lossy files below this value or without a reported bitrate are rejected. FLAC is exempt.',
+    slskdAttempts: 'Candidate attempts',
+    slskdAttemptsHint:
+      'In strict mode, this many candidates are tried per format; otherwise this is the total.',
+    slskdStrictPriority: 'Strict format priority',
+    slskdStrictPriorityHint:
+      'Try each listed format in order, ranking matches within each format.',
+    slskdWhitelist: 'Only allow listed formats',
+    slskdWhitelistHint:
+      'Reject results whose extension is not in the format list.',
+    formatOriginal: 'Original',
+    formatOriginalHint:
+      'Keep the best audio stream available without re-encoding it. The file extension depends on the source.',
+    bitrateOriginal: 'Not used when keeping the original audio format.',
   },
   shortcuts: {
     title: 'Keyboard shortcuts',
@@ -1387,11 +1976,11 @@ export default {
     lyrics: 'Lyrics',
     queue: 'Up next',
     search: 'Search',
+    findInPlaylist: 'Search the playlist (on its page)',
     goLibrary: 'Go to library',
     goQueue: 'Go to queue',
     close: 'Close now playing',
     help: 'Show shortcuts',
-    findInPlaylist: 'Search the playlist (on its page)',
   },
   auth: {
     signInTitle: 'Sign in to Downtify',
@@ -1409,6 +1998,11 @@ export default {
     noticeKeptPassword: 'the password you set before',
     noticeChange: 'Then change the password in Settings → General.',
     noticeOk: 'Got it',
+    signInBodyOidcOnly: 'Sign in with your identity provider.',
+    oidcSignIn: 'Continue with identity provider',
+    or: 'or',
+    oidcFailed:
+      'Could not sign in with the identity provider. Please try again.',
   },
   apps: {
     serverGroup: 'This server',
@@ -1631,6 +2225,7 @@ export default {
       unlike: 'Unlikes',
       delete: 'Deleted files',
       audio_replaced: 'Audio replaced',
+      album_compilation: 'Compilations marked',
       library_hidden: 'Items hidden from users',
       library_shown: 'Items shown to users',
       device_paired: 'Apps paired',
@@ -1640,7 +2235,6 @@ export default {
       user_deleted: 'Users deleted',
       password_changed: 'Passwords changed',
       settings_changed: 'Settings changed',
-      album_compilation: 'Compilations marked',
     },
     did: {
       login: 'signed in',
@@ -1652,6 +2246,8 @@ export default {
       unlike: 'unliked {what}',
       delete: 'deleted {what}',
       audio_replaced: 'replaced the audio of {what}',
+      album_compilation:
+        'changed whether {what} is a Various Artists compilation',
       library_hidden: 'hid {what} from users',
       library_shown: 'showed {what} to users',
       device_paired: 'paired {what}',
@@ -1661,8 +2257,6 @@ export default {
       user_deleted: 'deleted the user {what}',
       password_changed: 'changed the password of {what}',
       settings_changed: 'changed settings: {what}',
-      album_compilation:
-        'changed whether {what} is a Various Artists compilation',
     },
   },
   discover: {
@@ -1895,514 +2489,5 @@ export default {
       'The files are removed from disk, along with their playlists and covers.',
     deleteSelected: 'Delete selected',
     deleted: 'Deleted {count} file(s).',
-  },
-  artistSuggestions: {
-    title: 'Artists to follow',
-    listening: 'Based on your listening',
-    library: 'Based on your library',
-    listeningHelp:
-      'Artists you play the most. Recent plays count more: a play’s weight halves every {days} days.',
-    libraryHelp: 'Artists with the most tracks, then albums, in your library.',
-    listens: {
-      one: '{count} listen',
-      other: '{count} listens',
-    },
-    tracks: {
-      one: '{count} track',
-      other: '{count} tracks',
-    },
-    albums: {
-      one: '{count} album',
-      other: '{count} albums',
-    },
-    follow: 'Follow',
-    more: 'Show more',
-    loading: 'Loading suggestions…',
-    empty: 'No more artists to suggest yet.',
-    failed: 'Suggestions could not be loaded.',
-    retry: 'Retry',
-    choose: 'Which artist is {name}?',
-    chooseHelp:
-      'More than one YouTube Music artist could be {name}. Compare the photos or open their profiles, then follow the right one.',
-    notFound:
-      'No YouTube Music artist named {name} was found. Paste the artist’s link instead.',
-    lookupFailed: 'Artist lookup is unavailable. You can still paste a link.',
-    followProfile: 'Follow this artist',
-    inspect: 'Open on YouTube Music',
-    manual: 'Paste a link',
-    cancel: 'Cancel',
-  },
-  trash: {
-    title: 'Trash',
-    subtitle:
-      'Songs taken out of the library, kept for {days} days after they move. Restore them until then.',
-    adminOnly: 'Only admins can see this',
-    adminOnlyHint: 'Ask an admin of this server to restore a song.',
-    off: 'The trash is off',
-    offHint:
-      'Songs are deleted for good on this server. The trash is turned on in the server’s configuration (DOWNTIFY_TRASH).',
-    inTrash: 'In the trash',
-    exclusions: 'Kept out of downloads',
-    search: 'Search the trash',
-    restoreSelected: {
-      one: 'Restore {count} song',
-      other: 'Restore {count} songs',
-    },
-    summary: {
-      one: '{count} song · {size}',
-      other: '{count} songs · {size}',
-    },
-    empty: 'The trash is empty',
-    emptyHint:
-      'Songs moved to the trash from the library show up here until they expire.',
-    noMatch: 'Nothing in the trash matches',
-    select: 'Select “{title}”',
-    keptUntil: 'Kept until {date}',
-    restore: 'Restore',
-    retry: 'Try again',
-    previous: 'Previous',
-    next: 'Next',
-    exclusionsHint:
-      'Songs whose time in the trash ran out. Automatic downloads (Playlist Monitor, watches) still skip them until you allow them again.',
-    exclusionsEmpty: 'Nothing is kept out of downloads',
-    allowDownload: 'Allow downloads',
-    allowTitle: 'Allow “{title}” to be downloaded again?',
-    allowBody:
-      'Automatic downloads may fetch it again. Nothing is downloaded right now.',
-    move: 'Move to trash',
-    preparing: 'Checking the files…',
-    confirmTitle: {
-      one: 'Move {count} song to the trash?',
-      other: 'Move {count} songs to the trash?',
-    },
-    confirmBody:
-      'Only these files move, with their lyrics files. They leave the library for everyone and can be restored for {days} days. Their playlists and likes come back with them, and automatic downloads skip them meanwhile.',
-    confirmMore: {
-      one: 'and {count} more',
-      other: 'and {count} more',
-    },
-    pending: {
-      one: 'Moving {count} song to the trash',
-      other: 'Moving {count} songs to the trash',
-    },
-    downloadBlocked: 'In the music trash: an admin has to allow it again.',
-    states: {
-      preview: 'Waiting for confirmation',
-      pending: 'Waiting to move',
-      moving: 'Moving',
-      trashed: 'In the trash',
-      restore_pending: 'Waiting to restore',
-      restoring: 'Restoring',
-      restored: 'Restored',
-      purging: 'Expiring',
-      purged: 'Expired',
-      error: 'Stopped — files kept',
-    },
-    errors: {
-      unavailable: 'The trash isn’t available right now. Nothing was moved.',
-      admin_required: 'Only an admin can use the trash.',
-      admin_access_revoked: 'The account that asked is no longer an admin.',
-      atomic_move_unsupported:
-        'This storage can’t move files safely. Nothing was moved.',
-      confirmation_expired: 'The check expired. Choose the songs again.',
-      confirmation_invalid:
-        'This confirmation isn’t for your account or selection.',
-      file_changed:
-        'The file changed after it was checked. It stayed where it was; choose it again.',
-      file_changed_during_move:
-        'The file changed while it moved. It is kept in the trash for you to check.',
-      file_missing: 'A file is missing. Check the storage, then try again.',
-      filesystem_unavailable:
-        'The storage isn’t available. Check it, then try again.',
-      identity_uncertain:
-        'This song’s tags are too thin to keep it out of automatic downloads. Nothing was moved.',
-      invalid_path: 'This file is outside the folders the trash covers.',
-      invalid_selection: 'Choose between 1 and 200 songs.',
-      item_not_found: 'This song is no longer in the library.',
-      library_task_active:
-        'The library upgrade is running. Wait for it or pause it first.',
-      nas_marker_changed:
-        'The storage isn’t the one the trash expects. Nothing was moved.',
-      nas_marker_missing:
-        'The expected storage isn’t mounted. Nothing was moved.',
-      operation_already_pending: 'This song is already on its way.',
-      operation_in_progress:
-        'The move is still running. Wait for it before restoring.',
-      operation_not_complete: 'Wait for the current step to finish.',
-      preview_busy: 'Another check is running. Wait for it to finish.',
-      preview_unavailable: 'The check was interrupted. Choose the songs again.',
-      restore_collision:
-        'Another file is already there. Nothing was overwritten; the song stays in the trash.',
-      retention_expired: 'Its time in the trash ran out.',
-      root_unavailable: 'The music folder isn’t available.',
-      track_is_playing: 'Someone is playing this song. Pause it first.',
-      trash_file_changed: 'The copy in the trash changed. It won’t be deleted.',
-      trash_file_missing: 'A file in the trash is missing.',
-      trash_ignore_invalid:
-        'The trash folder’s .ignore file isn’t empty. Nothing was moved.',
-      trash_not_configured: 'The trash is off on this server.',
-      trash_permissions_unsafe:
-        'Others can read the trash folder. Check its permissions.',
-      unsafe_symlink: 'The path has a symbolic link, so it isn’t touched.',
-      unsupported_collection: 'This song’s folder isn’t covered by the trash.',
-      unsupported_lyrics_location:
-        'The lyrics folder isn’t covered by the trash. Nothing was moved.',
-    },
-  },
-  downloadPolicy: {
-    block: 'Stop downloading',
-    blocked: 'Downloads suspended for this track.',
-    confirm: 'Suspend downloads for this track?',
-    confirmHelp:
-      'New attempts will be blocked. A shared transfer already started may finish. Existing files will not be deleted.',
-    exclusions: 'Suspended tracks',
-    empty: 'No suspended tracks.',
-    resume: 'Allow again',
-    timeout: 'Attempt time limit reached',
-    manual: 'Suspended manually',
-    error: 'Could not change the suspension.',
-    alreadyActive: 'An attempt for this track is already in progress.',
-    budget: 'Cumulative attempt limit',
-    budgetHelp:
-      'Automatically suspend a track after this cumulative attempt time. Time between attempts is excluded. 0 disables the limit.',
-  },
-  playlistNames: {
-    restore: 'Restore source name',
-  },
-  libraryOnly: {
-    title: 'Library-only mode',
-    active: 'Only music in your server library is available.',
-    enable: 'Use only the library',
-    hint: 'Search and similar tracks use your library. External music, previews, downloads and automatic watches are disabled.',
-    serverHint:
-      'Applies to all accounts, browsers and Android clients. Wait for external work to finish before enabling it. The phone still needs access to the server unless tracks are downloaded.',
-    empty: 'No matching tracks in the accessible library.',
-    similar:
-      'Similar tracks from saved library tags. No external provider is contacted.',
-  },
-  playlistFavorites: {
-    title: 'Favorite playlists',
-    add: 'Add playlist to favorites',
-    remove: 'Remove playlist from favorites',
-  },
-  normalization: {
-    title: 'Volume normalization',
-    hint: 'Play every song at a similar loudness without changing your audio files.',
-    enable: 'Normalize playback volume',
-    enableHint:
-      'Uses the measured loudness of each song, boosts by at most 12 dB and keeps peaks from clipping. Songs not measured yet play at their original level.',
-    analysisHint:
-      'Analysis reads each song once in the background; later runs only measure new or changed files. It never starts on its own, not even after a restart.',
-    progress: '{done} / {total} analyzed · {failed} failed',
-    analyze: 'Analyze library',
-    pause: 'Pause analysis',
-    resume: 'Resume analysis',
-    pausing: 'Finishing the current files before pausing…',
-    states: {
-      ready: 'Measured volume applied to the current song.',
-      silent: 'Silent song: original level kept.',
-      unanalysed: 'No measurement for this song yet: original level kept.',
-      unavailable: 'Normalization unavailable: original level kept.',
-    },
-  },
-  externalPlaylistImport: {
-    open: 'Import folder playlists',
-    title: 'Playlists in your music folders',
-    hint: 'Select the playlists to add, up to 50 at a time. Only available tracks are referenced. Source files and audio are never changed.',
-    loading: 'Looking for playlist files…',
-    empty: 'No M3U or M3U8 playlist files found in the added folders.',
-    counts:
-      '{count} available · {missing} unavailable · {duplicates} repeated entries',
-    existing: 'Already added as {name}',
-    preview: 'Preview the first 30 tracks',
-    truncated: 'The scan reached its limit; this list is incomplete.',
-    add: 'Add selected playlists ({count})',
-    result:
-      '{added} added · {existing} already present · {failed} need a new preview or could not be imported',
-  },
-  collaboration: {
-    canEdit: 'Can add and remove songs',
-    copyHint:
-      'This playlist follows its source, so others can’t edit its songs. Share an editable copy instead: it stays yours, and the original keeps following its source.',
-    copy: 'Share an editable copy',
-    byEditor: 'by {owner} · you can add and remove songs',
-  },
-  buy: {
-    menu: 'Support the artist',
-    title: 'Support the artist',
-    body: 'Buy the music, or visit the artist’s own website.',
-    inStore: 'Open it in the store',
-    search: 'Search for “{query}”',
-    website: 'Official website',
-    failed: 'Couldn’t look it up in the stores.',
-    note: 'Bandcamp passes most of each sale on to the artist. These are plain links: Downtify doesn’t sell anything or earn from them.',
-  },
-  playlistSearch: {
-    placeholder: 'Search this playlist',
-    all: 'All',
-    missing: 'Missing',
-    failed: 'Failed',
-    notInNavidrome: 'Not in Navidrome',
-    fromFolders: 'Your folders',
-    unknownSource: 'Unknown source',
-    showing: '{count} of {total}',
-    noMatch: 'Nothing here matches',
-    noMatchHint: 'Try other words, or another filter.',
-  },
-  usage: {
-    title: 'Storage and usage',
-    subtitle:
-      'How big the library is, how fast it grows and where it came from.',
-    adminOnly: 'Only admins can see this',
-    adminOnlyHint: 'Ask an admin of this server for the storage figures.',
-    loadFailed: "Couldn't load the storage figures.",
-    tileLibrary: 'Library',
-    tileAdded: {
-      one: 'Added in the last day',
-      other: 'Added in {count} days',
-    },
-    tileGrowth: 'Net change',
-    tileFree: 'Free space',
-    tileDownloads: 'Downloaded',
-    tileCleanup: 'Could be freed',
-    songs: {
-      one: '{count} song',
-      other: '{count} songs',
-    },
-    files: {
-      one: '{count} file',
-      other: '{count} files',
-    },
-    perWeekRate: '{size} a week',
-    ofTotal: 'of {total}',
-    daysLeft: {
-      one: 'of {total} · full in about {count} day at this rate',
-      other: 'of {total} · full in about {count} days at this rate',
-    },
-    downloadsShort: '{skipped} skipped · {failed} failed',
-    growthTitle: 'Library size',
-    growthHint:
-      'The library at the end of each day, without slskd working copies.',
-    estimated: 'Estimated from file dates',
-    estimatedNote:
-      'Before {date}, the size is estimated from the dates of the songs still in the library, so songs deleted since are left out.',
-    allEstimatedNote:
-      'Downtify notes the library size every hour from now on. Earlier days are estimated from the dates of the songs still in the library.',
-    addedPerDay: 'Added per day',
-    addedPerWeek: 'Added per week',
-    sourcesTitle: 'By source',
-    sourcesHint: {
-      one: 'Where the audio came from, and what each source added in the last day.',
-      other:
-        'Where the audio came from, and what each source added in the last {count} days.',
-    },
-    addedInPeriod: {
-      one: '+{size} · {count} song in the period',
-      other: '+{size} · {count} songs in the period',
-    },
-    emptyLibrary: 'The library is empty.',
-    whereTitle: 'Where it is stored',
-    byLocation: 'Folder',
-    byFormat: 'Format',
-    location: {
-      downloads: 'Downloads folder',
-      slskd: 'slskd folder',
-      folders: 'Extra music folders',
-    },
-    unknown: 'Unknown',
-    downloadsTitle: 'Downloads',
-    downloadsHint: {
-      one: 'How downloads from the queue and the Playlist Monitor ended in the last day. Every attempt counts.',
-      other:
-        'How downloads from the queue and the Playlist Monitor ended in the last {count} days. Every attempt counts.',
-    },
-    outcome: {
-      completed: 'Completed',
-      skipped: 'Skipped',
-      failed: 'Failed',
-    },
-    perDay: 'Per day',
-    perWeek: 'Per week',
-    downloadedBySource: 'Downloaded by source · {size}',
-    noDownloads: 'Nothing was downloaded in this period.',
-    logEmptyNote:
-      'No download has been counted yet: Downtify counts them from this version on.',
-    logSinceNote: 'Downloads are counted since {date}.',
-    cleanupTitle: 'Could be cleaned up',
-    cleanupHint:
-      'Storage Downtify can tell is redundant or left over. Nothing is deleted from here.',
-    duplicatesTitle: 'Duplicate songs',
-    duplicatesHint:
-      '{exact} stored twice as the same file, {likely} likely the same song from another source. The size is what keeping only the largest copy would free.',
-    duplicateKind: {
-      exact: 'Same file',
-      likely: 'Likely the same song',
-    },
-    workingTitle: 'slskd working copies',
-    workingHint:
-      'Soulseek transfers left in the slskd folder after Downtify copied them into the library.',
-    workingInPlace:
-      'slskd files are left in place, so the slskd folder is part of the library.',
-    leftoversTitle: 'Leftover temporary files',
-    leftoversHint: 'Partial downloads and conversions older than an hour.',
-    orphansTitle: 'Orphaned sidecars',
-    orphansHint: 'Lyrics files and album covers whose songs are gone.',
-    foldersTitle: 'Folders',
-    foldersHint: 'Everything in the folders Downtify writes to, by kind.',
-    rescan: 'Scan again',
-    scanFailed: "Couldn't scan the folders.",
-    scanning: 'Scanning the folders…',
-    scannedAt: 'Scanned {when} in {seconds} s',
-    folder: {
-      downloads: 'Downloads folder',
-      slskd: 'slskd folder',
-      lyrics: 'Lyrics folder',
-    },
-    kind: {
-      audio: 'Songs',
-      podcasts: 'Podcasts',
-      lyrics: 'Lyrics',
-      images: 'Images',
-      playlists: 'Playlists',
-      metadata: 'Artist photos and profiles',
-      temporary: 'Temporary files',
-      other: 'Other',
-    },
-  },
-  watchStats: {
-    colActivity: 'Activity',
-    colStorage: 'Storage',
-    period: 'Period',
-    days: {
-      one: '{count} day',
-      other: '{count} days',
-    },
-    totalNew: {
-      one: 'New in the last day',
-      other: 'New in {count} days',
-    },
-    totalSongs: 'Songs from watches',
-    totalSize: 'On disk',
-    totalShared: 'In more than one watch',
-    statsFailed: "Couldn't load the statistics.",
-    rateWeekShort: '{rate}/week',
-    sharedShort: '+{count} shared',
-    activityTooltip:
-      '{added} new in the last {count} days · {rate} a week · {trend}',
-    storageTooltip:
-      '{unique} only in this watch · {shared} shared with other watches',
-    sortActivity: 'Recent activity',
-    sortRate: 'Average rate',
-    sortGrowth: 'Storage growth',
-    sortStorage: 'Storage only in it',
-    sortContributed: 'Songs downloaded',
-    details: 'Activity and songs',
-    openInLibrary: 'Open in Library',
-    notFound: 'Watch not found',
-    notFoundHint: 'It may have been removed, or belong to another account.',
-    since: 'Watched since {date}',
-    tileSongs: 'Songs on disk',
-    tileDownloaded: 'Downloaded by it',
-    tileLinked: 'Already in library',
-    tileUnique: 'Only in this watch',
-    tileUniqueHint: {
-      one: '{count} song no other watch has',
-      other: '{count} songs no other watch has',
-    },
-    tileShared: 'Shared',
-    tileSharedHint: '{size}, also in other watches, stored once',
-    tileFailing: 'Failing',
-    unknownNote: {
-      one: '{count} song was added before Downtify kept track of how songs got into a watch.',
-      other:
-        '{count} songs were added before Downtify kept track of how songs got into a watch.',
-    },
-    missingNote: {
-      one: '{count} song this watch recorded is no longer on disk.',
-      other: '{count} songs this watch recorded are no longer on disk.',
-    },
-    activityTitle: 'Activity',
-    activityHint:
-      "New songs it added: not the ones it found already in your library, and not its first check's backfill.",
-    newSongsLabel: {
-      one: 'new song added',
-      other: 'new songs added',
-    },
-    rateDay: 'A day',
-    rateWeek: 'A week',
-    rateMonth: 'A month',
-    trendUp: 'Adding more lately',
-    trendDown: 'Adding less lately',
-    trendSteady: 'Steady pace',
-    trendIdle: 'Nothing new lately',
-    trendNew: 'Too new to tell',
-    periodGrowth: '{size} of new audio',
-    periodLinked: {
-      one: '{count} more was already in your library',
-      other: '{count} more were already in your library',
-    },
-    periodInitial: {
-      one: '{count} came with its first check',
-      other: '{count} came with its first check',
-    },
-    periodUnknown: {
-      one: '{count} of them was recorded before Downtify kept track of how',
-      other: '{count} of them were recorded before Downtify kept track of how',
-    },
-    barsPerDay: 'New songs per day',
-    barsPerWeek: 'New songs per week',
-    providersTitle: 'Where the audio came from',
-    failuresTitle: {
-      one: '{count} song keeps failing',
-      other: '{count} songs keep failing',
-    },
-    attempts: {
-      one: '{count} try',
-      other: '{count} tries',
-    },
-    lastTried: 'last tried {when}',
-    songsTitle: 'Songs from this watch',
-    songsHint:
-      'Newest first, including songs that have since left the playlist. Select some to play them, add them to a playlist or delete them.',
-    filter: {
-      all: 'All',
-      recent: {
-        one: 'Last day',
-        other: 'Last {count} days',
-      },
-      downloaded: 'Downloaded by it',
-      linked: 'Already in library',
-      unknown: 'Before tracking',
-    },
-    noSongs: 'No songs from this watch on disk',
-    noSongsHint:
-      'They show up here once a check downloads them or finds them in your library.',
-  },
-  origin: {
-    menu: 'Where it came from',
-    title: 'Where this song came from',
-    body: 'The Playlist Monitor watches that brought it into your library.',
-    failed: "Couldn't load where this song came from.",
-    firstTitle: 'First downloaded by',
-    none: 'No watch downloaded it: it was downloaded by hand, or before Downtify kept track.',
-    otherAccount: 'A watch of another account',
-    backfill: 'First check',
-    estimated: 'Probably',
-    gone: 'That watch was removed or now follows another link.',
-    watchesTitle: {
-      one: 'In {count} watch',
-      other: 'In {count} watches',
-    },
-    noWatches: 'No watch holds it right now.',
-    others: {
-      one: '{count} of them belongs to another account.',
-      other: '{count} of them belong to other accounts.',
-    },
-    oneFile: "It's one file: every watch points at the same copy.",
-    outcome: {
-      downloaded: 'Downloaded it',
-      linked: 'Already in library',
-      unknown: 'Before tracking',
-    },
   },
 }

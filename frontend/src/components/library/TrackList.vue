@@ -48,6 +48,14 @@
       <button
         type="button"
         role="columnheader"
+        class="text-left uppercase max-xl:hidden"
+        @click="sortBy('releaseDate')"
+      >
+        {{ t('track.releaseDate') }}<SortMark field="releaseDate" />
+      </button>
+      <button
+        type="button"
+        role="columnheader"
         class="text-right"
         @click="sortBy('duration')"
       >
@@ -65,7 +73,7 @@
     >
       <div
         v-for="row in rows"
-        :key="row.track.file"
+        :key="trackRowKey(row.track)"
         role="row"
         class="group grid h-14 items-center gap-3 rounded-[10px] px-3 transition-colors select-none"
         :class="[
@@ -103,7 +111,7 @@
             <span class="tabular group-hover:hidden">{{
               numbering === 'track'
                 ? row.track.trackNumber || '–'
-                : positions?.get(row.track.file) || row.index + 1
+                : positions?.get(trackRowKey(row.track)) || row.index + 1
             }}</span>
             <button
               type="button"
@@ -204,13 +212,16 @@
         >
           {{ row.track.added ? timeAgo(row.track.added, locale) : '' }}
         </span>
+        <span class="truncate text-[13px] text-muted max-xl:hidden">
+          {{ row.track.releaseDate }}
+        </span>
         <span class="tabular text-right text-[13px] text-muted max-md:hidden">
           {{ row.track.duration ? formatDuration(row.track.duration) : '' }}
         </span>
         <span class="flex items-center justify-end" @click.stop>
           <LikeButton :file="row.track.file" />
           <UiMenu
-            :ref="(el) => (menus[row.track.file] = el)"
+            :ref="(el) => (menus[trackRowKey(row.track)] = el)"
             :items="menuItems(row)"
             :label="t('common.more')"
             size="sm"
@@ -237,7 +248,7 @@ import { usePlayer } from '/src/model/player'
 import { useTrackActions } from '/src/model/trackActions'
 import { usePlaylistActions } from '/src/model/playlistActions'
 import { formatDuration, timeAgo } from '/src/lib/format'
-import { isGuestOn } from '/src/lib/library'
+import { isGuestOn, trackRowKey } from '/src/lib/library'
 import { useI18n } from '/src/i18n'
 
 const props = defineProps({
@@ -249,8 +260,8 @@ const props = defineProps({
   showCover: { type: Boolean, default: true },
   linkArtist: { type: Boolean, default: true },
   numbering: { type: String, default: 'index' },
-  // file -> place in the whole list, numbered instead of the row's own
-  // place while a filtered list is shown (a playlist search).
+  // trackRowKey -> place in the whole list, numbered instead of the
+  // row's own place while a filtered list is shown (a playlist search).
   positions: { type: Map, default: null },
   header: { type: Boolean, default: true },
   sort: { type: Object, default: null },
@@ -283,18 +294,18 @@ const gridClass = computed(() => {
     selectable.value
       ? props.showAlbum
         ? props.showAdded
-          ? 'md:grid-cols-[28px_32px_minmax(0,1fr)_64px_72px] lg:grid-cols-[28px_32px_minmax(0,2fr)_minmax(0,1.3fr)_64px_72px] xl:grid-cols-[28px_32px_minmax(0,2fr)_minmax(0,1.3fr)_72px_120px_64px_72px]'
-          : 'md:grid-cols-[28px_32px_minmax(0,1fr)_64px_72px] lg:grid-cols-[28px_32px_minmax(0,2fr)_minmax(0,1.3fr)_64px_72px] xl:grid-cols-[28px_32px_minmax(0,2fr)_minmax(0,1.3fr)_72px_64px_72px]'
+          ? 'md:grid-cols-[28px_32px_minmax(0,1fr)_64px_72px] lg:grid-cols-[28px_32px_minmax(0,2fr)_minmax(0,1.3fr)_64px_72px] xl:grid-cols-[28px_32px_minmax(0,2fr)_minmax(0,1.3fr)_72px_120px_72px_64px_72px]'
+          : 'md:grid-cols-[28px_32px_minmax(0,1fr)_64px_72px] lg:grid-cols-[28px_32px_minmax(0,2fr)_minmax(0,1.3fr)_64px_72px] xl:grid-cols-[28px_32px_minmax(0,2fr)_minmax(0,1.3fr)_72px_72px_64px_72px]'
         : props.showAdded
-          ? 'md:grid-cols-[28px_32px_minmax(0,1fr)_64px_72px] xl:grid-cols-[28px_32px_minmax(0,1fr)_72px_120px_64px_72px]'
-          : 'md:grid-cols-[28px_32px_minmax(0,1fr)_64px_72px] xl:grid-cols-[28px_32px_minmax(0,1fr)_72px_64px_72px]'
+          ? 'md:grid-cols-[28px_32px_minmax(0,1fr)_64px_72px] xl:grid-cols-[28px_32px_minmax(0,1fr)_72px_120px_72px_64px_72px]'
+          : 'md:grid-cols-[28px_32px_minmax(0,1fr)_64px_72px] xl:grid-cols-[28px_32px_minmax(0,1fr)_72px_72px_64px_72px]'
       : props.showAlbum
         ? props.showAdded
-          ? 'md:grid-cols-[32px_minmax(0,1fr)_64px_72px] lg:grid-cols-[32px_minmax(0,2fr)_minmax(0,1.3fr)_64px_72px] xl:grid-cols-[32px_minmax(0,2fr)_minmax(0,1.3fr)_72px_120px_64px_72px]'
-          : 'md:grid-cols-[32px_minmax(0,1fr)_64px_72px] lg:grid-cols-[32px_minmax(0,2fr)_minmax(0,1.3fr)_64px_72px] xl:grid-cols-[32px_minmax(0,2fr)_minmax(0,1.3fr)_72px_64px_72px]'
+          ? 'md:grid-cols-[32px_minmax(0,1fr)_64px_72px] lg:grid-cols-[32px_minmax(0,2fr)_minmax(0,1.3fr)_64px_72px] xl:grid-cols-[32px_minmax(0,2fr)_minmax(0,1.3fr)_72px_120px_72px_64px_72px]'
+          : 'md:grid-cols-[32px_minmax(0,1fr)_64px_72px] lg:grid-cols-[32px_minmax(0,2fr)_minmax(0,1.3fr)_64px_72px] xl:grid-cols-[32px_minmax(0,2fr)_minmax(0,1.3fr)_72px_72px_64px_72px]'
         : props.showAdded
-          ? 'md:grid-cols-[32px_minmax(0,1fr)_64px_72px] xl:grid-cols-[32px_minmax(0,1fr)_72px_120px_64px_72px]'
-          : 'md:grid-cols-[32px_minmax(0,1fr)_64px_72px] xl:grid-cols-[32px_minmax(0,1fr)_72px_64px_72px]',
+          ? 'md:grid-cols-[32px_minmax(0,1fr)_64px_72px] xl:grid-cols-[32px_minmax(0,1fr)_72px_120px_72px_64px_72px]'
+          : 'md:grid-cols-[32px_minmax(0,1fr)_64px_72px] xl:grid-cols-[32px_minmax(0,1fr)_72px_72px_64px_72px]',
   ]
 })
 
@@ -394,7 +405,7 @@ function onRowClick(event, row) {
 }
 
 function openMenu(event, row) {
-  menus[row.track.file]?.openAt(event)
+  menus[trackRowKey(row.track)]?.openAt(event)
 }
 
 function menuItems(row) {

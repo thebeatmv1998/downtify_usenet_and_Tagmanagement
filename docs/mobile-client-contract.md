@@ -4,6 +4,8 @@ icon: lucide/file-code
 
 # Mobile Client Contract
 
+Global server pause uses `GET /api/queue/state` and web-administrator-only `POST /api/queue/pause` / `POST /api/queue/resume`. GET adds `global_pause_supported`, `monitors_paused` and request-specific `can_control` to the existing `paused`, `state`, `active` fields. A paired device token remains client-scoped even when its account is an administrator, so it must not be offered this server administration action. Phone offline copies have their own controls. See the [queue API](api-reference.md#get-apiqueuestate).
+
 How an app (the official Android client, or any other) talks to a Downtify server: **discover → check → sign in (or pair) → sync → stream → report**. Everything here is `api_version` **1**; the full request/response shapes of each endpoint are in the [API reference](api-reference.md#server-and-sign-in). User-facing behaviour (signing in, pairing, accounts, transcoding limits) is described in [Mobile Apps](features/mobile-apps.md) and [Users & Sign-in](features/users.md).
 
 ## 1. Discover
@@ -44,7 +46,7 @@ Build the address from the resolved host + `port`. Discovery is a convenience: a
 - Refuse to continue when `product` isn't `Downtify` or `api_version` is higher than the app knows.
 - Remember `server_id`: it identifies the server across address changes. When the address later answers with a different id, it's a different server.
 - Use `capabilities` to enable features (e.g. hide mobile-data quality when `transcoding.available` is false).
-- `capabilities.password_sign_in` decides how the app asks for credentials next: a username and password when it is `true`, a pairing code otherwise (accounts turned off, or a server older than `POST /api/auth/token`).
+- `capabilities.password_sign_in` decides how the app asks for credentials next: a username and password when it is `true`, a pairing code otherwise (accounts turned off, local password login disabled, or a server older than `POST /api/auth/token`).
 
 ## 3. Sign in or pair
 
@@ -144,7 +146,7 @@ Other reads, all by track id:
 | `GET /api/v1/tracks/{id}/lyrics` | `{ "synced": "<LRC>", "plain": "…" }` (either may be empty) |
 | `GET /api/v1/tracks/{id}/loudness` | The track's [playback loudness profile](features/playback-normalization.md): `{ "state", "gain_db", "integrated_lufs", "true_peak_dbtp", "algorithm_version", "fingerprint", "source_etag", "source_size" }`. Apply `gain_db` only when `state` is `ready` and `algorithm_version` is `1`, capped at +12 dB and at `-1 - true_peak_dbtp`; anything else (`unanalysed`, `silent`, a `404` from an older server) means the original level. `source_etag` and `source_size` are the `ETag` and size of the original file's stream: bind the profile to an offline copy only when they match the download |
 | `GET /api/v1/tracks/{id}/cover?size=150\|300\|600` | JPEG thumbnail; omit `size` for the full picture. `ETag` + `Cache-Control: private, max-age=604800` |
-| `GET /api/v1/playlists` | `[{ "name", "liked", "manual", "count", "cover", "track_ids": [...], "owner", "visibility", "mine", "followed", "can_edit_tracks", "shared_with_me", "new", "hidden_count" }]` (`cover` is a path for `GET /playlist-cover?file=`, or `""`). Other people's shared or followed playlists are in here (`mine: false`): list them apart from the user's own, labelled with `owner`. They are view-only unless `can_edit_tracks` says the user is one of its [editors](features/collaborative-playlists.md) (songs only — never rename, share or delete); the user's own also list `shared_with` and `editors` |
+| `GET /api/v1/playlists` | `[{ "name", "liked", "manual", "count", "cover", "track_ids": [...], "owner", "visibility", "mine", "followed", "can_edit_tracks", "shared_with_me", "new", "hidden_count" }]` (`cover` is a path for `GET /playlist-cover?file=`, or `""`). `track_ids` is in playlist order and may list an id more than once: a `manual` playlist can [repeat a song](features/playlist-order.md), so key rows by position as well as id. Other people's shared or followed playlists are in here (`mine: false`): list them apart from the user's own, labelled with `owner`. They are view-only unless `can_edit_tracks` says the user is one of its [editors](features/collaborative-playlists.md) (songs only — never rename, share or delete); the user's own also list `shared_with` and `editors` |
 | `GET /api/v1/usernames` | `{ "enabled", "usernames": [...] }` — who a playlist can be shared with |
 | `POST` / `DELETE /api/v1/playlists/follow` | Body (or `?name=`) `{ "name" }` — follow a public playlist, or stop |
 | `POST /api/v1/playlists/seen` | Body `{ "name" }` — clear the `new` marker of a playlist shared with the user |

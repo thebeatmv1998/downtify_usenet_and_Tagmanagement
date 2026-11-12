@@ -54,11 +54,12 @@ from downtify.deemix_upgrade_store import AudioReplacementStore
 from downtify.discover import DiscoverStore
 from downtify.discovery import Announcer, discovery_enabled
 from downtify.download_log import DownloadLog
-from downtify.download_queue import PendingDownloads
+from downtify.download_queue import PendingDownloads, queue_pause
 from downtify.downloader import Downloader
 from downtify.external_playlists import ExternalPlaylistImports
 from downtify.external_sync import ExternalSyncJob
 from downtify.file_providers import FileProviders
+from downtify.http_etag import JsonETagMiddleware
 from downtify.library_archive import (
     MAX_ARCHIVE_FILES,
     ArchiveTicketStore,
@@ -69,7 +70,7 @@ from downtify.library_catalog import (
     AUDIO_EXTENSIONS,
     TRACK_QUERY_LIMIT_MAX,
     filter_library_entries,
-    list_entries_for_stored_paths,
+    list_entries_for_playlist,
     list_library_entries,
     list_library_paths,
     resolve_library_file,
@@ -95,6 +96,11 @@ from downtify.lyrics import read_track_lyrics
 from downtify.lyrics_cache import LyricsLookupCache
 from downtify.monitor import PlaylistMonitorDB, monitor_loop, reconcile_loop
 from downtify.navidrome_index import NavidromeIndex
+from downtify.oidc import (
+    OIDCConfig,
+    OIDCProvider,
+    local_login_enabled_from_env,
+)
 from downtify.playlist_batches import PlaylistBatchStore, ensure_batch_records
 from downtify.playlist_catalog import (
     ManualPlaylistOwners,
@@ -107,6 +113,7 @@ from downtify.playlist_spotify_cache import (
     playlist_spotify_cache_loop,
 )
 from downtify.podcasts import PodcastStore
+from downtify.proxy_config import configure_outbound_proxy
 from downtify.security_headers import SecurityHeadersMiddleware
 from downtify.server_identity import ServerIdentity
 from downtify.server_port import (
@@ -190,11 +197,19 @@ def _setup_logging(level: str) -> None:
         _log = logging.getLogger(_name)
         _log.handlers = [_InterceptHandler()]
         _log.propagate = False
+        _log.setLevel(level.upper())
+    for _name in ('httpx', 'httpcore'):
+        logging.getLogger(_name).setLevel(logging.WARNING)
+    logging.getLogger('uvicorn.access').setLevel(
+        logging.DEBUG if level.upper() == 'DEBUG' else logging.WARNING
+    )
 
 
 DOWNLOAD_DIR = Path(os.getenv('DOWNLOAD_DIR', '/downloads'))
 DATABASE_DIR = Path(os.getenv('DATABASE_DIR', '/data'))
 WEB_GUI_LOCATION = os.getenv('WEB_GUI_LOCATION', '/downtify/frontend/dist')
+#: ``Cache-Control`` for the hashed files under ``assets/``.
+IMMUTABLE_ASSET = 'public, max-age=31536000, immutable'
 DEFAULT_HOST = os.getenv('HOST', '0.0.0.0')
 # Where the server listens, for the LAN announcement; set by main().
 _LISTEN: dict[str, Any] = {
@@ -244,13 +259,26 @@ class LibraryAudioFiles(StaticFiles):
 
 
 class SPAStaticFiles(StaticFiles):
-    """Serve ``index.html`` for unknown paths so SPA routing works."""
+    """Serve ``index.html`` for unknown paths so SPA routing works.
+
+    Vite puts a content hash in the name of everything under ``assets/``, so
+    the browser may keep those for good. ``index.html`` names the current
+    ones, so it is checked on every load: that is what lets an upgrade reach
+    the browser without a forced reload.
+    """
 
     async def get_response(self, path: str, scope):
         try:
-            return await super().get_response(path, scope)
+            response = await super().get_response(path, scope)
         except Exception:
-            return await super().get_response('index.html', scope)
+            response = await super().get_response('index.html', scope)
+        else:
+            if path.replace('\\', '/').startswith('assets/'):
+                response.headers['Cache-Control'] = IMMUTABLE_ASSET
+                return response
+        if response.headers.get('content-type', '').startswith('text/html'):
+            response.headers['Cache-Control'] = 'no-cache'
+        return response
 
 
 class LibraryStaticFiles(StaticFiles):
@@ -436,6 +464,11 @@ def _open_library_stores(monitor_db_path: Path) -> None:
     )
     api.state.playlist_batch_store = PlaylistBatchStore(library_db)
     api.state.pending_downloads = PendingDownloads(library_db)
+    # Restore the gate before monitors or upgrade recovery can start work.
+    if api.state.pending_downloads.paused():
+        queue_pause.pause()
+    else:
+        queue_pause.resume()
     api.state.playlist_spotify_cache = PlaylistSpotifyCache(library_db)
     api.state.lyrics_cache = LyricsLookupCache(library_db)
     api.state.likes = LikedTracks(library_db)
@@ -738,6 +771,17 @@ def build_app() -> FastAPI:
     # Where this server listens (downtify/server_port.py), for Settings.
     api.state.listen = _LISTEN
     api.state.auth = open_auth_store()
+    oidc_config = OIDCConfig.from_env()
+    api.state.local_login_enabled = local_login_enabled_from_env()
+    if (
+        not api.state.auth.auth_disabled
+        and not api.state.local_login_enabled
+        and oidc_config is None
+    ):
+        raise ValueError(
+            'DOWNTIFY_DISABLE_LOCAL_LOGIN requires OIDC to be configured'
+        )
+    api.state.oidc = OIDCProvider(oidc_config) if oidc_config else None
     api.state.activity = ActivityLog(DATABASE_DIR / 'downtify_activity.db')
     app.add_middleware(
         AuthMiddleware,
@@ -763,8 +807,22 @@ def build_app() -> FastAPI:
             'X-Downtify-Transcoded',
         ],
     )
-    # Compress large JSON listings (``GET /tracks``) for the web UI.
-    app.add_middleware(GZipMiddleware, minimum_size=1000)
+    # Inside the compression, so a 304 skips it. Large listings the web UI
+    # reads again on every page load.
+    app.add_middleware(
+        JsonETagMiddleware,
+        paths=(
+            '/tracks',
+            '/playlists',
+            '/api/library/albums',
+            '/api/library/artists',
+            '/api/library/summary',
+        ),
+    )
+    # Compress large JSON listings (``GET /tracks``) for the web UI. Level 4
+    # is a fifth of the default 9's work for 6% more bytes, and it runs on
+    # the event loop, where every other request waits for it.
+    app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=4)
     # Outermost: every response - including an auth denial - carries the
     # hardening headers.
     app.add_middleware(SecurityHeadersMiddleware)
@@ -915,7 +973,7 @@ def build_app() -> FastAPI:
             match = api.playlist_entry_for_request(name, request)
             files = list(match.get('files') or []) if match else []
             tracks = api.visible_entries(
-                list_entries_for_stored_paths(ctx, files), request
+                list_entries_for_playlist(ctx, files), request
             )
         else:
             tracks = api.entries_for_request(request)
@@ -1230,8 +1288,8 @@ def build_app() -> FastAPI:
             full,
             media_type=mimetypes.guess_type(str(full))[0] or 'image/jpeg',
             headers={
-                'Cache-Control': 'public, max-age=86400',
-                'ETag': f'"{int(full.stat().st_mtime)}"',
+                'Cache-Control': 'no-cache',
+                'ETag': f'"{full.stat().st_mtime_ns}"',
             },
         )
 
@@ -1287,6 +1345,7 @@ def main() -> None:
         _auth_reset()
         return None
 
+    configure_outbound_proxy()
     _fix_mime_types()
     port, source = resolve_port(args.port, ServerIdentity(DATABASE_DIR).port)
     _LISTEN.update(host=args.host, port=port, source=source)
@@ -1303,7 +1362,8 @@ def main() -> None:
         host=args.host,
         port=port,
         loop=loop,  # type: ignore[arg-type]
-        log_level=args.log_level.lower(),
+        # _setup_logging owns per-logger levels, including quiet access logs.
+        log_level=None,
         log_config=None,
         workers=1,
         # Do not wait on the SPA's keep-alive HTTP / leftover WS.

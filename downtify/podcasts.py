@@ -1232,6 +1232,7 @@ def sync_show(
     download_dir: Path,
     *,
     progress: Optional[Callable[[dict[str, Any]], None]] = None,
+    should_continue: Optional[Callable[[], bool]] = None,
 ) -> int:
     """Fetch a show's feed and bring its downloads in line with retention.
 
@@ -1241,6 +1242,8 @@ def sync_show(
     do, not this function's own logic.
     """
 
+    if should_continue is not None and not should_continue():
+        return 0
     feed = fetch_feed(show['feed_url'])
     inserted = store.upsert_episodes(show['id'], feed.episodes)
     metadata_updates = {}
@@ -1253,6 +1256,8 @@ def sync_show(
     if metadata_updates:
         show = store.update_show(show['id'], **metadata_updates) or show
 
+    if should_continue is not None and not should_continue():
+        return 0
     to_download, to_prune = episode_plan(store, show, inserted)
     for ep in to_prune:
         full = download_dir / ep['filename']
@@ -1270,6 +1275,8 @@ def sync_show(
     cover_bytes = best_cover_bytes(show['artwork_url'])
     downloaded = 0
     for ep_row in to_download:
+        if should_continue is not None and not should_continue():
+            break
         info = EpisodeInfo(
             guid=ep_row['guid'],
             title=ep_row['title'],

@@ -10,6 +10,10 @@ Every endpoint needs a signed-in user except a few public ones — see [Server a
 
 ## General
 
+### `POST /api/proxy/test`
+
+Admin. Checks the configured outbound proxy by requesting the Tor Project's status endpoint. The response includes whether the route was reachable and whether the exit was recognized as Tor; it never includes the observed public IP. It does not make a direct request when no proxy is configured or the test host is bypassed.
+
 ### `GET /api/version`
 
 Returns the current Downtify version as a plain string.
@@ -48,7 +52,7 @@ Search YouTube Music by free text.
 |-----------|------|----------|-------------|
 | `query` | string | yes | Search query |
 
-**Response:** Array of song objects (up to 20 results).
+**Response:** Array of song objects (up to 20 results). Each YouTube Music row also carries `album_url` (its album on YouTube Music, `""` when it has none) and `artist_urls` (`{name: YouTube Music channel URL}` for each credited artist that has a channel); the search page links a row's album and artist names to them.
 
 When YouTube Music returns nothing and slskd is an enabled audio source, the response is a single placeholder song built from the query itself (`"source": "text_search"`; `Artist - Title` is split into artist and title), so it can still be downloaded from Soulseek.
 
@@ -685,6 +689,11 @@ Whether the download queue is paused. Anyone signed in can read it. See [Downloa
 | `paused` | boolean | Whether the queue is paused |
 | `state` | string | `running`, `pausing` (paused, with `active` downloads still finishing) or `paused` (nothing running) |
 | `active` | integer | Downloads running right now, everyone's (Playlist Monitor sweeps included) |
+| `global_pause_supported` | boolean | Whether pause also gates watch checks and podcasts; absent on older servers |
+| `monitors_paused` | boolean | Whether new automatic checks wait at the global gate |
+| `can_control` | boolean | Whether this request can use the web administrator control; false for paired devices |
+
+A native library improvement finishing its current track also counts as active while paused. Pausing requests its native pause; global resume leaves it paused until explicitly resumed in its own screen. Starting or recovering an improvement run respects the global pause.
 
 Every change is also broadcast as a `queue_state` [WebSocket](#websocket) frame.
 
@@ -694,7 +703,7 @@ Every change is also broadcast as a `queue_state` [WebSocket](#websocket) frame.
 
 Admin. Pause the queue: no download starts until it is resumed, and the ones already running finish normally. Waiting jobs keep their place (`status: "queued"`, including a `POST /api/download/url` that hasn't started — that request waits until the queue is resumed), and Playlist Monitor sweeps wait before each track. The switch is saved, so the queue is still paused after a restart.
 
-**Response:** the [`GET /api/queue/state`](#get-apiqueuestate) object.
+**Response:** the `paused`, `state` and `active` fields of [`GET /api/queue/state`](#get-apiqueuestate). Read GET for request-specific control capability.
 
 ---
 
@@ -702,7 +711,7 @@ Admin. Pause the queue: no download starts until it is resumed, and the ones alr
 
 Admin. Carry on with the waiting jobs, with the current settings and audio provider order.
 
-**Response:** the [`GET /api/queue/state`](#get-apiqueuestate) object.
+**Response:** the `paused`, `state` and `active` fields of [`GET /api/queue/state`](#get-apiqueuestate). Read GET for request-specific control capability.
 
 Unfinished jobs (waiting, or interrupted mid-download) are saved in `/data` and queued again when Downtify starts, paused or not; finished and failed ones are not.
 
@@ -757,6 +766,8 @@ Allow automatic downloads of the recording again and reset its elapsed time.
 ### `GET /api/settings`
 
 Return the current settings.
+
+The `format` setting accepts `mp3`, `flac`, `m4a`, `ogg`, `opus` or `original`. `original` keeps the best available audio stream without re-encoding it; the saved extension depends on the source.
 
 **Response:**
 
@@ -1004,7 +1015,7 @@ List downloaded playlists, derived from the `.m3u` files already on disk (see [M
 ]
 ```
 
-Sorted by name, except that the [liked songs](features/liked-songs.md) playlist (`"liked": true`, named `Downtify Liked Songs`) comes first. `"manual": true` is a playlist created in the Library (editable); imported Spotify/YouTube playlists are `"manual": false`. A single track or an album downloaded without an M3U doesn't appear here. `added` is the M3U file's modification time (Unix seconds).
+Sorted by name, except that the [liked songs](features/liked-songs.md) playlist (`"liked": true`, named `Downtify Liked Songs`) comes first. `"manual": true` is a playlist created in the Library (editable); imported Spotify/YouTube playlists are `"manual": false`. A single track or an album downloaded without an M3U doesn't appear here. `added` is the M3U file's modification time (Unix seconds). `files` is in playlist order, and a manual playlist may [repeat a song](features/playlist-order.md): it is listed once per copy, and `count` counts every copy.
 
 `cover` is the library path of the playlist's own artwork when one was saved beside its M3U (see [Playlist cover art](features/playlist-cover-art.md)), and `""` otherwise. Fetch it from [`GET /playlist-cover`](#get-playlist-cover).
 
@@ -1057,6 +1068,8 @@ Query filters so the browser does not download every track to show a short list:
 | `album=Title` | Tracks on that album (combine with `artist=` when two albums share a title) |
 | `q=words` | Title / artist / album / path must contain every word |
 | `limit=N` | Cap the list (`1`–`200`). Used by the "add songs" picker |
+
+`GET /tracks`, `GET /playlists`, `GET /api/library/albums`, `GET /api/library/artists` and `GET /api/library/summary` carry an `ETag` and `Cache-Control: private, no-cache`: send the tag back as `If-None-Match` and an unchanged listing answers `304 Not Modified` with no body. Browsers do this on their own.
 
 Unfiltered `GET /tracks` is still the Library **Tracks** tab. Album and artist pages use `?artist=`. Search and pasted links use [`POST /api/library/lookup`](#post-apilibrarylookup).
 
@@ -1310,6 +1323,22 @@ Create an empty playlist the user can edit in **Library → Playlists**. Writes 
 
 ---
 
+### `PUT /api/library/playlists/cover`
+
+Upload a custom cover for a **manual** playlist. Only its owner or an admin may change it; imported playlists return `403`, and playlists the caller cannot open return `404`. The raw request body must be an `image/jpeg`, `image/png` or `image/webp` image no larger than 10 MiB. Downtify validates and converts it to the `.jpg` sidecar beside the M3U, then sends `playlists_changed` so connected clients refresh the cover.
+
+**Query parameter:** `name` — playlist name.
+
+**Response:** `{ "ok": true }`; `400` for an invalid image, `413` when the body exceeds 10 MiB, or `503` if image conversion is unavailable.
+
+---
+
+### `DELETE /api/library/playlists/cover`
+
+Remove the custom cover from a **manual** playlist. Only its owner or an admin may change it; the generated track mosaic is restored beside the M3U. Uses the same `name` query parameter and returns `{ "ok": true }`.
+
+---
+
 ### `POST /api/library/playlists/tracks`
 
 Add or remove library files (downloads or [extra folders](features/external-library.md)) on a **manual** playlist: your own (an admin may change any), or one shared with you as an [editor](features/collaborative-playlists.md) (`can_edit_tracks`). Imported playlists return `403`: hide their songs with [`POST /api/library/playlists/hidden`](#post-apilibraryplaylistshidden) instead. `403` for someone who can open the playlist without being its owner or an editor, and for an editor sending `source_playlist_url` (the source artwork stays the owner's). A song the caller can't see — missing, or [hidden from users](features/users.md#hiding-from-users) — is refused with `400`. Missing files are dropped from the M3U. When the playlist is shared, `playlists_changed` goes out on the WebSocket so the owner and the other editors list it again.
@@ -1320,11 +1349,28 @@ Add or remove library files (downloads or [extra folders](features/external-libr
 {
   "name": "Late night",
   "add": ["Artist - Song.mp3", "ext/ab12cd34ef56/Other.mp3"],
-  "remove": ["old.mp3"]
+  "remove": ["old.mp3"],
+  "remove_entries": [{ "file": "Artist - Loop.mp3", "occurrence": 1 }],
+  "allow_duplicates": false
 }
 ```
 
-**Response:** `{ "name": "Late night", "manual": true, "files": ["Artist - Song.mp3"], "count": 1, "added": 1, "removed": 1 }`
+New songs go at the end. A playlist can hold a song more than once (see [Playlist order & repeated songs](features/playlist-order.md)):
+
+- `remove` takes every copy of a song; `remove_entries` takes one copy each — `occurrence` counts the song's copies from `0`, in playlist order. An occurrence the playlist doesn't have takes nothing.
+- A song in `add` that the playlist already has is skipped and listed in `already`, unless `allow_duplicates` is `true`: then it is added again.
+
+**Response:** `{ "name": "Late night", "manual": true, "files": ["Artist - Song.mp3"], "count": 1, "added": 1, "removed": 1, "already": [] }` — `removed` counts the copies taken out.
+
+---
+
+### `PUT /api/library/playlists/order`
+
+Put a **manual** playlist's songs in a new order. The same people as [`POST /api/library/playlists/tracks`](#post-apilibraryplayliststracks) may: its owner (an admin may change any) and its [editors](features/collaborative-playlists.md); `403` for anyone else who can open it, and for an imported playlist. `files` is every song the caller sees in the playlist, each copy of a repeated song included, in its new place. When that isn't the playlist's songs — someone added or removed one in the meantime — it answers `409` and changes nothing: reload the playlist and try again. Songs [hidden from](features/users.md#hiding-from-users) the caller keep their places. `400` without `files`. When the playlist is shared, `playlists_changed` goes out on the WebSocket.
+
+**Request body:** `{ "name": "Late night", "files": ["b.mp3", "a.mp3", "a.mp3"] }`
+
+**Response:** `{ "name": "Late night", "manual": true, "files": ["b.mp3", "a.mp3", "a.mp3"], "count": 3 }`
 
 ---
 
@@ -1354,7 +1400,7 @@ Share a playlist you own (an admin may change any). Liked songs are never sharea
 
 ### `POST /api/library/playlists/copy`
 
-Save a copy of a playlist the caller can open (their own, one shared with them, or a public one) as a new **manual** playlist of theirs: private, editable, and independent of the original. Songs an admin hid from users are left out. `404` for a playlist the caller can't open, `409` if `new_name` is taken.
+Save a copy of a playlist the caller can open (their own, one shared with them, or a public one) as a new **manual** playlist of theirs: private, editable, and independent of the original. The songs keep their order, a song the original repeats included. Songs an admin hid from users are left out. `404` for a playlist the caller can't open, `409` if `new_name` is taken.
 
 **Request body:** `{ "name": "Late night", "new_name": "Late night (mine)" }` — without `new_name` the copy is called `<name> (copy)`, then `<name> (copy) 2`, and so on.
 
@@ -1394,6 +1440,35 @@ What the playlist page [filters its songs by](features/library-catalog.md#search
 ```
 
 `providers` maps the playlist's files (as `GET /tracks` lists them) to the audio provider that fetched them: `youtube-music`, `youtube`, `soundcloud`, `slskd` or `deemix`, or `folder` for a file from an [extra music folder](features/external-library.md). Downtify records it when a download finishes, so files downloaded before that are left out — except slskd files left in place, recognised by their `slskd/` path. `navidrome.enabled` is whether Navidrome sync is on; while it is, `unmatched` lists the playlist's files that have no Navidrome song id in Downtify's index yet (not matched by a playlist sync or after a download). Songs an admin hid from users are left out for them.
+
+---
+
+### `GET /api/library/playlists/diagnostics`
+
+Compare a Spotify playlist's cached tracklist with its downloaded playlist catalog, physical files, TrackIndex, the caller's Monitor history and Navidrome. The request uses the same playlist visibility rules as [`GET /api/library/playlists/details`](#get-apilibraryplaylistsdetails).
+
+**Query:** `?name=Road trip`
+
+**Response:**
+
+```json
+{
+  "available": true,
+  "items": [
+    { "key": "spotify_tracks", "count": 280, "issues": [] },
+    { "key": "downloaded", "count": 278, "issues": [{ "track_id": "…", "label": "Artist - Song" }] },
+    { "key": "physical_files", "count": 278, "issues": [] },
+    { "key": "track_index", "count": 280, "issues": [] },
+    { "key": "monitor_history", "count": null, "issues": [] },
+    { "key": "navidrome_matched", "count": 278, "issues": [] },
+    { "key": "navidrome_rows", "count": 278, "issues": [] },
+    { "key": "missing_files", "count": 2, "issues": [{ "track_id": "…", "label": "Artist - Song" }] },
+    { "key": "orphan_files", "count": 0, "issues": [] }
+  ]
+}
+```
+
+`issues` lists the affected tracks or files for that metric. `downloaded` counts source tracks in the playlist catalog; `physical_files` counts those whose files are present; `track_index`, `monitor_history` and `navidrome_matched` count source track IDs in the corresponding store. `navidrome_rows` is the current number of rows in the synchronized Navidrome playlist; its issues include expected tracks missing there and extra Navidrome rows. `missing_files` counts Spotify tracks without a physical file, and `orphan_files` counts catalog rows not in the cached source tracklist. A `null` count means the relevant watch, index or Navidrome data is not available, not that its count is zero. If the Spotify tracklist is not cached, the response is `{ "available": false, "reason": "spotify_tracks_unavailable" }`. Hidden tracks are omitted for non-admin callers.
 
 ---
 
@@ -2961,7 +3036,7 @@ Who this server is, signing in, and pairing apps — see [Users & Sign-in](featu
 
 | Scope | Credentials | Covers |
 |-------|-------------|--------|
-| Public | none | The web app's own files, `GET /api/health`, `GET /api/version`, `GET /api/server/info`, `GET /api/auth/status`, `POST /api/auth/login`, `POST /api/auth/logout`, `POST /api/auth/pair`, `POST /api/auth/token` |
+| Public | none | The web app's own files, `GET /api/health`, `GET /api/version`, `GET /api/server/info`, `GET /api/auth/status`, `GET /api/auth/oidc` and `/api/auth/oidc/callback` (when configured), `POST /api/auth/login`, `POST /api/auth/logout`, `POST /api/auth/pair`, `POST /api/auth/token` |
 | Client | a device token (`Authorization: Bearer dtfy_…`), a signed URL (reads only), a WebSocket ticket, or any web session | Library and media reads (`/tracks`, `/list`, `/playlists`, `/lyrics`, `/cover`, `/playlist-cover`, `/downloads/…`, `/media/…`), `/api/v1/…`, search and link resolving, previews, `POST /api/download/url\|batch\|album`, likes, Discover and listens, podcast reads, episode downloads and playback, the queue and monitor lists (read), `GET /api/me`, `POST /api/activity/playback`, `POST /api/auth/ws-ticket`, `WS /api/ws` |
 | User | a web session of any user (the `downtify_session` cookie) | Client, plus your own account (`/api/me…`), your paired devices and pairing (`/api/auth/devices…`, `/api/auth/pairing…`) |
 | Admin | a web session of an **admin** | Everything else: settings, cookies, deleting files and playlists, library upgrade/reconcile/archive, hiding songs from users, queue changes, monitor and podcast subscription changes, artist photo/bio edits, CSV import, renaming the server, users, the activity log, signing everyone out |
@@ -2993,7 +3068,7 @@ Public. What an app checks before it has credentials.
 }
 ```
 
-`server_id` is made once and kept in `/data/server.json`. `api_version` is the version of [`/api/v1`](#mobile-api-v1): it changes only for a change that would break an existing app. `require_sign_in` is `true` unless accounts are turned off (`DOWNTIFY_DISABLE_AUTH`). `password_sign_in` says an app may sign in with a username and password ([`POST /api/auth/token`](#post-apiauthtoken)); it is `false` while accounts are turned off, and missing on servers older than this endpoint — pair with a code then. `transcoding.available` is `false` (and the lists empty) without ffmpeg.
+`server_id` is made once and kept in `/data/server.json`. `api_version` is the version of [`/api/v1`](#mobile-api-v1): it changes only for a change that would break an existing app. `require_sign_in` is `true` unless accounts are turned off (`DOWNTIFY_DISABLE_AUTH`). `password_sign_in` says an app may sign in with a username and password ([`POST /api/auth/token`](#post-apiauthtoken)); it is `false` when accounts or local password login are off, and missing on servers older than this endpoint — pair with a code then. `transcoding.available` is `false` (and the lists empty) without ffmpeg.
 
 ---
 
@@ -3033,6 +3108,8 @@ Public. How this request is signed in.
 {
   "require_sign_in": true,
   "auth_disabled": false,
+  "local_login_enabled": true,
+  "oidc_enabled": false,
   "min_password_length": 8,
   "signed_in": true,
   "via": "device",
@@ -3046,13 +3123,21 @@ Public. How this request is signed in.
 
 `auth_disabled` is `true` when accounts are turned off (`DOWNTIFY_DISABLE_AUTH`): then `signed_in` is `true`, `via` is `open` and `user` is the first admin.
 
+`local_login_enabled` reflects `DOWNTIFY_DISABLE_LOCAL_LOGIN`; `oidc_enabled` is `true` when an OIDC provider is configured. Both are `false` while `DOWNTIFY_DISABLE_AUTH` is on.
+
 `notice` is only set while signed out, on a server upgraded from a version without accounts, until an admin signs in: `{ "username": "admin", "password": "downtify" }` — `password` is `null` when the sign-in password of the older version was kept.
+
+---
+
+### `GET /api/auth/oidc` and `GET /api/auth/oidc/callback`
+
+Public, only when OIDC is configured. The first endpoint starts the Authorization Code flow with PKCE and redirects to the provider. The provider returns to `/api/auth/oidc/callback`; Downtify checks state, nonce, issuer, audience, expiry and the ID-token signature before provisioning or finding the `(issuer, sub)` account and issuing a normal `downtify_session` cookie. Provider rejection returns to the sign-in page with a generic error. See [OpenID Connect setup](features/users.md#openid-connect).
 
 ---
 
 ### `POST /api/auth/login`
 
-Public, rate-limited per address (10 failures per 5 minutes, then `429` with `Retry-After`). Signs a browser in.
+Public, rate-limited per address (10 failures per 5 minutes, then `429` with `Retry-After`). Signs a browser in; answers `409` when `DOWNTIFY_DISABLE_LOCAL_LOGIN` is enabled.
 
 **Request body:** `{ "username": "admin", "password": "…" }` — the username in any case.
 
@@ -3549,7 +3634,7 @@ The same profile as [`GET /api/library/loudness`](#get-apilibraryloudness), by t
 ]
 ```
 
-The playlists [`GET /playlists`](#get-playlists) lists, with track ids in playlist order. A user gets their own (with their own liked songs as the liked one), the ones [shared with them](features/users.md#sharing-playlists) by name, the public ones they follow and — unless they turned *Show public playlists* off — every other public one. An admin gets everything. `cover` is a path for `GET /playlist-cover?file=`, or `""`.
+The playlists [`GET /playlists`](#get-playlists) lists, with track ids in playlist order. A `manual` playlist may [repeat a song](features/playlist-order.md): its id is listed once per copy, so key list rows by position as well as id. A user gets their own (with their own liked songs as the liked one), the ones [shared with them](features/users.md#sharing-playlists) by name, the public ones they follow and — unless they turned *Show public playlists* off — every other public one. An admin gets everything. `cover` is a path for `GET /playlist-cover?file=`, or `""`.
 
 | Field | Meaning |
 |-------|---------|
