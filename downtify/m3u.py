@@ -12,7 +12,7 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
-from typing import Iterable, Optional, Sequence
+from typing import Iterable, Mapping, Optional, Sequence
 
 from loguru import logger
 
@@ -396,6 +396,58 @@ def insert_m3u_track(
     )
     forget_cached_playlists()
     return True
+
+
+def update_m3u_paths(
+    m3u_path: Path,
+    replacements: Mapping[str, Path],
+    download_dir: Path,
+    slskd_dir: Optional[Path] = None,
+    extra_dirs: Optional[Sequence[Path]] = None,
+) -> int:
+    """Rewrite stale track lines in *m3u_path* to their moved files.
+
+    *replacements* maps the stored path a line currently resolves to
+    (``read_m3u_tracks`` shape) to the file's new absolute path. Only the
+    non-comment track lines are touched: ``#EXTINF`` labels, playlist
+    markers, covers and every other line stay exactly as written, so a
+    track that merely moved from one album folder to another keeps its
+    place and title in the playlist. Returns how many lines changed.
+    """
+
+    if not replacements:
+        return 0
+    resolve = _line_resolver(m3u_path, download_dir, slskd_dir, extra_dirs)
+    text = read_m3u_text(m3u_path)
+    if text is None:
+        return 0
+    m3u_dir = m3u_path.resolve().parent
+    lines = text.splitlines()
+    changed = 0
+    for index, raw in enumerate(lines):
+        line = raw.strip()
+        if not line or line.startswith('#'):
+            continue
+        found = resolve(line)
+        if found is None:
+            continue
+        target = replacements.get(found[0])
+        if target is None:
+            continue
+        try:
+            relative = os.path.relpath(Path(target), start=m3u_dir)
+        except (OSError, ValueError):
+            continue
+        replacement = Path(relative).as_posix()
+        if replacement != raw:
+            lines[index] = replacement
+            changed += 1
+    if changed:
+        m3u_path.write_text(
+            '\n'.join(lines) + '\n', encoding='utf-8', newline='\n'
+        )
+        forget_cached_playlists()
+    return changed
 
 
 def _stored_library_path(

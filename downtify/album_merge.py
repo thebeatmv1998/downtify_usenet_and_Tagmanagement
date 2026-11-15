@@ -42,6 +42,7 @@ from . import (
     deezer,
     itunes,
     library_cleanup,
+    m3u,
     spotify,
 )
 from . import lyrics as lyrics_mod
@@ -1245,6 +1246,7 @@ def apply_merge(  # noqa: PLR0914
     if downloader is not None:
         slskd_dir = slskd_dir or slskd_dir_from_downloader(downloader)
     affected: set[str] = set()
+    renamed: dict[str, Path] = {}
     moved = 0
     deleted = 0
     reclaimed_bytes = 0
@@ -1334,6 +1336,7 @@ def apply_merge(  # noqa: PLR0914
                     slskd_dir,
                     affected,
                     monitor_db,
+                    renamed=renamed,
                 )
                 _prune_after_move(stored, source, ctx, download_dir, slskd_dir)
             except Exception:
@@ -1372,6 +1375,7 @@ def apply_merge(  # noqa: PLR0914
                     slskd_dir,
                     affected,
                     monitor_db,
+                    renamed=renamed,
                 )
                 source.unlink()
                 deleted += 1
@@ -1391,6 +1395,7 @@ def apply_merge(  # noqa: PLR0914
             merged += 1
 
     _progress(on_progress, 'merging', total, total)
+    _update_playlist_files(ctx, renamed)
     folders_removed = prune_empty_folders(ctx)
     invalidate_library_paths_cache(drop_entries=True)
     return {
@@ -1592,6 +1597,7 @@ def rehome_unknown_tracks(  # noqa: PLR0914
     duplicates = 0
     unresolved = 0
     affected: set[str] = set()
+    renamed: dict[str, Path] = {}
     failed: list[str] = []
     _progress(on_progress, 'rehoming', 0, total)
 
@@ -1665,6 +1671,7 @@ def rehome_unknown_tracks(  # noqa: PLR0914
                         slskd_dir,
                         affected,
                         monitor_db,
+                        renamed=renamed,
                     )
                     root, _relative = library_file_root(
                         stored,
@@ -1703,6 +1710,7 @@ def rehome_unknown_tracks(  # noqa: PLR0914
                 slskd_dir,
                 affected,
                 monitor_db,
+                renamed=renamed,
             )
             _prune_after_move(stored, source, ctx, download_dir, slskd_dir)
             rehomed += 1
@@ -1713,6 +1721,7 @@ def rehome_unknown_tracks(  # noqa: PLR0914
             failed.append(stored)
 
     _progress(on_progress, 'rehoming', total, total)
+    _update_playlist_files(ctx, renamed)
     return {
         'rehomed': rehomed,
         'duplicates_removed': duplicates,
@@ -1845,6 +1854,36 @@ def _target_location(
     return download_dir / fallback, basename
 
 
+def _update_playlist_files(
+    ctx: LibraryContext, renamed: dict[str, Path]
+) -> None:
+    """Keep M3U playlists pointing at moved album/tidy tracks.
+
+    Album merge and unknown-track re-homing move files between folders.
+    The playlist catalog is relinked per file, but the M3U files on disk
+    are what the Library lists; leave them stale and their tracks
+    disappear from the playlist. Only path lines change, so titles,
+    positions and markers are preserved.
+    """
+
+    if not renamed:
+        return
+    download_dir = Path(ctx.download_dir)
+    for path in m3u.iter_m3u_files(download_dir):
+        try:
+            m3u.update_m3u_paths(
+                path,
+                renamed,
+                download_dir,
+                ctx.slskd_dir,
+                ctx.extra_dirs,
+            )
+        except Exception:
+            logger.opt(exception=True).warning(
+                'Album merge: could not update playlist {}', path
+            )
+
+
 def _relink(
     old_stored: str,
     target: Path,
@@ -1853,6 +1892,8 @@ def _relink(
     slskd_dir: Optional[Path],
     affected: set[str],
     monitor_db: Any = None,
+    *,
+    renamed: Optional[dict[str, Path]] = None,
 ) -> None:
     """Point the library stores at a moved track's new path."""
 
@@ -1861,6 +1902,8 @@ def _relink(
     )
     if not new_stored or new_stored == old_stored:
         return
+    if renamed is not None:
+        renamed[old_stored] = target
     try:
         if ctx.track_index is not None:
             tid = ctx.track_index.spotify_id_for_filename(old_stored)

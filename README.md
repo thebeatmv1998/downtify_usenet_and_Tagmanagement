@@ -96,7 +96,7 @@ Existing Library `.m3u` playlists can use UTF-8 or the Windows-1252 legacy fallb
 > library tools (merge/upgrade/tag editor/duplicates), the theme engine and the
 > Unraid template. The published image is
 > **[`thebeat1998/downtify-usenet`](https://hub.docker.com/r/thebeat1998/downtify-usenet)**
-> (`latest` or a version tag such as `3.10.0-usenet.1`).
+> (`latest` or a version tag such as `3.10.0-usenet.2`).
 
 You only need [Docker](https://docs.docker.com/get-docker/).
 

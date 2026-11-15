@@ -9,9 +9,10 @@ from typing import Any, Optional
 
 from mutagen.id3 import APIC, ID3, TALB, TDRC, TIT2, TPE1, TPE2, TRCK
 
-from downtify import album_merge, cover_sources
+from downtify import album_merge, cover_sources, m3u, manual_playlists
 from downtify.library_catalog import LibraryContext
 from downtify.library_metadata_cache import LibraryMetadataCache
+from downtify.playlist_listing import list_library_playlists
 
 # Same playable-looking MP3 stream the library-upgrade tests use.
 _MP3_FRAME = b'\xff\xfb\x90\x00' + b'\x00' * 413
@@ -207,6 +208,62 @@ def test_apply_merge_moves_retags_and_writes_a_folder_cover(
     assert str(tags['TRCK']) == '1'
     assert tags.getall('APIC')
     assert (album_dir / 'cover.png').is_file()
+
+
+def test_apply_merge_keeps_manual_playlist_tracks_and_relinks_paths(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    ctx = _context(tmp_path)
+    first = _write_track(
+        ctx.download_dir / 'Little Mix' / 'Shout Out to My Ex.mp3',
+        title='Shout Out to My Ex',
+        album='Shout Out to My Ex',
+    )
+    second = _write_track(
+        ctx.download_dir / 'Little Mix' / 'Touch.mp3',
+        title='Touch',
+        album='Touch',
+    )
+    manual_playlists.create_manual_playlist(ctx, 'Mix')
+    manual_playlists.edit_manual_playlist(
+        ctx,
+        'Mix',
+        add=['Little Mix/Shout Out to My Ex.mp3', 'Little Mix/Touch.mp3'],
+    )
+    plans = album_merge.detect_split_albums(ctx, resolver=_fake_resolver)
+    monkeypatch.setattr(
+        album_merge.cover_sources, 'best_cover', lambda *_a, **_k: None
+    )
+    monkeypatch.setattr(
+        album_merge.cover_sources,
+        'default_cover',
+        lambda: cover_sources.CoverCandidate(
+            source='default', data=_png(600), width=600
+        ),
+    )
+
+    report = album_merge.apply_merge(
+        [plan.to_dict() for plan in plans], ctx=ctx, downloader=None
+    )
+
+    assert report['moved'] == 2
+    assert not first.exists()
+    assert not second.exists()
+    playlist = next(
+        item
+        for item in list_library_playlists(ctx.download_dir)
+        if item['name'] == 'Mix'
+    )
+    assert playlist['count'] == 2
+    assert playlist['files'] == [
+        'Little Mix/Glory Days/01 - Shout Out to My Ex.mp3',
+        'Little Mix/Glory Days/02 - Touch.mp3',
+    ]
+    path = ctx.download_dir / 'Playlists' / 'Mix.m3u'
+    assert m3u.read_m3u_tracks(path, ctx.download_dir) == [
+        'Little Mix/Glory Days/01 - Shout Out to My Ex.mp3',
+        'Little Mix/Glory Days/02 - Touch.mp3',
+    ]
 
 
 def test_apply_merge_reports_a_missing_file(tmp_path: Path) -> None:
